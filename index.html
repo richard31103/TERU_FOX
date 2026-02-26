@@ -1179,6 +1179,17 @@
             text-shadow: 0 0 10px rgba(80, 180, 255, 0.6);
         }
 
+        /* SVG symbols inside cells */
+        .ooxx-cell svg {
+            width: 58%;
+            height: 58%;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 6px currentColor);
+        }
+
         .ooxx-cell.win-line {
             background: rgba(220, 160, 20, 0.30);
             border-color: rgba(240, 200, 60, 0.90);
@@ -1224,6 +1235,21 @@
         #ooxx-result-text.lose {
             color: #cc2222;
             text-shadow: 0 0 20px rgba(255, 40, 40, 0.9);
+        }
+
+        #ooxx-result-sub {
+            font-family: 'Noto Serif TC', serif;
+            font-size: 18px;
+            color: #d4a050;
+            letter-spacing: 4px;
+            margin-top: 18px;
+            opacity: 0;
+            transition: opacity 2s ease 0.5s;
+            /* slight delay after main text */
+        }
+
+        #ooxx-result.show-text #ooxx-result-sub {
+            opacity: 1;
         }
 
         /* ── SVG ICON HELPER ── */
@@ -1449,6 +1475,7 @@
     <!-- OOXX Result Screen -->
     <div id="ooxx-result" class="overlay-screen hidden">
         <div id="ooxx-result-text"></div>
+        <div id="ooxx-result-sub"></div>
     </div>
 
     <!-- Map View -->
@@ -1912,7 +1939,9 @@
             if (isTyping) {
                 clearInterval(typeTimer);
                 setTyping(false);
-                dialogueText.textContent = script[lineIndex].text;
+                // Use localized text, not the undefined script[].text
+                const lineText = l10n[currentLang].lines[lineIndex];
+                if (lineText) dialogueText.textContent = lineText;
                 return;
             }
             if (lineIndex < script.length - 1) {
@@ -2016,10 +2045,15 @@
             return bestMove;
         }
 
+        const OOXX_SVG = {
+            X: `<svg viewBox="0 0 40 40"><line x1="10" y1="10" x2="30" y2="30"/><line x1="30" y1="10" x2="10" y2="30"/></svg>`,
+            O: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="12"/></svg>`
+        };
+
         function renderOOXX(highlightLine) {
             document.querySelectorAll('.ooxx-cell').forEach((cell, i) => {
-                cell.textContent = ooxxBoard[i];
                 cell.className = 'ooxx-cell';
+                cell.innerHTML = ooxxBoard[i] ? OOXX_SVG[ooxxBoard[i]] : '';
                 if (ooxxBoard[i]) cell.classList.add('taken', ooxxBoard[i]);
                 if (highlightLine && highlightLine.includes(i)) cell.classList.add('win-line');
             });
@@ -2037,6 +2071,11 @@
             const isDraw = !winnerMark;
             const resultText = isDraw ? ui.ooxxDraw : ui.ooxxLose;
             const cls = isDraw ? 'draw' : 'lose';
+            const subText = isDraw ? '' : (
+                currentLang === 'jp' ? '勝てばご褒美イラストが見れるぞ！' :
+                    currentLang === 'en' ? 'Win and you\'d get a special CG...' :
+                        '贏了有色圖看'
+            );
 
             setTimeout(() => {
                 document.getElementById('ooxx-screen').classList.add('hidden');
@@ -2054,8 +2093,10 @@
 
                 const resultEl = document.getElementById('ooxx-result');
                 const textEl = document.getElementById('ooxx-result-text');
+                const subEl = document.getElementById('ooxx-result-sub');
                 textEl.textContent = resultText;
                 textEl.className = cls;
+                subEl.textContent = subText;
                 resultEl.classList.remove('hidden');
                 setTimeout(() => resultEl.classList.add('show-text'), 300);
 
@@ -2429,12 +2470,28 @@
             startBGM();
             document.getElementById('title-screen').classList.add('hidden');
 
-            // Reset game state
+            // Thorough state reset to prevent stale state from previous session
+            clearInterval(typeTimer);
+            typeTimer = null;
             lineIndex = 0;
+            charIndex = 0;
+            isTyping = false;
+            inChoiceMode = false;
             isDeathSequence = false;
             isAngry = false;
-            dialogueHistory.length = 0; // Clear history
-            setCharState('idle'); // proper reset
+            dialogueHistory.length = 0;
+
+            // Reset UI elements that may be dirty
+            dialogueArea.classList.remove('choices-mode');
+            choicePanel.classList.remove('visible');
+            dialogueText.textContent = '';
+            document.getElementById('chapter-badge').style.opacity = '1';
+            document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+
+            clearTimeout(blinkTimeout);
+            stopSpeakingAnimation();
+            setCharState('idle');
+            scheduleNextBlink();
             renderLine(0);
         }
 
