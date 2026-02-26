@@ -1095,6 +1095,135 @@
                 padding: 10px 36px;
                 font-size: 14px;
             }
+
+            #ooxx-grid {
+                width: 200px;
+                height: 200px;
+            }
+
+            .ooxx-cell {
+                font-size: 38px;
+                border-radius: 8px;
+            }
+
+            #ooxx-title {
+                font-size: 20px;
+                letter-spacing: 4px;
+            }
+
+            #ooxx-status {
+                font-size: 15px;
+            }
+
+            #ooxx-result-text {
+                font-size: 44px;
+            }
+        }
+
+        /* ── OOXX MINI-GAME ── */
+        #ooxx-screen {
+            flex-direction: column;
+            gap: 28px;
+            background: radial-gradient(ellipse at center, #1a0a20 0%, #000000 100%);
+        }
+
+        #ooxx-title {
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            color: #f0d898;
+            letter-spacing: 6px;
+            text-shadow: 0 0 20px rgba(245, 160, 30, 0.8);
+        }
+
+        #ooxx-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+            width: 270px;
+            height: 270px;
+        }
+
+        .ooxx-cell {
+            background: rgba(30, 15, 5, 0.75);
+            border: 2px solid rgba(220, 140, 40, 0.40);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 52px;
+            cursor: pointer;
+            transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+            backdrop-filter: blur(6px);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .ooxx-cell:not(.taken):hover {
+            background: rgba(180, 80, 10, 0.45);
+            border-color: rgba(240, 170, 50, 0.85);
+            box-shadow: 0 0 18px rgba(210, 120, 20, 0.50);
+        }
+
+        .ooxx-cell.taken {
+            cursor: default;
+        }
+
+        .ooxx-cell.X {
+            color: #ff6868;
+            text-shadow: 0 0 10px rgba(255, 80, 80, 0.6);
+        }
+
+        .ooxx-cell.O {
+            color: #68c8ff;
+            text-shadow: 0 0 10px rgba(80, 180, 255, 0.6);
+        }
+
+        .ooxx-cell.win-line {
+            background: rgba(220, 160, 20, 0.30);
+            border-color: rgba(240, 200, 60, 0.90);
+            box-shadow: 0 0 20px rgba(220, 160, 20, 0.70);
+        }
+
+        #ooxx-status {
+            font-family: 'Noto Serif TC', serif;
+            font-size: 17px;
+            color: #d4a050;
+            letter-spacing: 2px;
+            text-align: center;
+            min-height: 1.6em;
+        }
+
+        #ooxx-result {
+            background: #000;
+            pointer-events: none;
+        }
+
+        #ooxx-result:not(.hidden) {
+            pointer-events: auto;
+        }
+
+        #ooxx-result-text {
+            font-family: 'Noto Serif TC', serif;
+            font-size: 56px;
+            font-weight: bold;
+            letter-spacing: 10px;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        #ooxx-result.show-text #ooxx-result-text {
+            opacity: 1;
+        }
+
+        #ooxx-result-text.draw {
+            color: #f0c040;
+            text-shadow: 0 0 20px rgba(240, 180, 30, 0.9);
+        }
+
+        #ooxx-result-text.lose {
+            color: #cc2222;
+            text-shadow: 0 0 20px rgba(255, 40, 40, 0.9);
         }
     </style>
 </head>
@@ -1166,7 +1295,7 @@
             </button>
             <button class="choice-btn" onclick="pickChoice(2)">
                 <span class="choice-num">3</span>
-                <span class="choice-text">摸摸OO</span>
+                <span class="choice-text">摸摸肉球</span>
             </button>
             <button class="choice-btn" onclick="pickChoice(3)">
                 <span class="choice-num">4</span>
@@ -1270,6 +1399,14 @@
     <!-- Death Screen -->
     <div id="death-screen" class="overlay-screen hidden">
         <div id="death-text">你被咬死了</div>
+    </div>
+
+    <!-- OOXX Game Screen -->
+    <div id="ooxx-screen" class="overlay-screen hidden"></div>
+
+    <!-- OOXX Result Screen -->
+    <div id="ooxx-result" class="overlay-screen hidden">
+        <div id="ooxx-result-text"></div>
     </div>
 
     <!-- Map View -->
@@ -1452,8 +1589,8 @@
                 choices: [
                     '撲過去摸尾巴UwU',
                     '抱住摸肚肚',
-                    '摸摸OO',
-                    '推倒在草地上'
+                    '摸摸肉球',
+                    '和你OOXX'
                 ],
                 responses: [
                     '不行!!(咬咬咬)',
@@ -1472,7 +1609,9 @@
                     on: '開啟', off: '關閉', tw: '繁中', jp: '日本語', en: 'EN',
                     socialPrompt: '是否要前往 TERU FOX 的社群媒體頁面？', social: '社群媒體',
                     toastSave: '📂 已存檔', toastLoad: '📖 讀取中...', toastSkip: '⏩ 快進模式', toastAutoOn: '▶ 自動播放 ON',
-                    toastAutoOff: '⏸ 自動播放 OFF', toastContinue: '✨ 故事繼續中...', noHistory: '暫無紀錄...'
+                    toastAutoOff: '⏸ 自動播放 OFF', toastContinue: '✨ 故事繼續中...', noHistory: '暫無紀錄...',
+                    ooxxTitle: 'OOXX 遊戲', ooxxYourTurn: '你的回合 (O)', ooxxAiTurn: '提爾在想...',
+                    ooxxDraw: '平手', ooxxLose: '你輸了', ooxxTapReturn: '點擊任意處返回'
                 }
             },
             en: {
@@ -1491,7 +1630,7 @@
                     'Pounce and touch the tail UwU',
                     'Hug and rub the belly',
                     'Touch the OO',
-                    'Push down onto the grass'
+                    'I want to OOXX with you'
                 ],
                 responses: [
                     'No!! (bite bite bite)',
@@ -1510,7 +1649,9 @@
                     on: 'On', off: 'Off', tw: 'TW', jp: 'JP', en: 'EN',
                     socialPrompt: "Would you like to visit TERU FOX's social media page?", social: 'Social',
                     toastSave: '📂 Saved', toastLoad: '📖 Loading...', toastSkip: '⏩ Skipping', toastAutoOn: '▶ Auto Play ON',
-                    toastAutoOff: '⏸ Auto Play OFF', toastContinue: '✨ Story continues...', noHistory: 'No history...'
+                    toastAutoOff: '⏸ Auto Play OFF', toastContinue: '✨ Story continues...', noHistory: 'No history...',
+                    ooxxTitle: 'OOXX Game', ooxxYourTurn: 'Your turn (O)', ooxxAiTurn: 'Teru is thinking...',
+                    ooxxDraw: 'Draw', ooxxLose: 'You Lost', ooxxTapReturn: 'Tap anywhere to return'
                 }
             },
             jp: {
@@ -1529,7 +1670,7 @@
                     '飛びかかってしっぽを触る UwU',
                     '抱きしめてお腹を撫でる',
                     'OOを触る',
-                    '草地に押し倒す'
+                    'あなたとOOXXしたい'
                 ],
                 responses: [
                     'ダメ!! (ガブガブッ)',
@@ -1548,7 +1689,9 @@
                     on: 'オン', off: 'オフ', tw: 'TW', jp: 'JP', en: 'EN',
                     socialPrompt: 'TERU FOXのソーシャルメディアへ移動しますか？', social: 'ソーシャル',
                     toastSave: '📂 セーブ完了', toastLoad: '📖 ロード中...', toastSkip: '⏩ スキップモード', toastAutoOn: '▶ オートON',
-                    toastAutoOff: '⏸ オートOFF', toastContinue: '✨ 物語は続く...', noHistory: '記録がありません...'
+                    toastAutoOff: '⏸ オートOFF', toastContinue: '✨ 物語は続く...', noHistory: '記録がありません...',
+                    ooxxTitle: 'OOXXゲーム', ooxxYourTurn: 'あなたのターン (O)', ooxxAiTurn: 'テルが考えてる...',
+                    ooxxDraw: '引き分け', ooxxLose: 'あなたの負け', ooxxTapReturn: 'タップして戻る'
                 }
             }
         };
@@ -1751,6 +1894,14 @@
             inChoiceMode = false;
             dialogueArea.classList.remove('choices-mode');
             choicePanel.classList.remove('visible');
+            document.getElementById('chapter-badge').style.opacity = '1';
+            document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+
+            // Choice 3 → launch OOXX minigame instead of normal response
+            if (idx === 3) {
+                startOOXX();
+                return;
+            }
 
             isAngry = true;
             setCharState('angry');
@@ -1776,11 +1927,144 @@
                     setTyping(false);
                     dialogueHistory.push({ speaker: t.speaker, text: responseText, isChoice: false });
                     isDeathSequence = true;
-
-                    // Trigger death IMMEDIATELY after typing finishes, rather than waiting for another click
                     triggerDeath();
                 }
             }, textSpeedMs);
+        }
+
+        // ── OOXX MINI-GAME ──────────────────────────────────────────────
+        const OOXX_AI = 'X', OOXX_HU = 'O';
+        let ooxxBoard = [], ooxxLocked = false;
+
+        function checkOOXX(b) {
+            const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+            for (const ln of lines) {
+                const [a, c, d] = ln;
+                if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: ln };
+            }
+            return null;
+        }
+
+        function minimax(b, isMax) {
+            const r = checkOOXX(b);
+            if (r) return r.winner === OOXX_AI ? 10 : -10;
+            if (b.every(c => c)) return 0;
+            let best = isMax ? -Infinity : Infinity;
+            for (let i = 0; i < 9; i++) {
+                if (!b[i]) {
+                    b[i] = isMax ? OOXX_AI : OOXX_HU;
+                    const val = minimax(b, !isMax);
+                    b[i] = '';
+                    best = isMax ? Math.max(best, val) : Math.min(best, val);
+                }
+            }
+            return best;
+        }
+
+        function getBestOOXX(b) {
+            let bestVal = -Infinity, bestMove = -1;
+            for (let i = 0; i < 9; i++) {
+                if (!b[i]) {
+                    b[i] = OOXX_AI;
+                    const val = minimax(b, false);
+                    b[i] = '';
+                    if (val > bestVal) { bestVal = val; bestMove = i; }
+                }
+            }
+            return bestMove;
+        }
+
+        function renderOOXX(highlightLine) {
+            document.querySelectorAll('.ooxx-cell').forEach((cell, i) => {
+                cell.textContent = ooxxBoard[i];
+                cell.className = 'ooxx-cell';
+                if (ooxxBoard[i]) cell.classList.add('taken', ooxxBoard[i]);
+                if (highlightLine && highlightLine.includes(i)) cell.classList.add('win-line');
+            });
+        }
+
+        function ooxxSetStatus(key) {
+            const el = document.getElementById('ooxx-status');
+            if (el) el.textContent = l10n[currentLang].ui[key] || key;
+        }
+
+        function endOOXX(winnerMark, line) {
+            ooxxLocked = true;
+            renderOOXX(line);
+            const ui = l10n[currentLang].ui;
+            const isDraw = !winnerMark;
+            const resultText = isDraw ? ui.ooxxDraw : ui.ooxxLose;
+            const cls = isDraw ? 'draw' : 'lose';
+
+            setTimeout(() => {
+                document.getElementById('ooxx-screen').classList.add('hidden');
+                const resultEl = document.getElementById('ooxx-result');
+                const textEl = document.getElementById('ooxx-result-text');
+                textEl.textContent = resultText;
+                textEl.className = cls;
+                resultEl.classList.remove('hidden');
+                setTimeout(() => resultEl.classList.add('show-text'), 300);
+
+                resultEl.addEventListener('click', function once() {
+                    resultEl.removeEventListener('click', once);
+                    resultEl.classList.remove('hidden', 'show-text');
+                    // Return to title
+                    lineIndex = 0;
+                    isDeathSequence = false;
+                    isAngry = false;
+                    setCharState('idle');
+                    document.getElementById('bgm').currentTime = 0;
+                    startBGM();
+                    const ts = document.getElementById('title-screen');
+                    ts.style.opacity = '1';
+                    ts.classList.remove('hidden');
+                });
+            }, 900);
+        }
+
+        function aiOOXXMove() {
+            const move = getBestOOXX(ooxxBoard);
+            if (move === -1) return;
+            ooxxBoard[move] = OOXX_AI;
+            const res = checkOOXX(ooxxBoard);
+            if (res || ooxxBoard.every(c => c)) {
+                endOOXX(res ? res.winner : null, res ? res.line : null);
+            } else {
+                renderOOXX();
+                ooxxLocked = false;
+                ooxxSetStatus('ooxxYourTurn');
+            }
+        }
+
+        function startOOXX() {
+            ooxxBoard = Array(9).fill('');
+            ooxxLocked = true;
+            const ui = l10n[currentLang].ui;
+            const screen = document.getElementById('ooxx-screen');
+            // Build UI
+            screen.innerHTML = `
+                <div id="ooxx-title">${ui.ooxxTitle}</div>
+                <div id="ooxx-grid">${Array.from({ length: 9 }, (_, i) => `<div class="ooxx-cell" data-i="${i}"></div>`).join('')}</div>
+                <div id="ooxx-status">${ui.ooxxAiTurn}</div>`;
+            screen.querySelectorAll('.ooxx-cell').forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const i = +cell.dataset.i;
+                    if (ooxxLocked || ooxxBoard[i]) return;
+                    ooxxLocked = true;
+                    ooxxBoard[i] = OOXX_HU;
+                    const res = checkOOXX(ooxxBoard);
+                    if (res || ooxxBoard.every(c => c)) {
+                        endOOXX(res ? res.winner : null, res ? res.line : null);
+                        return;
+                    }
+                    renderOOXX();
+                    ooxxSetStatus('ooxxAiTurn');
+                    setTimeout(aiOOXXMove, 500);
+                });
+            });
+            screen.classList.remove('hidden');
+            // AI goes first
+            setTimeout(aiOOXXMove, 600);
         }
 
         function triggerDeath() {
