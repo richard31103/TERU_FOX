@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title id="lang-ui-docTitle">大安森林公園 - 草地</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Cinzel:wght@600&family=Orbitron:wght@700&family=M+PLUS+Rounded+1c:wght@700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            font-family: 'Noto Serif TC', serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* ── Game Container ── */
+        #game-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* ── Background ── */
+        #bg {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            filter: brightness(0.9);
+            transition: filter 0.6s;
+            animation: bgFloat 12s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+
+            0%,
+            100% {
+                transform: scale(1.02) translateY(0);
+            }
+
+            50% {
+                transform: scale(1.02) translateY(-8px);
+            }
+        }
+
+        /* ── Vignette ── */
+        #vignette {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+            pointer-events: none;
+        }
+
+        /* ── Particles ── */
+        #particles-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            /* Changed from 2 to 10 to ensure it's above character container */
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 240, 160, 0.85);
+            /* Brighter base */
+            box-shadow: 0 0 16px 4px rgba(250, 180, 60, 0.9);
+            /* Stronger glow */
+            opacity: 0;
+            z-index: 15;
+            /* Ensure it is above the vignette and background */
+            animation: floatParticle 8s infinite alternate ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translate(0, 0) scale(0.6);
+                opacity: 0;
+            }
+
+            15% {
+                opacity: 0.8;
+            }
+
+            85% {
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translate(var(--x-drift, 20px), -150px) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        /* ── Character ── */
+        #character-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .char-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            /* No transition for fast flipping */
+            /* transition: opacity 0.05s; */
+        }
+
+        .char-img.active {
+            opacity: 1;
+        }
+
+        /* ── TOP BAR ── */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.80) 0%, transparent 100%);
+            z-index: 10;
+        }
+
+        #game-title {
+            font-family: 'Cinzel', serif;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: #f5d898;
+            text-shadow: 0 0 18px rgba(245, 160, 30, 0.9), 0 0 5px rgba(0, 0, 0, 0.9);
+        }
+
+        .top-btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .top-btn {
+            background: rgba(40, 20, 5, 0.45);
+            border: 1.5px solid rgba(220, 150, 50, 0.30);
+            color: #f0d8a8;
+            padding: 12px 28px;
+            border-radius: 28px;
+            font-size: 19px;
+            font-family: 'Noto Sans TC', sans-serif;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s, border-color 0.2s, transform 0.15s, color 0.2s;
+        }
+
+        .top-btn:hover {
+            background: rgba(200, 100, 20, 0.40);
+            border-color: rgba(230, 160, 40, 0.80);
+            color: #fff0cc;
+            transform: translateY(-2px);
+        }
+
+        .top-btn.active {
+            background: rgba(200, 100, 20, 0.55);
+            border-color: #e09030;
+        }
+
+        /* ── CHAPTER BADGE ── */
+        #chapter-badge {
+            position: absolute;
+            top: 76px;
+            left: 24px;
+            background: linear-gradient(135deg, rgba(60, 25, 5, 0.90), rgba(25, 10, 2, 0.90));
+            border: 2px solid rgba(220, 140, 40, 0.50);
+            border-radius: 12px;
+            padding: 14px 26px;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        #chapter-badge .ch-label {
+            font-size: 15px;
+            color: #c8903a;
+            letter-spacing: 4px;
+            font-family: 'Cinzel', serif;
+        }
+
+        #chapter-badge .ch-title {
+            font-size: 24px;
+            color: #f0d8a0;
+            margin-top: 6px;
+            font-weight: 700;
+        }
+
+        /* ── QUICK ACTIONS ── */
+        #quick-actions {
+            position: absolute;
+            right: 24px;
+            top: 76px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .qa-btn {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: rgba(20, 8, 0, 0.65);
+            border: 2px solid rgba(220, 140, 40, 0.32);
+            color: #f0cc80;
+            font-size: 28px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .qa-btn:hover {
+            background: rgba(180, 80, 10, 0.60);
+            border-color: #e09030;
+            transform: scale(1.12);
+            box-shadow: 0 0 18px rgba(220, 130, 20, 0.6);
+        }
+
+        .qa-btn .tooltip {
+            position: absolute;
+            right: 76px;
+            background: rgba(30, 10, 0, 0.95);
+            color: #f0d898;
+            font-size: 15px;
+            white-space: nowrap;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(220, 140, 40, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .qa-btn:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* ══════════════════════════════════════════
+           CHOICE PANEL (left side, vertical list)
+        ══════════════════════════════════════════ */
+        #choice-panel {
+            position: absolute;
+            left: 48px;
+            top: 50%;
+            transform: translateY(-50%) translateX(-160px);
+            width: 520px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+        }
+
+        #choice-panel.visible {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .choice-label {
+            font-size: 22px;
+            color: #d4a050;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 0 14px rgba(220, 140, 30, 0.85);
+        }
+
+        .choice-btn {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: linear-gradient(135deg, rgba(40, 15, 2, 0.82), rgba(15, 6, 0, 0.82));
+            border: 2px solid rgba(200, 120, 30, 0.38);
+            border-radius: 16px;
+            padding: 20px 24px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.22s;
+            text-align: left;
+            width: 100%;
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        .choice-btn:hover {
+            background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
+            border-color: rgba(240, 170, 50, 0.80);
+            transform: translateX(8px);
+            box-shadow: 0 0 22px rgba(210, 120, 20, 0.50);
+        }
+
+        .choice-num {
+            min-width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b05010, #7a2e00);
+            color: #ffe8b0;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 12px rgba(210, 110, 20, 0.6);
+        }
+
+        .choice-text {
+            font-size: 20px;
+            color: #f5e8c8;
+            line-height: 1.55;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 0.8);
+            letter-spacing: 0.5px;
+        }
+
+        /* ── DIALOGUE AREA ── */
+        #dialogue-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 160px;
+            z-index: 20;
+        }
+
+        /* Glass backdrop — warm semi-transparent */
+        #dialogue-box {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom,
+                    rgba(15, 6, 0, 0.42) 0%,
+                    rgba(30, 10, 0, 0.62) 100%);
+            backdrop-filter: blur(6px);
+            border-top: 1px solid rgba(200, 120, 30, 0.38);
+        }
+
+        /* Warm neon top line */
+        #dialogue-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 4%;
+            right: 4%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e08020, #ffd060, #e08020, transparent);
+            box-shadow: 0 0 14px rgba(220, 140, 20, 0.85);
+        }
+
+        /* Name plate */
+        #speaker-plate {
+            position: absolute;
+            top: -40px;
+            left: 40px;
+            background: linear-gradient(135deg, #8b3200, #c06010);
+            border: 2px solid rgba(240, 170, 60, 0.60);
+            border-radius: 12px 12px 0 0;
+            padding: 10px 36px 6px;
+            font-size: 24px;
+            font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif;
+            font-weight: 700;
+            color: #fff0cc;
+            letter-spacing: 4px;
+            text-shadow: 0 0 12px rgba(240, 160, 40, 0.9);
+            box-shadow: 0 -5px 22px rgba(160, 70, 10, 0.60);
+        }
+
+        /* Dialogue text + inline blinking cursor */
+        #dialogue-text {
+            position: absolute;
+            top: 32px;
+            left: 40px;
+            right: 40px;
+            bottom: 52px;
+            font-size: 26px;
+            /* Increased from 22px to 26px */
+            line-height: 1.75;
+            color: #f8efd8;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 1);
+            letter-spacing: 1px;
+        }
+
+        /* Inline typing cursor — only visible while .typing class is present */
+        #dialogue-text.typing::after {
+            content: '▌';
+            color: #f0ae40;
+            text-shadow: 0 0 10px rgba(220, 140, 20, 0.95);
+            animation: cursorBlink 0.65s steps(1) infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes cursorBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* ▼ end-of-line indicator — shown when NOT typing */
+        #next-indicator {
+            position: absolute;
+            right: 32px;
+            bottom: 58px;
+            font-size: 16px;
+            color: #f0ae40;
+            text-shadow: 0 0 10px rgba(220, 140, 20, 0.9);
+            opacity: 0;
+            transition: opacity 0.2s;
+            animation: arrowBlink 0.9s ease-in-out infinite;
+        }
+
+        /* Show ▼ only when NOT typing */
+        #dialogue-text:not(.typing)~#next-indicator {
+            opacity: 1;
+        }
+
+        @keyframes arrowBlink {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            30% {
+                transform: translateY(4px);
+                opacity: 0.25;
+            }
+        }
+
+        /* ── BOTTOM CONTROLS BAR ── */
+        #controls-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            border-top: 1px solid rgba(200, 120, 30, 0.22);
+        }
+
+        .ctrl-btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ctrl-btn {
+            background: rgba(40, 15, 0, 0.45);
+            border: 1.5px solid rgba(200, 120, 30, 0.28);
+            color: #e8c880;
+            padding: 7px 18px;
+            border-radius: 18px;
+            font-size: 14px;
+            font-family: 'Noto Serif TC', serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(160, 65, 10, 0.45);
+            border-color: rgba(230, 150, 40, 0.75);
+            color: #fff0c0;
+            transform: translateY(-1px);
+        }
+
+        .ctrl-btn.primary {
+            background: linear-gradient(135deg, rgba(150, 55, 10, 0.80), rgba(100, 35, 5, 0.80));
+            border-color: rgba(230, 150, 40, 0.55);
+            color: #fff0cc;
+        }
+
+        .ctrl-btn.primary:hover {
+            background: linear-gradient(135deg, rgba(190, 75, 15, 0.90), rgba(130, 50, 8, 0.90));
+            box-shadow: 0 0 18px rgba(210, 110, 20, 0.55);
+        }
+
+        /* ── TITLE AND DEATH SCREENS ── */
+        .overlay-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            opacity: 1;
+            transition: opacity 1s ease;
+        }
+
+        .overlay-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #title-screen h1 {
+            font-family: 'Cinzel', 'Noto Serif TC', serif;
+            font-size: 64px;
+            color: #f5d898;
+            margin-bottom: 40px;
+            text-shadow: 0 0 30px rgba(245, 160, 30, 0.8);
+            letter-spacing: 8px;
+        }
+
+        #start-btn {
+            background: transparent;
+            border: 2px solid rgba(245, 160, 30, 0.8);
+            color: #f5d898;
+            font-size: 24px;
+            padding: 16px 48px;
+            border-radius: 36px;
+            cursor: pointer;
+            font-family: 'Noto Serif TC', serif;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(245, 160, 30, 0.3) inset, 0 0 15px rgba(245, 160, 30, 0.3);
+        }
+
+        #start-btn:hover {
+            background: rgba(245, 160, 30, 0.2);
+            box-shadow: 0 0 25px rgba(245, 160, 30, 0.6) inset, 0 0 25px rgba(245, 160, 30, 0.6);
+            transform: scale(1.05);
+        }
+
+        #death-screen {
+            background: #000;
+            pointer-events: none;
+        }
+
+        #death-screen:not(.hidden) {
+            pointer-events: auto;
+            /* Catch clicks so they don't hit game-container */
+        }
+
+        #death-text {
+            color: #cc0000;
+            font-size: 56px;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: bold;
+            letter-spacing: 12px;
+            text-shadow: 0 0 20px #ff0000;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        #death-screen.show-text #death-text {
+            opacity: 1;
+        }
+
+        /* ── MAP OVERLAY ── */
+        #map-overlay {
+            background: rgba(10, 5, 0, 0.90);
+            backdrop-filter: blur(8px);
+        }
+
+        #map-overlay img {
+            max-width: 90%;
+            max-height: 85%;
+            border: 2px solid rgba(220, 140, 40, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(180, 90, 10, 0.6);
+        }
+
+        #close-map {
+            position: absolute;
+            top: 40px;
+            right: 60px;
+            background: rgba(200, 50, 0, 0.8);
+            color: #fff;
+            border: 2px solid rgba(255, 100, 50, 0.8);
+            font-size: 24px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        #close-map:hover {
+            transform: scale(1.1);
+            background: rgba(255, 80, 20, 0.9);
+        }
+
+        /* ── LOADING BAR ── */
+        #loading-container {
+            width: 300px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.4s;
+        }
+
+        #loading-text {
+            color: #f5d898;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        #loading-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid rgba(220, 150, 40, 0.3);
+        }
+
+        #loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #d4a050, #ffcc66);
+            transition: width 0.3s ease;
+        }
+
+        /* ── HISTORY OVERLAY ── */
+        #history-overlay {
+            background: rgba(15, 8, 5, 0.95);
+            backdrop-filter: blur(12px);
+        }
+
+        #history-panel {
+            width: 700px;
+            height: 80vh;
+            background: linear-gradient(160deg, rgba(40, 15, 5, 0.9), rgba(15, 6, 2, 0.9));
+            border: 1.5px solid rgba(220, 140, 40, 0.6);
+            border-radius: 16px;
+            padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(160, 80, 10, 0.5);
+        }
+
+        #history-panel h2 {
+            font-family: 'Cinzel', 'Noto Serif TC', serif;
+            color: #f0c060;
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(220, 150, 20, 0.8);
+        }
+
+        #history-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Custom scrollbar for history */
+        #history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #history-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        #history-list::-webkit-scrollbar-thumb {
+            background: rgba(200, 120, 30, 0.5);
+            border-radius: 4px;
+        }
+
+        .history-entry {
+            border-bottom: 1px solid rgba(220, 140, 40, 0.2);
+            padding-bottom: 12px;
+        }
+
+        .history-speaker {
+            color: #d4a050;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .history-text {
+            color: #f5e8c8;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .history-choice {
+            font-style: italic;
+            color: #a0f0a0;
+        }
+
+        #close-history {
+            margin-top: 24px;
+            align-self: center;
+            background: linear-gradient(135deg, #8b3200, #c06010);
+            border: 1.5px solid rgba(240, 170, 60, 0.55);
+            color: #fff0cc;
+            padding: 10px 40px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-family: 'Noto Serif TC', serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #close-history:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(220, 130, 20, 0.7);
+        }
+
+        /* ── SETTINGS PANEL OVERLAY ── */
+        #settings-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(8, 3, 0, 0.88);
+            backdrop-filter: blur(18px);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #settings-overlay.open {
+            display: flex;
+            opacity: 1;
+        }
+
+        #settings-panel {
+            width: 540px;
+            background: linear-gradient(160deg, rgba(45, 15, 2, 0.97), rgba(15, 5, 0, 0.97));
+            border: 1.5px solid rgba(210, 130, 40, 0.45);
+            border-radius: 18px;
+            padding: 36px 44px;
+            box-shadow: 0 0 60px rgba(180, 90, 10, 0.45);
+        }
+
+        #settings-panel h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 18px;
+            color: #f0c060;
+            letter-spacing: 4px;
+            margin-bottom: 28px;
+            text-align: center;
+            text-shadow: 0 0 14px rgba(220, 150, 20, 0.8);
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .setting-label {
+            color: #d4a860;
+            font-size: 15px;
+            letter-spacing: 1px;
+        }
+
+        .setting-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 220px;
+            height: 5px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #c06010 var(--val, 70%), rgba(255, 255, 255, 0.12) var(--val, 70%));
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setting-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #f0a030;
+            box-shadow: 0 0 10px rgba(220, 140, 20, 0.85);
+            cursor: pointer;
+        }
+
+        .setting-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tog-btn {
+            padding: 6px 16px;
+            border-radius: 14px;
+            border: 1.5px solid rgba(200, 120, 30, 0.38);
+            background: transparent;
+            color: #b08040;
+            font-size: 13px;
+            font-family: 'Noto Serif TC', serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tog-btn.on {
+            background: linear-gradient(135deg, #8b3200, #c06010);
+            border-color: rgba(240, 170, 60, 0.60);
+            color: #fff0cc;
+        }
+
+        .setting-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(210, 130, 40, 0.40), transparent);
+            margin: 20px 0;
+        }
+
+        #close-settings {
+            display: block;
+            margin: 26px auto 0;
+            padding: 11px 48px;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #8b3200, #c06010);
+            border: 1.5px solid rgba(240, 170, 60, 0.55);
+            color: #fff0cc;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 0 18px rgba(160, 75, 10, 0.55);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        #close-settings:hover {
+            box-shadow: 0 0 28px rgba(220, 130, 20, 0.75);
+            transform: scale(1.04);
+        }
+
+        /* ── CLICK RIPPLE ── */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(220, 130, 20, 0.22);
+            transform: scale(0);
+            animation: rippleAnim 0.55s ease-out forwards;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes rippleAnim {
+            to {
+                transform: scale(5);
+                opacity: 0;
+            }
+        }
+
+        /* ── NOTIFICATION TOAST ── */
+        #toast {
+            position: absolute;
+            top: 76px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-90px);
+            background: rgba(25, 8, 0, 0.95);
+            border: 1.5px solid rgba(210, 130, 40, 0.55);
+            color: #f0d898;
+            font-size: 14px;
+            padding: 10px 24px;
+            border-radius: 22px;
+            z-index: 60;
+            transition: transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* hide next-indicator & controls-bar during choices */
+        #dialogue-area.choices-mode #next-indicator,
+        #dialogue-area.choices-mode #controls-bar {
+            display: none;
+        }
+
+        /* ── MOBILE RESPONSIVE (iPhone Standard) ── */
+        @media (max-width: 430px) {
+            #top-bar {
+                top: 15px;
+                left: 10px;
+                right: 10px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            #game-title {
+                font-size: 14px;
+                padding: 4px 12px;
+            }
+
+            .top-btn {
+                padding: 6px 14px;
+                font-size: 13px;
+            }
+
+            #chapter-badge {
+                top: auto;
+                bottom: 240px;
+                left: 10px;
+                transform: none;
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .ch-label {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+
+            .ch-title {
+                margin-top: 0;
+                font-size: 14px;
+                letter-spacing: 1px;
+            }
+
+            #quick-actions {
+                top: auto;
+                bottom: 240px;
+                right: 10px;
+                gap: 12px;
+                transform: none;
+            }
+
+            .qa-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
+            }
+
+            #dialogue-area {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+            }
+
+            #choice-panel {
+                top: auto;
+                bottom: 190px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                gap: 10px;
+                transform: translateY(20px);
+            }
+
+            #choice-panel.visible {
+                transform: translateY(0);
+            }
+
+            #dialogue-box {
+                padding: 24px 18px 50px;
+                min-height: 120px;
+            }
+
+            #dialogue-text {
+                font-size: 17px;
+                line-height: 1.6;
+            }
+
+            #speaker-plate {
+                top: -18px;
+                left: -10px;
+                font-size: 16px;
+                padding: 4px 16px;
+            }
+
+            .ctrl-btn {
+                padding: 6px 14px;
+                font-size: 13px;
+            }
+
+            .choice-label {
+                font-size: 16px;
+            }
+
+            .choice-btn {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+
+            #history-panel {
+                width: 90%;
+                height: 85vh;
+                padding: 20px 20px;
+            }
+
+            #history-panel h2 {
+                font-size: 20px;
+                margin-bottom: 12px;
+            }
+
+            .history-text {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Audio -->
+    <audio id="bgm" src="UFP_120_Fmin_Kit_3_Nature.mp3" loop preload="auto"></audio>
+    <audio id="sfx-death" src="TSP_NOISIA_fx_dist_fail_stab_mooi_toon.mp3" preload="auto"></audio>
+
+    <div id="game-container">
+
+        <!-- Background -->
+        <div id="bg"></div>
+        <div id="vignette"></div>
+
+        <!-- Particles -->
+        <div id="particles-container"></div>
+
+        <!-- Character -->
+        <div id="character-container">
+            <img src="no speak.jpg" id="char-idle" class="char-img active" alt="Idle" />
+            <img src="blank.jpg" id="char-blink" class="char-img" alt="Blink" />
+            <img src="speak.jpg" id="char-speak" class="char-img" alt="Speak" />
+            <img src="angry.jpg" id="char-angry" class="char-img" alt="Angry" />
+        </div>
+
+        <!-- Top bar -->
+        <div id="top-bar">
+            <div id="game-title" class="lang-ui-gameTitle">大安森林公園 ‧ 草地</div>
+            <div class="top-btn-group">
+                <button class="top-btn" id="lang-btn-gear" onclick="openSettings()">⚙ 設定</button>
+            </div>
+        </div>
+
+        <!-- Chapter badge -->
+        <div id="chapter-badge">
+            <div class="ch-label">CHAPTER 01</div>
+            <div class="ch-title" id="lang-ui-chapTitle">初次邂逅</div>
+        </div>
+
+        <!-- Quick action buttons -->
+        <div id="quick-actions">
+            <div class="qa-btn" onclick="openSocial()"><img src="fox-face_1f98a.png" alt="Social Media"
+                    style="width:36px;height:36px;object-fit:contain;display:block;">
+                <span class="tooltip" id="lang-ui-social">社群媒體</span>
+            </div>
+            <div class="qa-btn" id="audio-toggle-btn" onclick="toggleAudioGlobal()">🎵
+                <span class="tooltip" id="lang-ui-audio">音樂 (開)</span>
+            </div>
+            <div class="qa-btn" onclick="openHistory()">📜
+                <span class="tooltip" id="lang-ui-history">對話紀錄</span>
+            </div>
+            <div class="qa-btn" onclick="openMap()">🗺
+                <span class="tooltip" id="lang-ui-map">地圖</span>
+            </div>
+        </div>
+
+        <!-- Choice panel (left side) -->
+        <div id="choice-panel">
+            <div class="choice-label">— 選擇你的行為 —</div>
+            <button class="choice-btn" onclick="pickChoice(0)">
+                <span class="choice-num">1</span>
+                <span class="choice-text">撲過去摸尾巴UwU</span>
+            </button>
+            <button class="choice-btn" onclick="pickChoice(1)">
+                <span class="choice-num">2</span>
+                <span class="choice-text">抱住摸肚肚</span>
+            </button>
+            <button class="choice-btn" onclick="pickChoice(2)">
+                <span class="choice-num">3</span>
+                <span class="choice-text">摸摸OO</span>
+            </button>
+            <button class="choice-btn" onclick="pickChoice(3)">
+                <span class="choice-num">4</span>
+                <span class="choice-text">推倒在草地上</span>
+            </button>
+        </div>
+
+        <!-- Dialogue area -->
+        <div id="dialogue-area">
+            <div id="dialogue-box">
+                <div id="speaker-plate">提爾狐</div>
+                <div id="dialogue-text"></div>
+                <div id="next-indicator">▼</div>
+
+                <!-- Bottom controls -->
+                <div id="controls-bar">
+                    <div class="ctrl-btn-group">
+                        <button class="ctrl-btn" id="lang-btn-prev" onclick="prevLine()">◀ 上一句</button>
+                        <button class="ctrl-btn" id="lang-btn-hist" onclick="openHistory()">紀錄</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"></div>
+
+        <!-- Settings overlay -->
+        <div id="settings-overlay" onclick="handleSettingsClick(event)">
+            <div id="settings-panel" onclick="event.stopPropagation()">
+                <h2 id="lang-ui-settings-title">⚙ 遊戲設定</h2>
+
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-text-speed">文字速度</span>
+                    <input type="range" class="setting-slider" id="text-speed" min="1" max="10" value="5"
+                        oninput="updateSlider(this)" style="--val:50%">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-bgm">BGM 音量</span>
+                    <input type="range" class="setting-slider" id="bgm-vol" min="0" max="100" value="70"
+                        oninput="updateSlider(this)" style="--val:70%">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-sfx">音效音量</span>
+                    <input type="range" class="setting-slider" id="sfx-vol" min="0" max="100" value="80"
+                        oninput="updateSlider(this)" style="--val:80%">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-voice">語音音量</span>
+                    <input type="range" class="setting-slider" id="voice-vol" min="0" max="100" value="90"
+                        oninput="updateSlider(this)" style="--val:90%">
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-fullscreen">全螢幕顯示</span>
+                    <div class="setting-toggle">
+                        <button class="tog-btn" id="tog-fs-off" onclick="setToggle('fs','off')">關閉</button>
+                        <button class="tog-btn on" id="tog-fs-on"
+                            onclick="setToggle('fs','on');toggleFullscreen()">開啟</button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-lang">字幕語言</span>
+                    <div class="setting-toggle">
+                        <button class="tog-btn on" id="tog-lang-tw" onclick="setLanguage('tw')">繁中</button>
+                        <button class="tog-btn" id="tog-lang-jp" onclick="setLanguage('jp')">日本語</button>
+                        <button class="tog-btn" id="tog-lang-en" onclick="setLanguage('en')">EN</button>
+                    </div>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <button id="close-settings" onclick="closeSettings()">關閉設定</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Title Screen -->
+    <div id="title-screen" class="overlay-screen">
+
+        <div class="setting-toggle" style="margin-bottom: 40px; transform: scale(1.2);">
+            <button class="tog-btn on" id="title-lang-tw" onclick="setLanguage('tw')">繁中</button>
+            <button class="tog-btn" id="title-lang-jp" onclick="setLanguage('jp')">日本語</button>
+            <button class="tog-btn" id="title-lang-en" onclick="setLanguage('en')">EN</button>
+        </div>
+
+        <div id="loading-container">
+            <div id="loading-text">Loading Assets... 0%</div>
+            <div id="loading-bar-bg">
+                <div id="loading-bar-fill"></div>
+            </div>
+        </div>
+
+        <button id="start-btn" onclick="startGame()" style="display: none; margin-top: 20px;">開始</button>
+    </div>
+
+    <!-- Death Screen -->
+    <div id="death-screen" class="overlay-screen hidden">
+        <div id="death-text">你被咬死了</div>
+    </div>
+
+    <!-- Map View -->
+    <div id="map-overlay" class="overlay-screen hidden" onclick="closeMap()">
+        <button id="close-map" onclick="closeMap(event)">×</button>
+        <img src="ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg" alt="Map" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- History Panel -->
+    <div id="history-overlay" class="overlay-screen hidden" onclick="handleHistoryClick(event)">
+        <div id="history-panel" onclick="event.stopPropagation()">
+            <h2 id="lang-ui-hist-title">📜 對話紀錄</h2>
+            <div id="history-list">
+                <!-- Records injected here -->
+            </div>
+            <button id="close-history" onclick="closeHistory()">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        // ── Audio Engine ──────────────────────────────────────────────────
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioMuted = false;
+
+        function toggleAudioGlobal() {
+            audioMuted = !audioMuted;
+            const btn = document.getElementById('audio-toggle-btn');
+
+            if (audioMuted) {
+                document.getElementById('bgm').pause();
+                btn.innerHTML = `🔇\n                <span class=\"tooltip\" id=\"lang-ui-audio\">${l10n[currentLang].ui.audioOff}</span>`;
+            } else {
+                ensureAudio();
+                document.getElementById('bgm').play().catch(() => { });
+                btn.innerHTML = `🎵\n                <span class=\"tooltip\" id=\"lang-ui-audio\">${l10n[currentLang].ui.audioOn}</span>`;
+            }
+        }
+
+        // Tiny synth tap: short band-pass burst → typewriter feel
+        function playTap() {
+            if (audioMuted) return;
+            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            if (vol === 0) return;
+            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.18));
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 3200;
+            filter.Q.value = 1.2;
+            const gain = audioCtx.createGain();
+            gain.gain.value = vol * 0.13;
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            src.start();
+        }
+
+        // Soft hover blip: short sine fade
+        function playHover() {
+            if (audioMuted) return;
+            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            if (vol === 0) return;
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.06);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(vol * 0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.09);
+        }
+
+        // Click confirm tone: two-tone short blip
+        function playClick() {
+            if (audioMuted) return;
+            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            if (vol === 0) return;
+            [520, 760].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const gain = audioCtx.createGain();
+                const t = audioCtx.currentTime + i * 0.05;
+                gain.gain.setValueAtTime(vol * 0.08, t);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 0.1);
+            });
+        }
+
+        // Resume AudioContext on first interaction (browser policy)
+        function ensureAudio() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // BGM
+        const bgmEl = document.getElementById('bgm');
+        function startBGM() {
+            if (audioMuted) return;
+            ensureAudio();
+            const vol = parseFloat(document.getElementById('bgm-vol').value) / 100;
+            bgmEl.volume = vol;
+            bgmEl.play().catch(() => { });
+        }
+
+        // Wire hover/click SFX to all buttons and qa-btns after DOM ready
+        function wireSfx() {
+            document.querySelectorAll('button, .qa-btn, .choice-btn').forEach(el => {
+                el.addEventListener('mouseenter', () => { ensureAudio(); playHover(); });
+                el.addEventListener('click', () => { ensureAudio(); playClick(); });
+            });
+        }
+
+        // ── Particles Generation ──────────────────────────────────────────
+        function createParticles() {
+            const container = document.getElementById('particles-container');
+            const particleCount = 45; // Amount of floating particles
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+
+                // Random size between 2px and 4px
+                const size = Math.random() * 2 + 2;
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+
+                // Random position
+                p.style.left = `${Math.random() * 100}%`;
+                p.style.top = `${Math.random() * 100}%`;
+
+                // Random animation delay and duration
+                const duration = Math.random() * 8 + 6; // 6s to 14s
+                const delay = Math.random() * 14;
+
+                p.style.animationDuration = `${duration}s`;
+                p.style.animationDelay = `-${delay}s`;
+
+                // Random horizontal drift
+                const xDrift = (Math.random() - 0.5) * 80;
+                p.style.setProperty('--x-drift', `${xDrift}px`);
+
+                container.appendChild(p);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            wireSfx();
+            createParticles();
+            startAssetLoader();
+        });
+
+        // Also start BGM on first click anywhere
+        document.addEventListener('click', startBGM, { once: true });
+
+        // ── Dialogue Script & L10n ────────────────────────────────────
+        let currentLang = 'tw';
+
+        const l10n = {
+            tw: {
+                startBtn: '開始',
+                deathText: '你被咬死了',
+                speaker: '提爾狐',
+                lines: [
+                    '你真的不是什麼奇怪獸人控嗎？',
+                    '哪有第一次見面就說要跟我回家的...',
+                    '先說好等等不准碰我的尾巴!',
+                    '亂摸我會...咬你喔!!',
+                    '你...想幹什麼？'
+                ],
+                choiceTitle: '— 選擇你的行為 —',
+                choices: [
+                    '撲過去摸尾巴UwU',
+                    '抱住摸肚肚',
+                    '摸摸OO',
+                    '推倒在草地上'
+                ],
+                responses: [
+                    '不行!!(咬咬咬)',
+                    '什..什麼？',
+                    '不行! 變態!!!',
+                    '救命阿阿阿'
+                ],
+                ui: {
+                    docTitle: '大安森林公園 - 草地', gameTitle: '大安森林公園 ‧ 草地',
+                    save: '存檔', load: '讀檔', autoBtn: '自動', skip: '跳過', gearBtn: '⚙ 設定', chapTitle: '初次邂逅',
+                    cg: 'CG 圖庫', audioOn: '音樂 (開)', audioOff: '音樂 (關)', history: '對話紀錄', map: '地圖',
+                    prev: '◀ 上一句', histBtn: '紀錄',
+                    histTitle: '📜 對話紀錄', closeHist: '關閉',
+                    settingTitle: '⚙ 遊戲設定', textSpeed: '文字速度', bgm: 'BGM 音量', sfx: '音效音量', voice: '語音音量',
+                    fullScreen: '全螢幕顯示', lang: '字幕語言', closeSet: '關閉設定',
+                    on: '開啟', off: '關閉', tw: '繁中', jp: '日本語', en: 'EN',
+                    socialPrompt: '是否要前往 TERU FOX 的社群媒體頁面？', social: '社群媒體',
+                    toastSave: '📂 已存檔', toastLoad: '📖 讀取中...', toastSkip: '⏩ 快進模式', toastAutoOn: '▶ 自動播放 ON',
+                    toastAutoOff: '⏸ 自動播放 OFF', toastContinue: '✨ 故事繼續中...', noHistory: '暫無紀錄...'
+                }
+            },
+            en: {
+                startBtn: 'Start',
+                deathText: 'You were bitten to death',
+                speaker: 'Teru Fox',
+                lines: [
+                    'Are you seriously not some weird furry?',
+                    'Who asks to go home with me right after meeting...',
+                    'And absolutely NO touching my tail!',
+                    'If you touch it, I will... bite you!!',
+                    'W-What are you trying to do?'
+                ],
+                choiceTitle: '— Choose your action —',
+                choices: [
+                    'Pounce and touch the tail UwU',
+                    'Hug and rub the belly',
+                    'Touch the OO',
+                    'Push down onto the grass'
+                ],
+                responses: [
+                    'No!! (bite bite bite)',
+                    'W..What?',
+                    'No! Pervert!!!',
+                    'Help meee'
+                ],
+                ui: {
+                    docTitle: "Da'an Forest Park - Meadow", gameTitle: "Da'an Forest Park ‧ Meadow",
+                    save: 'Save', load: 'Load', skip: 'Skip', gearBtn: '⚙ Settings', chapTitle: 'First Encounter',
+                    audioOn: 'Music (On)', audioOff: 'Music (Off)', history: 'Log', map: 'Map',
+                    prev: '◀ Prev', histBtn: 'Log',
+                    histTitle: '📜 Dialogue Log', closeHist: 'Close',
+                    settingTitle: '⚙ Settings', textSpeed: 'Text Speed', bgm: 'BGM Vol', sfx: 'SFX Vol', voice: 'Voice Vol',
+                    fullScreen: 'Fullscreen', lang: 'Language', closeSet: 'Close Settings',
+                    on: 'On', off: 'Off', tw: 'TW', jp: 'JP', en: 'EN',
+                    socialPrompt: "Would you like to visit TERU FOX's social media page?", social: 'Social',
+                    toastSave: '📂 Saved', toastLoad: '📖 Loading...', toastSkip: '⏩ Skipping', toastAutoOn: '▶ Auto Play ON',
+                    toastAutoOff: '⏸ Auto Play OFF', toastContinue: '✨ Story continues...', noHistory: 'No history...'
+                }
+            },
+            jp: {
+                startBtn: 'スタート',
+                deathText: '噛み殺されました',
+                speaker: 'テルキツネ',
+                lines: [
+                    'あなた、本当に変なケモラーじゃないよね？',
+                    '初対面で一緒に帰ろうなんて...',
+                    '言っておくけど、しっぽは絶対に触らないで！',
+                    '勝手に触ったら...噛むからね!!',
+                    'な...何をするつもり？'
+                ],
+                choiceTitle: '— どうする？ —',
+                choices: [
+                    '飛びかかってしっぽを触る UwU',
+                    '抱きしめてお腹を撫でる',
+                    'OOを触る',
+                    '草地に押し倒す'
+                ],
+                responses: [
+                    'ダメ!! (ガブガブッ)',
+                    'えっ..何？',
+                    'ダメ！変態!!!',
+                    '助けてぇぇぇ'
+                ],
+                ui: {
+                    docTitle: '大安森林公園 - 芝生', gameTitle: '大安森林公園 ‧ 芝生',
+                    save: 'セーブ', load: 'ロード', skip: 'スキップ', gearBtn: '⚙ 設定', chapTitle: '初めての出会い',
+                    audioOn: '音楽 (オン)', audioOff: '音楽 (オフ)', history: '履歴', map: 'マップ',
+                    prev: '◀ 戻る', histBtn: '履歴',
+                    histTitle: '📜 会話の履歴', closeHist: '閉じる',
+                    settingTitle: '⚙ 設定', textSpeed: 'テキスト速度', bgm: 'BGM音量', sfx: 'SE音量', voice: 'ボイス音量',
+                    fullScreen: '全画面表示', lang: '言語', closeSet: '設定を閉じる',
+                    on: 'オン', off: 'オフ', tw: 'TW', jp: 'JP', en: 'EN',
+                    socialPrompt: 'TERU FOXのソーシャルメディアへ移動しますか？', social: 'ソーシャル',
+                    toastSave: '📂 セーブ完了', toastLoad: '📖 ロード中...', toastSkip: '⏩ スキップモード', toastAutoOn: '▶ オートON',
+                    toastAutoOff: '⏸ オートOFF', toastContinue: '✨ 物語は続く...', noHistory: '記録がありません...'
+                }
+            }
+        };
+
+        const script = [
+            { type: 'line' },
+            { type: 'line' },
+            { type: 'line' },
+            { type: 'line' },
+            { type: 'line' },
+            { type: 'choice' },
+        ];
+
+        let lineIndex = 0;
+        let charIndex = 0;
+        let typeTimer = null;
+        let isTyping = false;
+        let autoPlay = false;
+        let textSpeedMs = 45;
+        let inChoiceMode = false;
+
+        // Character Animation State
+        let isSpeaking = false;
+        let isAngry = false;
+        let blinkTimeout = null;
+        let speakInterval = null;
+
+        const charIdle = document.getElementById('char-idle');
+        const charBlink = document.getElementById('char-blink');
+        const charSpeak = document.getElementById('char-speak');
+        const charAngry = document.getElementById('char-angry');
+
+        const dialogueText = document.getElementById('dialogue-text');
+        const speakerPlate = document.getElementById('speaker-plate');
+        const dialogueArea = document.getElementById('dialogue-area');
+        const choicePanel = document.getElementById('choice-panel');
+        // const totalDots = script.length; (Removed)
+
+        function setCharState(state) {
+            charIdle.classList.remove('active');
+            charBlink.classList.remove('active');
+            charSpeak.classList.remove('active');
+            if (charAngry) charAngry.classList.remove('active');
+
+            if (isAngry) {
+                if (charAngry) charAngry.classList.add('active');
+                return;
+            }
+
+            if (state === 'idle') charIdle.classList.add('active');
+            else if (state === 'blink') charBlink.classList.add('active');
+            else if (state === 'speak') charSpeak.classList.add('active');
+            else if (state === 'angry') { if (charAngry) charAngry.classList.add('active'); }
+        }
+
+        function scheduleNextBlink() {
+            if (isSpeaking) return;
+            // Human-like blink interval: 2s to 6s
+            const nextBlinkTime = 2000 + Math.random() * 4000;
+            blinkTimeout = setTimeout(() => {
+                if (isSpeaking) return;
+                setCharState('blink');
+                setTimeout(() => {
+                    if (isSpeaking) return;
+                    setCharState('idle');
+                    // 20% chance for a quick double blink
+                    if (Math.random() < 0.2) {
+                        setTimeout(() => {
+                            if (isSpeaking) return;
+                            setCharState('blink');
+                            setTimeout(() => {
+                                if (isSpeaking) return;
+                                setCharState('idle');
+                                scheduleNextBlink();
+                            }, 100);
+                        }, 100);
+                    } else {
+                        scheduleNextBlink();
+                    }
+                }, 100); // 100ms blink duration
+            }, nextBlinkTime);
+        }
+
+        function startSpeakingAnimation() {
+            if (speakInterval) clearInterval(speakInterval);
+            let mouthOpen = true;
+            setCharState('speak'); // start with mouth open
+            speakInterval = setInterval(() => {
+                mouthOpen = !mouthOpen;
+                setCharState(mouthOpen ? 'speak' : 'idle');
+            }, 120); // Fast toggle every 120ms
+        }
+
+        function stopSpeakingAnimation() {
+            if (speakInterval) {
+                clearInterval(speakInterval);
+                speakInterval = null;
+            }
+        }
+
+        function setTyping(flag) {
+            isTyping = flag;
+            dialogueText.classList.toggle('typing', flag);
+
+            isSpeaking = flag;
+
+            if (isAngry) {
+                stopSpeakingAnimation();
+                clearTimeout(blinkTimeout);
+                setCharState('angry');
+                return;
+            }
+
+            if (isSpeaking) {
+                clearTimeout(blinkTimeout); // Stop blinking when starting to type
+                startSpeakingAnimation();
+            } else {
+                stopSpeakingAnimation();
+                setCharState('idle');
+                scheduleNextBlink(); // Resume blinking when done typing
+            }
+        }
+
+        function renderLine(idx) {
+            const entry = script[idx];
+            const t = l10n[currentLang];
+
+            if (entry.type === 'choice') {
+                inChoiceMode = true;
+                dialogueArea.classList.add('choices-mode');
+                choicePanel.classList.add('visible');
+
+                // Update choice labels
+                document.querySelector('.choice-label').textContent = t.choiceTitle;
+                const choiceBtns = document.querySelectorAll('.choice-btn .choice-text');
+                t.choices.forEach((text, i) => choiceBtns[i].textContent = text);
+
+                return;
+            }
+
+            inChoiceMode = false;
+            dialogueArea.classList.remove('choices-mode');
+            choicePanel.classList.remove('visible');
+            speakerPlate.textContent = t.speaker;
+            dialogueText.textContent = '';
+            charIndex = 0;
+            setTyping(true);
+            clearInterval(typeTimer);
+
+            const lineText = t.lines[idx];
+
+            typeTimer = setInterval(() => {
+                if (charIndex < lineText.length) {
+                    dialogueText.textContent += lineText[charIndex++];
+                    playTap();
+                } else {
+                    clearInterval(typeTimer);
+                    setTyping(false);
+                    // Add to history once complete typing
+                    if (!dialogueHistory.some(r => r.text === lineText && (!r.isChoice))) {
+                        dialogueHistory.push({ speaker: t.speaker, text: lineText, isChoice: false });
+                    }
+                    if (autoPlay && idx < script.length - 1) setTimeout(nextLine, 1800);
+                }
+            }, textSpeedMs);
+        }
+
+        // function updateDots(idx) { ... } (Removed)
+
+        function nextLine() {
+            if (inChoiceMode) return;
+            if (isTyping) {
+                clearInterval(typeTimer);
+                setTyping(false);
+                dialogueText.textContent = script[lineIndex].text;
+                return;
+            }
+            if (lineIndex < script.length - 1) {
+                lineIndex++;
+                renderLine(lineIndex);
+            } else {
+                showToast(l10n[currentLang].ui.toastContinue);
+            }
+        }
+
+        function prevLine() {
+            if (lineIndex > 0) {
+                lineIndex--;
+                renderLine(lineIndex);
+            }
+        }
+
+        let isDeathSequence = false;
+
+        function pickChoice(idx) {
+            inChoiceMode = false;
+            dialogueArea.classList.remove('choices-mode');
+            choicePanel.classList.remove('visible');
+
+            isAngry = true;
+            setCharState('angry');
+
+            const t = l10n[currentLang];
+            const responseText = t.responses[idx];
+
+            // Add user choice to history
+            dialogueHistory.push({ speaker: '', text: t.choices[idx], isChoice: true });
+
+            speakerPlate.textContent = t.speaker;
+            dialogueText.textContent = '';
+            charIndex = 0;
+            setTyping(true);
+            clearInterval(typeTimer);
+
+            typeTimer = setInterval(() => {
+                if (charIndex < responseText.length) {
+                    dialogueText.textContent += responseText[charIndex++];
+                    playTap();
+                } else {
+                    clearInterval(typeTimer);
+                    setTyping(false);
+                    dialogueHistory.push({ speaker: t.speaker, text: responseText, isChoice: false });
+                    isDeathSequence = true;
+
+                    // Trigger death IMMEDIATELY after typing finishes, rather than waiting for another click
+                    triggerDeath();
+                }
+            }, textSpeedMs);
+        }
+
+        function triggerDeath() {
+            const deathScreen = document.getElementById('death-screen');
+            deathScreen.classList.remove('hidden');
+
+            // Stop BGM and play death sound
+            document.getElementById('bgm').pause();
+            if (!audioMuted) {
+                const deathSfx = document.getElementById('sfx-death');
+                deathSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
+                deathSfx.currentTime = 0; // ensure it plays from beginning
+                deathSfx.play().catch(() => { });
+            }
+
+            // Show text after screen turns black
+            setTimeout(() => {
+                deathScreen.classList.add('show-text');
+
+                // Return to title after keeping death screen for a few seconds
+                setTimeout(() => {
+                    deathScreen.classList.remove('show-text');
+                    deathScreen.classList.add('hidden');
+                    returnToTitle();
+                }, 4000);
+            }, 1000);
+        }
+
+        // Click anywhere to advance
+        document.getElementById('game-container').addEventListener('click', function (e) {
+            if (e.target.closest('button, .qa-btn, #settings-overlay, #top-bar, #choice-panel')) return;
+            const r = document.createElement('div');
+            r.className = 'ripple';
+            const rect = this.getBoundingClientRect();
+            r.style.left = (e.clientX - rect.left - 25) + 'px';
+            r.style.top = (e.clientY - rect.top - 25) + 'px';
+            this.appendChild(r);
+            setTimeout(() => r.remove(), 560);
+
+            if (!isDeathSequence && !isTyping) {
+                nextLine();
+            }
+        });
+
+        // Trigger death shortcut if clicking anywhere on the black death screen overlay (to force show text)
+        document.getElementById('death-screen').addEventListener('click', function (e) {
+            // If we've started the sequence but the text hasn't shown up yet, fast-forward it
+            this.classList.add('show-text');
+        });
+
+        // ── Settings ──────────────────────────────────────────────────────
+        const overlay = document.getElementById('settings-overlay');
+        function openSettings() { overlay.style.display = 'flex'; setTimeout(() => overlay.classList.add('open'), 10); }
+        function closeSettings() { overlay.classList.remove('open'); setTimeout(() => overlay.style.display = 'none', 300); }
+        function handleSettingsClick(e) { if (e.target === overlay) closeSettings(); }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            ['tw', 'jp', 'en'].forEach(l => {
+                document.getElementById('tog-lang-' + l).classList.toggle('on', l === lang);
+                const titleBtn = document.getElementById('title-lang-' + l);
+                if (titleBtn) titleBtn.classList.toggle('on', l === lang);
+            });
+            updateUIText();
+
+            // Re-render current line immediately to reflect language change if not in transition
+            if (!isDeathSequence && !isTyping && !inChoiceMode && script[lineIndex]) {
+                const t = l10n[lang];
+                speakerPlate.textContent = t.speaker;
+                dialogueText.textContent = t.lines[lineIndex];
+            } else if (inChoiceMode) {
+                const t = l10n[lang];
+                document.querySelector('.choice-label').textContent = t.choiceTitle;
+                const choiceBtns = document.querySelectorAll('.choice-btn .choice-text');
+                t.choices.forEach((text, i) => choiceBtns[i].textContent = text);
+            }
+        }
+
+        function updateUIText() {
+            const t = l10n[currentLang];
+            const ui = t.ui;
+
+            document.getElementById('lang-ui-docTitle').textContent = ui.docTitle;
+            document.querySelector('.lang-ui-gameTitle').textContent = ui.gameTitle;
+            document.getElementById('lang-btn-gear').textContent = ui.gearBtn;
+            document.getElementById('lang-ui-chapTitle').textContent = ui.chapTitle;
+
+            document.getElementById('start-btn').textContent = t.startBtn;
+            document.getElementById('death-text').textContent = t.deathText;
+
+            document.getElementById('lang-ui-social').textContent = ui.social;
+            document.getElementById('lang-ui-audio').textContent = audioMuted ? ui.audioOff : ui.audioOn;
+            document.getElementById('lang-ui-history').textContent = ui.history;
+            document.getElementById('lang-ui-map').textContent = ui.map;
+
+            document.getElementById('lang-btn-prev').textContent = ui.prev;
+            document.getElementById('lang-btn-hist').textContent = ui.histBtn;
+
+            document.getElementById('lang-ui-hist-title').textContent = ui.histTitle;
+            document.getElementById('close-history').textContent = ui.closeHist;
+
+            document.getElementById('lang-ui-settings-title').textContent = ui.settingTitle;
+            document.getElementById('lang-ui-text-speed').textContent = ui.textSpeed;
+            document.getElementById('lang-ui-bgm').textContent = ui.bgm;
+            document.getElementById('lang-ui-sfx').textContent = ui.sfx;
+            document.getElementById('lang-ui-voice').textContent = ui.voice;
+            document.getElementById('lang-ui-fullscreen').textContent = ui.fullScreen;
+            document.getElementById('lang-ui-auto').textContent = ui.autoPlay;
+            document.getElementById('lang-ui-lang').textContent = ui.lang;
+            document.getElementById('close-settings').textContent = ui.closeSet;
+
+            document.getElementById('tog-fs-off').textContent = ui.off;
+            document.getElementById('tog-fs-on').textContent = ui.on;
+            document.getElementById('tog-lang-tw').textContent = ui.tw;
+            document.getElementById('tog-lang-jp').textContent = ui.jp;
+            document.getElementById('tog-lang-en').textContent = ui.en;
+        }
+
+        function setToggle(group, val) {
+            const map = {
+                fs: { ids: ['tog-fs-off', 'tog-fs-on'], vals: ['off', 'on'] },
+                auto: { ids: ['tog-auto-off', 'tog-auto-on'], vals: ['off', 'on'] }
+            };
+            if (map[group]) {
+                map[group].ids.forEach((id, i) =>
+                    document.getElementById(id).classList.toggle('on', map[group].vals[i] === val)
+                );
+            }
+            if (group === 'auto') autoPlay = (val === 'on');
+        }
+
+        function updateSlider(el) {
+            const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
+            el.style.setProperty('--val', pct);
+            if (el.id === 'text-speed') textSpeedMs = Math.round(90 - el.value * 8);
+            if (el.id === 'bgm-vol') bgmEl.volume = el.value / 100;
+        }
+
+        function toggleAutoPlay(btn) {
+            autoPlay = !autoPlay;
+            btn.classList.toggle('active', autoPlay);
+            showToast(autoPlay ? l10n[currentLang].ui.toastAutoOn : l10n[currentLang].ui.toastAutoOff);
+            if (autoPlay && !isTyping && lineIndex < script.length - 1) setTimeout(nextLine, 1800);
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
+            else document.exitFullscreen();
+        }
+
+        // ── ASSET PRELOADER FOR GITHUB PAGES ──────────────────────────────
+
+        const assetsToLoad = [
+            'no speak.jpg',
+            'blank.jpg',
+            'speak.jpg',
+            'angry.jpg',
+            'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
+            'fox-face_1f98a.png',
+            'UFP_120_Fmin_Kit_3_Nature.mp3',
+            'TSP_NOISIA_fx_dist_fail_stab_mooi_toon.mp3'
+        ];
+
+        let loadedAssetsCount = 0;
+
+        function updateLoaderProgress() {
+            loadedAssetsCount++;
+            const pct = Math.floor((loadedAssetsCount / assetsToLoad.length) * 100);
+            document.getElementById('loading-bar-fill').style.width = pct + '%';
+            document.getElementById('loading-text').textContent = `Loading Assets... ${pct}%`;
+
+            if (loadedAssetsCount >= assetsToLoad.length) {
+                setTimeout(() => {
+                    document.getElementById('loading-container').style.display = 'none';
+                    document.getElementById('start-btn').style.display = 'block';
+                }, 400);
+            }
+        }
+
+        function startAssetLoader() {
+            assetsToLoad.forEach(src => {
+                if (src.endsWith('.wav') || src.endsWith('.mp3')) {
+                    const audio = new Audio();
+                    audio.oncanplaythrough = updateLoaderProgress;
+                    audio.onerror = updateLoaderProgress; // fallback to avoid hard lock
+                    audio.src = src;
+                } else {
+                    const img = new Image();
+                    img.onload = updateLoaderProgress;
+                    img.onerror = updateLoaderProgress;
+                    img.src = src;
+                }
+            });
+        }
+
+        // ── MAP AND HISTORY ──────────────────────────────────────────────
+
+        function openSocial() {
+            if (confirm(l10n[currentLang].ui.socialPrompt)) {
+                window.open('https://www.facebook.com/teru.fox', '_blank');
+            }
+        }
+
+        const mapOverlay = document.getElementById('map-overlay');
+        const histOverlay = document.getElementById('history-overlay');
+
+        function openMap() { mapOverlay.classList.remove('hidden'); }
+        function closeMap(e) { if (e) e.stopPropagation(); mapOverlay.classList.add('hidden'); }
+
+        const dialogueHistory = []; // Stores {speaker, text, isChoice}
+
+        function openHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+
+            if (dialogueHistory.length === 0) {
+                list.innerHTML = `<div class="history-entry"><div class="history-text" style="text-align:center; opacity:0.5;">${l10n[currentLang].ui.noHistory}</div></div>`;
+            } else {
+                dialogueHistory.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'history-entry';
+                    if (r.isChoice) {
+                        div.innerHTML = `<div class="history-text history-choice">► ${r.text}</div>`;
+                    } else {
+                        div.innerHTML = `
+                            <div class="history-speaker">${r.speaker}</div>
+                            <div class="history-text">${r.text}</div>
+                        `;
+                    }
+                    list.appendChild(div);
+                });
+            }
+            histOverlay.classList.remove('hidden');
+
+            // Scroll to bottom
+            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 10);
+        }
+
+        function closeHistory() { histOverlay.classList.add('hidden'); }
+        function handleHistoryClick(e) { if (e.target === histOverlay) closeHistory(); }
+
+        // function showHistory() { showToast('📜 顯示對話紀錄'); } (Replaced by real history panel)
+
+        // ── Game Flow Control ────────────────────────────────────────────
+        function startGame() {
+            ensureAudio();
+            startBGM();
+            document.getElementById('title-screen').classList.add('hidden');
+
+            // Reset game state
+            lineIndex = 0;
+            isDeathSequence = false;
+            isAngry = false;
+            dialogueHistory.length = 0; // Clear history
+            setCharState('idle'); // proper reset
+            renderLine(0);
+        }
+
+        function returnToTitle() {
+            document.getElementById('title-screen').classList.remove('hidden');
+            // Stop logic / reset
+            clearInterval(typeTimer);
+            isDeathSequence = false;
+            isAngry = false;
+            setCharState('idle'); // revert character to idle
+            dialogueText.textContent = ''; // clear text
+        }
+
+        // ── Start ────────────────────────────────────────────────────────
+        scheduleNextBlink();
+        // Do not renderLine(0) immediately, wait for Start
+        // renderLine(0);
+    </script>
+</body>
+
+</html>
