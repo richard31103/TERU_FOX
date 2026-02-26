@@ -45,6 +45,21 @@
             cursor: pointer;
         }
 
+        /* ── Background splash (shows BG.jpg until game starts) ── */
+        #bg-splash {
+            position: absolute;
+            inset: 0;
+            background: url('BG.jpg') center/cover no-repeat;
+            z-index: 6;
+            opacity: 1;
+            transition: opacity 1.4s ease;
+            pointer-events: none;
+        }
+
+        #bg-splash.fade-out {
+            opacity: 0;
+        }
+
         /* ── Background ── */
         #bg {
             position: absolute;
@@ -1280,6 +1295,8 @@
         <!-- Background -->
         <div id="bg"></div>
         <div id="vignette"></div>
+        <!-- BG.jpg splash: covers character during title, fades out on game start -->
+        <div id="bg-splash"></div>
 
         <!-- Particles -->
         <div id="particles-container"></div>
@@ -2074,11 +2091,12 @@
             const subText = isDraw ? '' : (
                 currentLang === 'jp' ? '勝てばご褒美イラストが見れるぞ！' :
                     currentLang === 'en' ? 'Win and you\'d get a special CG...' :
-                        '贏了有色圖看'
+                        '贏了才有色圖看'
             );
 
             setTimeout(() => {
                 document.getElementById('ooxx-screen').classList.add('hidden');
+                stopOOXXAmbience();
 
                 // Stop BGM
                 document.getElementById('bgm').pause();
@@ -2112,7 +2130,7 @@
                     document.getElementById('bgm').currentTime = 0;
                     startBGM();
                     const ts = document.getElementById('title-screen');
-                    ts.style.opacity = '1';
+                    ts.style.opacity = '';  // clear any inline style so .hidden can work next time
                     ts.classList.remove('hidden');
                 });
             }, 900);
@@ -2122,6 +2140,7 @@
             const move = getBestOOXX(ooxxBoard);
             if (move === -1) return;
             ooxxBoard[move] = OOXX_AI;
+            playOOXXPlace(true); // AI piece sound
             const res = checkOOXX(ooxxBoard);
             if (res || ooxxBoard.every(c => c)) {
                 endOOXX(res ? res.winner : null, res ? res.line : null);
@@ -2137,7 +2156,7 @@
             ooxxLocked = true;
             const ui = l10n[currentLang].ui;
             const screen = document.getElementById('ooxx-screen');
-            // Build UI
+            // Build UI while still hidden (opacity 0), then fade in
             screen.innerHTML = `
                 <div id="ooxx-title">${ui.ooxxTitle}</div>
                 <div id="ooxx-grid">${Array.from({ length: 9 }, (_, i) => `<div class="ooxx-cell" data-i="${i}"></div>`).join('')}</div>
@@ -2148,6 +2167,7 @@
                     if (ooxxLocked || ooxxBoard[i]) return;
                     ooxxLocked = true;
                     ooxxBoard[i] = OOXX_HU;
+                    playOOXXPlace(false); // Player piece sound
                     const res = checkOOXX(ooxxBoard);
                     if (res || ooxxBoard.every(c => c)) {
                         endOOXX(res ? res.winner : null, res ? res.line : null);
@@ -2158,10 +2178,38 @@
                     setTimeout(aiOOXXMove, 500);
                 });
             });
+            // Fade in smoothly: remove hidden (sets opacity→1 via CSS transition)
             screen.classList.remove('hidden');
-            // AI goes first
+            startOOXXAmbience();
+            // AI goes first after fade begins
             setTimeout(aiOOXXMove, 600);
         }
+
+        // ── OOXX PIECE PLACEMENT SOUND ──────────────────────────────
+        // Short crisp tone, similar in character to playTap() but deeper
+        function playOOXXPlace(isAI) {
+            if (audioMuted) return;
+            try {
+                const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+                if (vol === 0) return;
+                const freq = isAI ? 300 : 500; // AI(X) = lower thud, Player(O) = higher click
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.80, audioCtx.currentTime + 0.07);
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(vol * 0.14, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.09);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.10);
+            } catch (e) { }
+        }
+
+        // Kept as no-ops so existing call sites don't break
+        function startOOXXAmbience() { }
+        function stopOOXXAmbience() { }
 
         function triggerDeath() {
             const deathScreen = document.getElementById('death-screen');
@@ -2380,6 +2428,7 @@
             'blank.jpg',
             'speak.jpg',
             'angry.jpg',
+            'BG.jpg',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
         ];
@@ -2488,11 +2537,20 @@
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
 
+            // Clear any inline styles that could interfere with hiding/showing
+            document.getElementById('title-screen').style.opacity = '';
+            document.getElementById('title-screen').classList.add('hidden');
+
+            // Fade out BG.jpg splash as character fades in
+            const splash = document.getElementById('bg-splash');
+            if (splash) splash.classList.add('fade-out');
+
             clearTimeout(blinkTimeout);
             stopSpeakingAnimation();
             setCharState('idle');
             scheduleNextBlink();
-            renderLine(0);
+            // Wait for BG.jpg to finish fading (1.4s) before starting dialogue
+            setTimeout(() => renderLine(0), 1400);
         }
 
         function returnToTitle() {
