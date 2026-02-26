@@ -2061,7 +2061,8 @@
 
                 resultEl.addEventListener('click', function once() {
                     resultEl.removeEventListener('click', once);
-                    resultEl.classList.remove('hidden', 'show-text');
+                    resultEl.classList.add('hidden');       // hide the result overlay
+                    resultEl.classList.remove('show-text'); // reset for next time
                     // Return to title and restart BGM
                     lineIndex = 0;
                     isDeathSequence = false;
@@ -2149,7 +2150,7 @@
 
         // Click anywhere to advance
         document.getElementById('game-container').addEventListener('click', function (e) {
-            if (e.target.closest('button, .qa-btn, #settings-overlay, #top-bar, #choice-panel')) return;
+            if (e.target.closest('button, .qa-btn, #settings-overlay, #top-bar, #choice-panel, #ooxx-result, #ooxx-screen')) return;
             const r = document.createElement('div');
             r.className = 'ripple';
             const rect = this.getBoundingClientRect();
