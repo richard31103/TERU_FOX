@@ -1933,79 +1933,64 @@
         }
 
         // ── GYROSCOPE PARALLAX (mobile only) ──────────────────────────────
+        // Uses object-position to shift the visible crop of character images — safe,
+        // no edge bleed, no transform override conflicts.
         (function () {
             if (!window.DeviceOrientationEvent) return;
             if (window.matchMedia('(hover: hover)').matches) return; // skip on desktop
 
-            const BG_MAX = 10; // px background moves
-            const CHAR_MAX = 5;  // px character moves (less = more stable)
-            const SMOOTH = 0.08; // lerp factor (lower = smoother/slower)
+            const MAX_SHIFT = 5;   // px: how far image crops can shift
+            const SMOOTH = 0.07; // lerp speed (lower = smoother)
 
             let baseGamma = null, baseBeta = null;
+            let targetX = 0, targetY = 0;
             let smoothX = 0, smoothY = 0;
-            let rafId = null;
-
-            const bg = document.getElementById('bg');
-            const char = document.getElementById('character-container');
 
             function lerp(a, b, t) { return a + (b - a) * t; }
-            function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-            let targetX = 0, targetY = 0;
+            function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
             function onOrientation(e) {
-                const gamma = e.gamma || 0; // left/right: -90~90
-                const beta = e.beta || 0; // fwd/back: -180~180
-
-                // Calibrate on first reading
+                const gamma = e.gamma != null ? e.gamma : 0;
+                const beta = e.beta != null ? e.beta : 0;
                 if (baseGamma === null) { baseGamma = gamma; baseBeta = beta; return; }
-
-                const dg = clamp(gamma - baseGamma, -30, 30);
+                const dg = clamp(gamma - baseGamma, -25, 25);
                 const db = clamp(beta - baseBeta, -20, 20);
-
-                targetX = (dg / 30) * BG_MAX;
-                targetY = (db / 20) * BG_MAX;
+                targetX = (dg / 25) * MAX_SHIFT;
+                targetY = (db / 20) * MAX_SHIFT;
             }
 
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
 
-                // Background moves opposite to tilt (deeper layer)
-                if (bg) bg.style.transform =
-                    `translateX(${(-smoothX).toFixed(2)}px) translateY(${(-smoothY).toFixed(2)}px) scale(1.04)`;
+                // Shift the visible crop of every char image via object-position.
+                // This never moves the element boundary, so no black edges appear.
+                const px = `calc(50% + ${smoothX.toFixed(2)}px)`;
+                const py = `calc(50% + ${smoothY.toFixed(2)}px)`;
+                document.querySelectorAll('.char-img').forEach(img => {
+                    img.style.objectPosition = `${px} ${py}`;
+                });
 
-                // Character moves slightly with tilt (closer layer)
-                const cx = clamp(smoothX * (CHAR_MAX / BG_MAX), -CHAR_MAX, CHAR_MAX);
-                const cy = clamp(smoothY * (CHAR_MAX / BG_MAX), -CHAR_MAX, CHAR_MAX);
-                if (char) char.style.transform =
-                    `translateX(calc(-50% + ${cx.toFixed(2)}px)) translateY(${cy.toFixed(2)}px)`;
-
-                rafId = requestAnimationFrame(tick);
+                requestAnimationFrame(tick);
             }
 
             function startGyro() {
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    // iOS 13+ requires explicit user permission
                     DeviceOrientationEvent.requestPermission()
                         .then(state => {
                             if (state === 'granted') {
                                 window.addEventListener('deviceorientation', onOrientation);
-                                rafId = requestAnimationFrame(tick);
+                                requestAnimationFrame(tick);
                             }
-                        })
-                        .catch(() => { });
+                        }).catch(() => { });
                 } else {
                     window.addEventListener('deviceorientation', onOrientation);
-                    rafId = requestAnimationFrame(tick);
+                    requestAnimationFrame(tick);
                 }
             }
 
-            // Trigger on first tap (satisfies iOS gesture requirement)
-            document.addEventListener('click', function initGyro() {
-                document.removeEventListener('click', initGyro);
-                startGyro();
-            }, { once: true });
+            // First tap satisfies iOS gesture requirement for permission dialog
+            document.addEventListener('click', startGyro, { once: true });
         })();
 
         // ── ASSET PRELOADER FOR GITHUB PAGES ──────────────────────────────
