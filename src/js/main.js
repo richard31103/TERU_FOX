@@ -227,6 +227,7 @@ console.log('[BOOT] main.js module active');
         let isMoneyIntermission = false;
         let skipMoneyResolveClick = false;
         let pendingPostChoiceAction = null;
+        let pendingClickAdvance = null;
         let moneyIntermissionDone = null;
         let mobileMoneyFocusActive = false;
         let blinkTimeout = null;
@@ -285,6 +286,8 @@ console.log('[BOOT] main.js module active');
                 speakClosed: 'bed/bed speak eyes close head.png',
                 idleClosedCry: 'bed/bed no speak eyes close cry head.png',
                 speakClosedCry: 'bed/bed speak eyes close cry head.png',
+                idleTears: 'bed/bed no speak tears head.png',
+                speakTears: 'bed/bed speak tears head.png',
                 angry: 'bed/bed no speak head.png',
                 happy: 'bed/bed no speak head.png',
                 happyTalk: 'bed/bed no speak head.png',
@@ -297,11 +300,57 @@ console.log('[BOOT] main.js module active');
         const PET_FOX_DISPLAY_MS = 3000;
         const BED_ENTRY_TRANSITION = { fadeInMs: 700, holdMs: 200, fadeOutMs: 700 };
         const BED_TAIL_BURST_RESET_MS = 260;
+        const BED_STOP_LINE_BY_LANG = {
+            tw: '你還想幹嘛?',
+            en: 'What else do you want?',
+            jp: 'まだ何するつもり？'
+        };
+        const OPENING_HEADS = {
+            idle: 'no speak normal head.png',
+            blink: 'blink normal head.png',
+            speak: 'speak head.png'
+        };
+        const OPENING_TEXT = {
+            tw: {
+                greeting: '你好呀~ 我是提爾很高興認識你!',
+                choiceIntro: '你好呀，可以自我介紹一下嗎?',
+                choiceGoHome: '我可以跟你回家嗎?',
+                introLines: [
+                    '我是提爾，是一隻赤狐',
+                    '你也可以叫我 "TERU" 或是 "狐泥"',
+                    '擅長的技能是製作音樂，除此之外我也是一名DJ哦!',
+                    '對我感興趣的話，可以點擊右邊的"狐狸頭"按鈕知道我更多資訊!'
+                ]
+            },
+            en: {
+                greeting: 'Hi~ I am Teru, nice to meet you!',
+                choiceIntro: 'Hi, can you introduce yourself?',
+                choiceGoHome: 'Can I go home with you?',
+                introLines: [
+                    'I am Teru, a red fox.',
+                    'You can also call me "TERU" or "Huni".',
+                    'I am good at making music, and I am also a DJ!',
+                    'If you are interested in me, tap the fox-head button on the right for more info!'
+                ]
+            },
+            jp: {
+                greeting: 'こんにちは〜 テルだよ。会えてうれしい!',
+                choiceIntro: 'こんにちは、自己紹介してくれる?',
+                choiceGoHome: '君の家に行ってもいい?',
+                introLines: [
+                    'ボクはテル、アカギツネだよ。',
+                    '「TERU」か「狐泥」って呼んでね。',
+                    '得意なのは音楽制作で、DJもやってるよ!',
+                    '興味があったら、右の「狐の頭」ボタンで詳しく見てね!'
+                ]
+            }
+        };
         let currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
         let petFoxTimer = null;
         let activeSceneId = SCENE_DEFAULT;
         let sceneSupportsSpecialHeads = true;
         let bedHeadVariant = 'normal';
+        let isOpeningPrologueActive = false;
         let isHappyTalkMode = false;
         let happyMouthOpen = false;
         let isRuntimeChoiceMode = false;
@@ -310,7 +359,8 @@ console.log('[BOOT] main.js module active');
             active: false,
             phase: 'none',
             tailOptionRemoved: false,
-            continueTouchCount: 0
+            continueTouchCount: 0,
+            tearsAfterStop: false
         };
         const choiceButtonEls = Array.from(choicePanel.querySelectorAll('.choice-btn'));
         // const totalDots = script.length; (Removed)
@@ -362,10 +412,31 @@ console.log('[BOOT] main.js module active');
             return (storyEngine && storyEngine.getTextByKey(key, currentLang)) || fallback;
         }
 
+        function getOpeningTextBundle() {
+            return OPENING_TEXT[currentLang] || OPENING_TEXT.tw;
+        }
+
+        function applyOpeningHeadMode(flag) {
+            isOpeningPrologueActive = !!flag;
+            if (activeSceneId !== SCENE_DEFAULT) return;
+            if (!charIdle || !charBlink || !charSpeak) return;
+            if (isOpeningPrologueActive) {
+                charIdle.src = OPENING_HEADS.idle;
+                charBlink.src = OPENING_HEADS.blink;
+                charSpeak.src = OPENING_HEADS.speak;
+            } else {
+                const cfg = SCENE_CONFIG[SCENE_DEFAULT];
+                charIdle.src = cfg.idle;
+                charBlink.src = cfg.blink;
+                charSpeak.src = cfg.speak;
+            }
+            setCharState(isTyping ? 'speak' : 'idle');
+        }
+
         function getSceneGameTitle(uiBundle) {
             const ui = uiBundle || l10n[currentLang]?.ui;
             if (!ui) return '';
-            if (activeSceneId === SCENE_BED) return ui.bedGameTitle || '君悅酒店';
+            if (activeSceneId === SCENE_BED) return ui.bedGameTitle || '提爾家';
             return ui.gameTitle || '';
         }
 
@@ -390,6 +461,11 @@ console.log('[BOOT] main.js module active');
             if (charIdle) charIdle.src = cfg.idle;
             if (charBlink) charBlink.src = cfg.blink;
             if (charSpeak) charSpeak.src = cfg.speak;
+            if (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive) {
+                if (charIdle) charIdle.src = OPENING_HEADS.idle;
+                if (charBlink) charBlink.src = OPENING_HEADS.blink;
+                if (charSpeak) charSpeak.src = OPENING_HEADS.speak;
+            }
             if (charAngry) charAngry.src = cfg.angry;
             if (charHappy) charHappy.src = cfg.happy;
             if (charHappyTalk) charHappyTalk.src = cfg.happyTalk || cfg.happy;
@@ -407,7 +483,11 @@ console.log('[BOOT] main.js module active');
         function applyBedHeadVariant(variant) {
             if (activeSceneId !== SCENE_BED) return;
             const cfg = SCENE_CONFIG[SCENE_BED];
-            bedHeadVariant = (variant === 'eyes_closed' || variant === 'eyes_closed_cry') ? variant : 'normal';
+            bedHeadVariant = (
+                variant === 'eyes_closed' ||
+                variant === 'eyes_closed_cry' ||
+                variant === 'tears'
+            ) ? variant : 'normal';
             if (!charIdle || !charBlink || !charSpeak) return;
             if (bedHeadVariant === 'eyes_closed') {
                 charIdle.src = cfg.idleClosed || cfg.idle;
@@ -416,6 +496,11 @@ console.log('[BOOT] main.js module active');
             } else if (bedHeadVariant === 'eyes_closed_cry') {
                 charIdle.src = cfg.idleClosedCry || cfg.idleClosed || cfg.idle;
                 charSpeak.src = cfg.speakClosedCry || cfg.speakClosed || cfg.speak;
+                charBlink.src = cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
+            } else if (bedHeadVariant === 'tears') {
+                // Asset naming is intentionally inverted for this interaction.
+                charIdle.src = cfg.speakTears || cfg.idle;
+                charSpeak.src = cfg.idleTears || cfg.speak;
                 charBlink.src = cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
             } else {
                 charIdle.src = cfg.idle;
@@ -430,6 +515,7 @@ console.log('[BOOT] main.js module active');
             bedFlow.phase = 'none';
             bedFlow.tailOptionRemoved = false;
             bedFlow.continueTouchCount = 0;
+            bedFlow.tearsAfterStop = false;
         }
 
         function hideChoicePanel() {
@@ -765,7 +851,7 @@ console.log('[BOOT] main.js module active');
 
         function runChoiceResponse(responseText, actionId, speakerName) {
             runScriptedLine(responseText, speakerName, () => {
-                if (actionId === 'show_to_be_continued') {
+                if (actionId === 'show_to_be_continued' || actionId === 'start_bed_scene') {
                     pendingPostChoiceAction = actionId;
                     return;
                 }
@@ -775,6 +861,81 @@ console.log('[BOOT] main.js module active');
                 }
                 dispatchAction(actionId, { delayMs: 1000 });
             });
+        }
+
+        function runScriptedLines(lines, speakerName, onDone, options = {}) {
+            const requireClickBetweenLines = !!options.requireClickBetweenLines;
+            const queue = Array.isArray(lines) ? lines.filter(Boolean) : [];
+            pendingClickAdvance = null;
+            if (queue.length === 0) {
+                if (typeof onDone === 'function') onDone();
+                return;
+            }
+            const playNext = () => {
+                const text = queue.shift();
+                if (!text) {
+                    if (queue.length === 0) {
+                        if (typeof onDone === 'function') onDone();
+                        return;
+                    }
+                    playNext();
+                    return;
+                }
+                runScriptedLine(text, speakerName, () => {
+                    if (queue.length > 0) {
+                        if (requireClickBetweenLines) {
+                            pendingClickAdvance = playNext;
+                        } else {
+                            playNext();
+                        }
+                    }
+                    else if (typeof onDone === 'function') onDone();
+                });
+            };
+            playNext();
+        }
+
+        function jumpToMainOpeningStory() {
+            pendingClickAdvance = null;
+            applyOpeningHeadMode(false);
+            lineIndex = 0;
+            renderLine(0);
+        }
+
+        function showOpeningGoHomeOnlyChoice() {
+            const opening = getOpeningTextBundle();
+            showRuntimeChoicePanel({
+                titleKey: 'choice_title',
+                options: [
+                    { textKey: '', fallbackText: opening.choiceGoHome, onSelect: jumpToMainOpeningStory }
+                ]
+            });
+        }
+
+        function showOpeningFirstChoice() {
+            const opening = getOpeningTextBundle();
+            showRuntimeChoicePanel({
+                titleKey: 'choice_title',
+                options: [
+                    {
+                        textKey: '',
+                        fallbackText: opening.choiceIntro,
+                        onSelect: () => runScriptedLines(
+                            opening.introLines,
+                            l10n[currentLang]?.speaker || '',
+                            showOpeningGoHomeOnlyChoice,
+                            { requireClickBetweenLines: true }
+                        )
+                    },
+                    { textKey: '', fallbackText: opening.choiceGoHome, onSelect: jumpToMainOpeningStory }
+                ]
+            });
+        }
+
+        function startOpeningPrologue() {
+            applyOpeningHeadMode(true);
+            const opening = getOpeningTextBundle();
+            runScriptedLine(opening.greeting, l10n[currentLang]?.speaker || '', showOpeningFirstChoice);
         }
 
         function pickChoice(idx) {
@@ -817,7 +978,7 @@ console.log('[BOOT] main.js module active');
         function showBedPhase1() {
             if (!bedFlow.active) return;
             bedFlow.phase = 'phase1';
-            applyBedHeadVariant('normal');
+            applyBedHeadVariant(bedFlow.tearsAfterStop ? 'tears' : 'normal');
             const options = [];
             if (!bedFlow.tailOptionRemoved) {
                 options.push({ textKey: 'bed_choice_tail', onSelect: onBedTailTouched });
@@ -843,6 +1004,7 @@ console.log('[BOOT] main.js module active');
         function onBedTailTouched() {
             playTailWagBurst();
             bedFlow.continueTouchCount = 0;
+            bedFlow.tearsAfterStop = false;
             applyBedHeadVariant('eyes_closed');
             const line = getStoryText('bed_line_2', '嗚...我尾巴很敏感的...你再摸我就要...');
             runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
@@ -860,10 +1022,13 @@ console.log('[BOOT] main.js module active');
         }
 
         function onBedStopTouch() {
+            const shouldUseTears = bedFlow.continueTouchCount >= 5;
             bedFlow.tailOptionRemoved = true;
             bedFlow.continueTouchCount = 0;
-            applyBedHeadVariant('normal');
-            const line = getStoryText('bed_line_1', '說...說好只能摸尾巴的喔');
+            bedFlow.tearsAfterStop = shouldUseTears;
+            applyBedHeadVariant(shouldUseTears ? 'tears' : 'normal');
+            const fallbackStopLine = BED_STOP_LINE_BY_LANG[currentLang] || BED_STOP_LINE_BY_LANG.tw;
+            const line = getStoryText('bed_line_stop', fallbackStopLine);
             runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
         }
 
@@ -906,6 +1071,7 @@ console.log('[BOOT] main.js module active');
             bedFlow.phase = 'phase1';
             bedFlow.tailOptionRemoved = false;
             bedFlow.continueTouchCount = 0;
+            bedFlow.tearsAfterStop = false;
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_scene' }); } catch (e) { }
             }
@@ -1080,12 +1246,14 @@ console.log('[BOOT] main.js module active');
                     // Stop BGM
                     document.getElementById('bgm').pause();
 
-                    // Play death sound effect on a loss (same as triggerDeath)
+                    // Keep OOXX lose SFX independent from the death-screen SFX.
                     if (!isDraw && !audioMuted) {
-                        const deathSfx = document.getElementById('sfx-death');
-                        deathSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
-                        deathSfx.currentTime = 0;
-                        deathSfx.play().catch(() => { });
+                        const ooxxLoseSfx = document.getElementById('sfx-ooxx-lose') || document.getElementById('sfx-death');
+                        if (ooxxLoseSfx) {
+                            ooxxLoseSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
+                            ooxxLoseSfx.currentTime = 0;
+                            ooxxLoseSfx.play().catch(() => { });
+                        }
                     }
 
                     const resultEl = document.getElementById('ooxx-result');
@@ -1381,6 +1549,13 @@ console.log('[BOOT] main.js module active');
             this.appendChild(r);
             setTimeout(() => r.remove(), 560);
 
+            if (pendingClickAdvance && !isTyping && !inChoiceMode) {
+                const continueFn = pendingClickAdvance;
+                pendingClickAdvance = null;
+                continueFn();
+                return;
+            }
+
             if (!isDeathSequence && !isTyping) {
                 nextLine();
             }
@@ -1430,7 +1605,7 @@ console.log('[BOOT] main.js module active');
             updateUIText();
 
             // Re-render current line immediately to reflect language change if not in transition
-            if (!isDeathSequence && !isTyping && !inChoiceMode && script[lineIndex]) {
+            if (!isDeathSequence && !isTyping && !inChoiceMode && script[lineIndex] && !isOpeningPrologueActive) {
                 const t = l10n[lang];
                 speakerPlate.textContent = t.speaker;
                 dialogueText.textContent = t.lines[lineIndex];
@@ -1649,7 +1824,9 @@ console.log('[BOOT] main.js module active');
             'body.png',
             'tail.png',
             'no speak head.png',
+            'no speak normal head.png',
             'blink head.png',
+            'blink normal head.png',
             'speak head.png',
             'angry head.png',
             'happy head.png',
@@ -1668,6 +1845,8 @@ console.log('[BOOT] main.js module active');
             'bed/bed speak eyes close head.png',
             'bed/bed no speak eyes close cry head.png',
             'bed/bed speak eyes close cry head.png',
+            'bed/bed no speak tears head.png',
+            'bed/bed speak tears head.png',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
         ];
@@ -1802,8 +1981,10 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             pendingPostChoiceAction = null;
+            pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
             dialogueHistory.length = 0;
@@ -1830,6 +2011,7 @@ console.log('[BOOT] main.js module active');
                 petFoxTimer = null;
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            applyOpeningHeadMode(true);
             applyScene(SCENE_DEFAULT);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
 
@@ -1845,7 +2027,7 @@ console.log('[BOOT] main.js module active');
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'start_game' }); } catch (e) { }
             }
             // Wait for BG.jpg to finish fading (1.4s) before starting dialogue
-            setTimeout(() => renderLine(0), 1400);
+            setTimeout(startOpeningPrologue, 1400);
         }
 
         function transitionToTitleWithCover(sourceOverlayEl, cleanupFn) {
@@ -1867,8 +2049,10 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             pendingPostChoiceAction = null;
+            pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
             hideChoicePanel();
