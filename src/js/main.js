@@ -993,7 +993,6 @@ console.log('[BOOT] main.js module active');
                 return;
             }
 
-            petFoxScreenEl.style.setProperty('--pet-fox-pan-duration', `${PET_FOX_DISPLAY_MS}ms`);
             petFoxScreenEl.classList.remove('hidden');
             petFoxTimer = setTimeout(() => {
                 petFoxTimer = null;
@@ -1295,7 +1294,7 @@ console.log('[BOOT] main.js module active');
             'angry head.png',
             'happy head.png',
             'money.png',
-            'pet fox.jpg',
+            'pet fox_M.jpg',
             'BG.jpg',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
