@@ -942,8 +942,8 @@ console.log('[BOOT] main.js module active');
                 const gamma = e.gamma != null ? e.gamma : 0;
                 const beta = e.beta != null ? e.beta : 0;
                 if (baseGamma === null) { baseGamma = gamma; baseBeta = beta; return; }
-                const dg = clamp(gamma - baseGamma, -25, 25);
-                const db = clamp(beta - baseBeta, -20, 20);
+                const dg = clamp(gamma - baseGamma, -50, 50);
+                const db = clamp(beta - baseBeta, -40, 40);
                 targetX = (dg / 25) * MAX_SHIFT;
                 targetY = (db / 20) * MAX_SHIFT;
             }
