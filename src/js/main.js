@@ -6,6 +6,28 @@ import { checkOOXX, getBestOOXX, OOXX_AI, OOXX_HU, renderOOXXBoard } from './min
 
 console.log('[BOOT] main.js module active');
 
+        const DEFAULT_TEXT_SPEED_LEVEL = 3;
+        const NO_ADVANCE_SELECTORS = [
+            'button',
+            '.qa-btn',
+            '#quick-actions',
+            '#top-bar',
+            '#chapter-badge',
+            '#choice-panel',
+            '#controls-bar',
+            '#settings-overlay',
+            '#history-overlay',
+            '#map-overlay',
+            '#ooxx-result',
+            '#ooxx-screen',
+            '#to-be-continued-screen',
+            '#title-screen'
+        ].join(', ');
+
+        function textSpeedLevelToMs(level) {
+            return Math.round(90 - Number(level) * 8);
+        }
+
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioMuted = false;
 
@@ -162,10 +184,12 @@ console.log('[BOOT] main.js module active');
             createParticles();
             startAssetLoader();
             updateUIText();
+            const textSpeedSlider = document.getElementById('text-speed');
+            if (textSpeedSlider) {
+                textSpeedSlider.value = String(DEFAULT_TEXT_SPEED_LEVEL);
+                updateSlider(textSpeedSlider);
+            }
         });
-
-        // Also start BGM on first click anywhere
-        document.addEventListener('click', startBGM, { once: true });
 
         // Dialogue script and localization (JSON-driven)
         let currentLang = 'tw';
@@ -191,12 +215,13 @@ console.log('[BOOT] main.js module active');
         let typeTimer = null;
         let isTyping = false;
         let autoPlay = false;
-        let textSpeedMs = 45;
+        let textSpeedMs = textSpeedLevelToMs(DEFAULT_TEXT_SPEED_LEVEL);
         let inChoiceMode = false;
 
         // Character Animation State
         let isSpeaking = false;
         let isAngry = false;
+        let isHappy = false;
         let blinkTimeout = null;
         let speakInterval = null;
 
@@ -204,6 +229,9 @@ console.log('[BOOT] main.js module active');
         const charBlink = document.getElementById('char-head-blink');
         const charSpeak = document.getElementById('char-head-speak');
         const charAngry = document.getElementById('char-head-angry');
+        const charHappy = document.getElementById('char-head-happy');
+        const moneyPopupEl = document.getElementById('money-popup');
+        const toBeContinuedEl = document.getElementById('to-be-continued-screen');
 
         const dialogueText = document.getElementById('dialogue-text');
         const speakerPlate = document.getElementById('speaker-plate');
@@ -216,9 +244,14 @@ console.log('[BOOT] main.js module active');
             charBlink.classList.remove('active');
             charSpeak.classList.remove('active');
             if (charAngry) charAngry.classList.remove('active');
+            if (charHappy) charHappy.classList.remove('active');
 
             if (isAngry) {
                 if (charAngry) charAngry.classList.add('active');
+                return;
+            }
+            if (isHappy) {
+                if (charHappy) charHappy.classList.add('active');
                 return;
             }
 
@@ -226,6 +259,7 @@ console.log('[BOOT] main.js module active');
             else if (state === 'blink') charBlink.classList.add('active');
             else if (state === 'speak') charSpeak.classList.add('active');
             else if (state === 'angry') { if (charAngry) charAngry.classList.add('active'); }
+            else if (state === 'happy') { if (charHappy) charHappy.classList.add('active'); }
         }
 
         function scheduleNextBlink() {
@@ -279,10 +313,10 @@ console.log('[BOOT] main.js module active');
 
             isSpeaking = flag;
 
-            if (isAngry) {
+            if (isAngry || isHappy) {
                 stopSpeakingAnimation();
                 clearTimeout(blinkTimeout);
-                setCharState('angry');
+                setCharState(isAngry ? 'angry' : 'happy');
                 return;
             }
 
@@ -396,6 +430,9 @@ console.log('[BOOT] main.js module active');
                 case 'return_title':
                     returnToTitle(context.sourceOverlayEl, context.cleanupFn);
                     return;
+                case 'show_to_be_continued':
+                    setTimeout(showToBeContinued, context.delayMs ?? 700);
+                    return;
                 default:
                     console.warn('[ACTION] Unknown action:', actionId);
             }
@@ -409,7 +446,9 @@ console.log('[BOOT] main.js module active');
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
 
             const t = l10n[currentLang];
-            const fallbackActionId = idx === 3 ? 'start_ooxx' : 'trigger_death';
+            const fallbackActionId = idx === 3
+                ? 'start_ooxx'
+                : (idx === 2 ? 'show_to_be_continued' : 'trigger_death');
             const outcome = storyEngine
                 ? storyEngine.getChoiceOutcomeByIndex(idx)
                 : { actionId: fallbackActionId, responseText: t.responses[idx] };
@@ -424,8 +463,11 @@ console.log('[BOOT] main.js module active');
                 return;
             }
 
-            isAngry = true;
-            setCharState('angry');
+            isAngry = actionId === 'trigger_death';
+            isHappy = actionId === 'show_to_be_continued';
+            if (isHappy) showMoneyPopup();
+            else hideMoneyPopup();
+            setCharState(isHappy ? 'happy' : (isAngry ? 'angry' : 'idle'));
             speakerPlate.textContent = t.speaker;
             dialogueText.textContent = '';
             charIndex = 0;
@@ -788,9 +830,32 @@ console.log('[BOOT] main.js module active');
             }, 1000);
         }
 
+        function showMoneyPopup() {
+            if (!moneyPopupEl) return;
+            moneyPopupEl.classList.remove('visible');
+            // Force restart animation for repeated route entries.
+            void moneyPopupEl.offsetWidth;
+            moneyPopupEl.classList.add('visible');
+        }
+
+        function hideMoneyPopup() {
+            if (!moneyPopupEl) return;
+            moneyPopupEl.classList.remove('visible');
+        }
+
+        function showToBeContinued() {
+            isDeathSequence = true;
+            setTyping(false);
+            hideMoneyPopup();
+            if (toBeContinuedEl) {
+                toBeContinuedEl.classList.remove('hidden');
+            }
+        }
+
         // Click anywhere to advance
         document.getElementById('game-container').addEventListener('click', function (e) {
-            if (e.target.closest('button, .qa-btn, #settings-overlay, #top-bar, #choice-panel, #ooxx-result, #ooxx-screen')) return;
+            const targetEl = e.target instanceof Element ? e.target : null;
+            if (targetEl && targetEl.closest(NO_ADVANCE_SELECTORS)) return;
             const r = document.createElement('div');
             r.className = 'ripple';
             const rect = this.getBoundingClientRect();
@@ -866,7 +931,8 @@ console.log('[BOOT] main.js module active');
             document.getElementById('lang-ui-map').textContent = ui.map;
 
             document.getElementById('lang-btn-prev').textContent = ui.prev;
-            document.getElementById('lang-btn-hist').textContent = ui.histBtn;
+            const histBtn = document.getElementById('lang-btn-hist');
+            if (histBtn) histBtn.textContent = ui.histBtn;
 
             document.getElementById('lang-ui-hist-title').textContent = ui.histTitle;
             document.getElementById('close-history').textContent = ui.closeHist;
@@ -887,6 +953,12 @@ console.log('[BOOT] main.js module active');
             document.getElementById('tog-lang-tw').textContent = ui.tw;
             document.getElementById('tog-lang-jp').textContent = ui.jp;
             document.getElementById('tog-lang-en').textContent = ui.en;
+            const titleLangTw = document.getElementById('title-lang-tw');
+            const titleLangJp = document.getElementById('title-lang-jp');
+            const titleLangEn = document.getElementById('title-lang-en');
+            if (titleLangTw) titleLangTw.textContent = ui.tw;
+            if (titleLangJp) titleLangJp.textContent = ui.jp;
+            if (titleLangEn) titleLangEn.textContent = ui.en;
         }
 
         function setToggle(group, val) {
@@ -905,7 +977,7 @@ console.log('[BOOT] main.js module active');
         function updateSlider(el) {
             const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
             el.style.setProperty('--val', pct);
-            if (el.id === 'text-speed') textSpeedMs = Math.round(90 - el.value * 8);
+            if (el.id === 'text-speed') textSpeedMs = textSpeedLevelToMs(el.value);
             if (el.id === 'bgm-vol') bgmEl.volume = el.value / 100;
         }
 
@@ -1039,20 +1111,26 @@ console.log('[BOOT] main.js module active');
             'blink head.png',
             'speak head.png',
             'angry head.png',
+            'happy head.png',
+            'money.png',
             'BG.jpg',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
         ];
+        const imageAssetsToLoad = Array.from(
+            new Set(assetsToLoad.filter(src => /\.(png|jpe?g|webp|gif)$/i.test(src)))
+        );
 
         let loadedAssetsCount = 0;
 
-        function updateLoaderProgress() {
+        function updateLoaderProgress(totalCount = imageAssetsToLoad.length) {
             loadedAssetsCount++;
-            const pct = Math.floor((loadedAssetsCount / assetsToLoad.length) * 100);
+            const safeTotal = Math.max(totalCount, 1);
+            const pct = Math.min(100, Math.floor((loadedAssetsCount / safeTotal) * 100));
             document.getElementById('loading-bar-fill').style.width = pct + '%';
             document.getElementById('loading-text').textContent = `Loading Assets... ${pct}%`;
 
-            if (loadedAssetsCount >= assetsToLoad.length) {
+            if (loadedAssetsCount >= safeTotal) {
                 setTimeout(() => {
                     document.getElementById('loading-container').style.display = 'none';
                     document.getElementById('start-btn').style.display = 'block';
@@ -1060,19 +1138,45 @@ console.log('[BOOT] main.js module active');
             }
         }
 
-        function startAssetLoader() {
-            assetsToLoad.forEach(src => {
-                if (src.endsWith('.wav') || src.endsWith('.mp3')) {
-                    const audio = new Audio();
-                    audio.oncanplaythrough = updateLoaderProgress;
-                    audio.onerror = updateLoaderProgress; // fallback to avoid hard lock
-                    audio.src = src;
-                } else {
-                    const img = new Image();
-                    img.onload = updateLoaderProgress;
-                    img.onerror = updateLoaderProgress;
-                    img.src = src;
+        function loadImageDecoded(src) {
+            return new Promise(resolve => {
+                const img = new Image();
+                let settled = false;
+
+                const finish = () => {
+                    if (settled) return;
+                    settled = true;
+                    resolve();
+                };
+
+                const finalize = () => {
+                    if (typeof img.decode === 'function') {
+                        img.decode().catch(() => { }).finally(finish);
+                    } else {
+                        finish();
+                    }
+                };
+
+                img.onload = finalize;
+                img.onerror = finish;
+                img.src = src;
+
+                if (img.complete) {
+                    if (img.naturalWidth > 0) finalize();
+                    else finish();
                 }
+            });
+        }
+
+        function startAssetLoader() {
+            loadedAssetsCount = 0;
+            const totalCount = imageAssetsToLoad.length;
+            if (totalCount === 0) {
+                updateLoaderProgress(1);
+                return;
+            }
+            imageAssetsToLoad.forEach(src => {
+                loadImageDecoded(src).finally(() => updateLoaderProgress(totalCount));
             });
         }
 
@@ -1143,6 +1247,7 @@ console.log('[BOOT] main.js module active');
             inChoiceMode = false;
             isDeathSequence = false;
             isAngry = false;
+            isHappy = false;
             dialogueHistory.length = 0;
 
             // Reset UI elements that may be dirty
@@ -1160,6 +1265,8 @@ console.log('[BOOT] main.js module active');
             const ooxxResultEl = document.getElementById('ooxx-result');
             ooxxResultEl.classList.add('hidden');
             ooxxResultEl.classList.remove('show-text');
+            hideMoneyPopup();
+            if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
 
             // Fade out BG.jpg splash as character fades in
             const splash = document.getElementById('bg-splash');
@@ -1194,8 +1301,11 @@ console.log('[BOOT] main.js module active');
             clearInterval(typeTimer);
             isDeathSequence = false;
             isAngry = false;
+            isHappy = false;
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
+            hideMoneyPopup();
+            if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
             cancelOOXXTransitions('returnToTitle reset');
             if (storyEngine) {
                 storyEngine.setLanguage(currentLang);

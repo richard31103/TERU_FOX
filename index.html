@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title id="lang-ui-docTitle">提爾模擬器</title>
+    <title id="lang-ui-docTitle">TERU FOX</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Cinzel:wght@600&family=Orbitron:wght@700&family=M+PLUS+Rounded+1c:wght@700&display=swap"
         rel="stylesheet" />
@@ -46,7 +46,7 @@
             -webkit-user-select: none;
         }
 
-        /* ── Game Container ── */
+        /* ???? Game Container ???? */
         #game-container {
             position: fixed;
             top: 0;
@@ -62,7 +62,7 @@
             cursor: pointer;
         }
 
-        /* ── Background splash (shows BG.jpg until game starts) ── */
+        /* ???? Background splash (shows BG.jpg until game starts) ???? */
         #bg-splash {
             position: absolute;
             inset: 0;
@@ -77,7 +77,7 @@
             opacity: 0;
         }
 
-        /* ── Background ── */
+        /* ???? Background ???? */
         #bg {
             position: absolute;
             inset: 0;
@@ -99,7 +99,7 @@
             }
         }
 
-        /* ── Vignette ── */
+        /* ???? Vignette ???? */
         #vignette {
             position: absolute;
             inset: 0;
@@ -107,7 +107,7 @@
             pointer-events: none;
         }
 
-        /* ── OOXX transition curtain ── */
+        /* ???? OOXX transition curtain ???? */
         #ooxx-curtain {
             position: fixed;
             inset: 0;
@@ -123,7 +123,7 @@
             pointer-events: all;
         }
 
-        /* ── Particles ── */
+        /* ???? Particles ???? */
         #particles-container {
             position: absolute;
             inset: 0;
@@ -166,7 +166,7 @@
             }
         }
 
-        /* ── Character ── */
+        /* ???? Character ???? */
         #character-container {
             position: absolute;
             inset: 0;
@@ -204,8 +204,26 @@
         #char-head-idle,
         #char-head-blink,
         #char-head-speak,
-        #char-head-angry {
+        #char-head-angry,
+        #char-head-happy {
             z-index: 3;
+        }
+
+        #money-popup {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: var(--char-focus-x, 50%) var(--char-focus-y, 22%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 42;
+            transition: opacity 0.15s ease-out;
+        }
+
+        #money-popup.visible {
+            opacity: 1;
         }
 
         @keyframes tailSway {
@@ -218,7 +236,7 @@
             }
         }
 
-        /* ── TOP BAR ── */
+        /* ???? TOP BAR ???? */
         #top-bar {
             position: absolute;
             top: 0;
@@ -272,7 +290,7 @@
             border-color: #e09030;
         }
 
-        /* ── CHAPTER BADGE ── */
+        /* ???? CHAPTER BADGE ???? */
         #chapter-badge {
             position: absolute;
             top: 76px;
@@ -300,7 +318,7 @@
             font-weight: 700;
         }
 
-        /* ── QUICK ACTIONS ── */
+        /* ???? QUICK ACTIONS ???? */
         #quick-actions {
             position: absolute;
             right: 24px;
@@ -355,9 +373,9 @@
             opacity: 1;
         }
 
-        /* ══════════════════════════════════════════
+        /* ???????????????????????????????????????????????????????????????
            CHOICE PANEL (left side, vertical list)
-        ══════════════════════════════════════════ */
+        ??????????????????????????????????????????????????????????????? */
         #choice-panel {
             position: absolute;
             left: 48px;
@@ -434,7 +452,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* ── DIALOGUE AREA ── */
+        /* ???? DIALOGUE AREA ???? */
         #dialogue-area {
             position: absolute;
             bottom: 0;
@@ -444,7 +462,7 @@
             z-index: 20;
         }
 
-        /* Glass backdrop — warm semi-transparent */
+        /* Glass backdrop ??warm semi-transparent */
         #dialogue-box {
             position: absolute;
             inset: 0;
@@ -500,9 +518,9 @@
             letter-spacing: 1px;
         }
 
-        /* Inline typing cursor — only visible while .typing class is present */
+        /* Inline typing cursor ??only visible while .typing class is present */
         #dialogue-text.typing::after {
-            content: '▌';
+            content: '??;
             color: #f0ae40;
             text-shadow: 0 0 10px rgba(220, 140, 20, 0.95);
             animation: cursorBlink 0.65s steps(1) infinite;
@@ -521,7 +539,7 @@
             }
         }
 
-        /* ▼ end-of-line indicator — shown when NOT typing */
+        /* ??end-of-line indicator ??shown when NOT typing */
         #next-indicator {
             position: absolute;
             right: 32px;
@@ -534,7 +552,7 @@
             animation: arrowBlink 0.9s ease-in-out infinite;
         }
 
-        /* Show ▼ only when NOT typing */
+        /* Show ??only when NOT typing */
         #dialogue-text:not(.typing)~#next-indicator {
             opacity: 1;
         }
@@ -554,7 +572,7 @@
             }
         }
 
-        /* ── BOTTOM CONTROLS BAR ── */
+        /* ???? BOTTOM CONTROLS BAR ???? */
         #controls-bar {
             position: absolute;
             bottom: 0;
@@ -603,7 +621,7 @@
             box-shadow: 0 0 18px rgba(210, 110, 20, 0.55);
         }
 
-        /* ── TITLE AND DEATH SCREENS ── */
+        /* ???? TITLE AND DEATH SCREENS ???? */
         .overlay-screen {
             position: fixed;
             inset: 0;
@@ -676,7 +694,30 @@
             opacity: 1;
         }
 
-        /* ── MAP OVERLAY ── */
+        #to-be-continued-screen {
+            background: #000;
+            z-index: 101;
+        }
+
+        #to-be-continued-text {
+            position: absolute;
+            right: 42px;
+            bottom: 34px;
+            color: #ffffff;
+            font-size: clamp(26px, 3.2vw, 48px);
+            letter-spacing: 4px;
+            text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.7s ease 0.25s, transform 0.7s ease 0.25s;
+        }
+
+        #to-be-continued-screen:not(.hidden) #to-be-continued-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ???? MAP OVERLAY ???? */
         #map-overlay {
             background: rgba(10, 5, 0, 0.90);
             backdrop-filter: blur(8px);
@@ -713,7 +754,7 @@
             background: rgba(255, 80, 20, 0.9);
         }
 
-        /* ── LOADING BAR ── */
+        /* ???? LOADING BAR ???? */
         #loading-container {
             width: 300px;
             margin-top: 20px;
@@ -746,7 +787,7 @@
             transition: width 0.3s ease;
         }
 
-        /* ── HISTORY OVERLAY ── */
+        /* ???? HISTORY OVERLAY ???? */
         #history-overlay {
             background: rgba(15, 8, 5, 0.95);
             backdrop-filter: blur(12px);
@@ -840,7 +881,7 @@
             box-shadow: 0 0 20px rgba(220, 130, 20, 0.7);
         }
 
-        /* ── SETTINGS PANEL OVERLAY ── */
+        /* ???? SETTINGS PANEL OVERLAY ???? */
         #settings-overlay {
             position: absolute;
             inset: 0;
@@ -962,7 +1003,7 @@
             transform: scale(1.04);
         }
 
-        /* ── CLICK RIPPLE ── */
+        /* ???? CLICK RIPPLE ???? */
         .ripple {
             position: absolute;
             border-radius: 50%;
@@ -982,7 +1023,7 @@
             }
         }
 
-        /* ── NOTIFICATION TOAST ── */
+        /* ???? NOTIFICATION TOAST ???? */
         #toast {
             position: absolute;
             top: 76px;
@@ -1009,7 +1050,7 @@
             display: none;
         }
 
-        /* ── MOBILE RESPONSIVE (iPhone Standard) ── */
+        /* ???? MOBILE RESPONSIVE (iPhone Standard) ???? */
         @media (max-width: 430px) {
             #top-bar {
                 top: 0px;
@@ -1196,7 +1237,7 @@
             }
         }
 
-        /* ── OOXX MINI-GAME ── */
+        /* ???? OOXX MINI-GAME ???? */
         #ooxx-screen {
             flex-direction: column;
             gap: 28px;
@@ -1327,7 +1368,7 @@
             opacity: 1;
         }
 
-        /* ── SVG ICON HELPER ── */
+        /* ???? SVG ICON HELPER ???? */
         .qa-svg {
             width: 1em;
             height: 1em;
@@ -1371,11 +1412,13 @@
             <img src="blink head.png" id="char-head-blink" class="char-img" alt="Head Blink" />
             <img src="speak head.png" id="char-head-speak" class="char-img" alt="Head Speak" />
             <img src="angry head.png" id="char-head-angry" class="char-img" alt="Head Angry" />
+            <img src="happy head.png" id="char-head-happy" class="char-img" alt="Head Happy" />
         </div>
+        <img src="money.png" id="money-popup" alt="Money Popup" />
 
         <!-- Top bar -->
         <div id="top-bar">
-            <div id="game-title" class="lang-ui-gameTitle">大安森林公園 ‧ 草地</div>
+            <div id="game-title" class="lang-ui-gameTitle">????????????????????????????? ???????</div>
             <div class="top-btn-group">
                 <button class="top-btn" id="lang-btn-gear" onclick="openSettings()">
                     <svg class="top-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -1383,7 +1426,7 @@
                         <circle cx="12" cy="12" r="3" />
                         <path
                             d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>設定
+                    </svg>????????????
                 </button>
             </div>
         </div>
@@ -1391,14 +1434,14 @@
         <!-- Chapter badge -->
         <div id="chapter-badge">
             <div class="ch-label">CHAPTER 01</div>
-            <div class="ch-title" id="lang-ui-chapTitle">初次邂逅</div>
+            <div class="ch-title" id="lang-ui-chapTitle">?????????????????????????</div>
         </div>
 
         <!-- Quick action buttons -->
         <div id="quick-actions">
             <div class="qa-btn" onclick="openSocial()"><img src="fox-face_1f98a.png" alt="Social Media"
                     style="width:36px;height:36px;object-fit:contain;display:block;">
-                <span class="tooltip" id="lang-ui-social">社群媒體</span>
+                <span class="tooltip" id="lang-ui-social">?????????</span>
             </div>
             <div class="qa-btn" id="audio-toggle-btn" onclick="toggleAudioGlobal()">
                 <svg class="qa-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -1407,7 +1450,7 @@
                     <circle cx="6" cy="18" r="3" />
                     <circle cx="18" cy="16" r="3" />
                 </svg>
-                <span class="tooltip" id="lang-ui-audio">音樂 (開)</span>
+                <span class="tooltip" id="lang-ui-audio">??? (??</span>
             </div>
             <div class="qa-btn" onclick="openHistory()">
                 <svg class="qa-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -1418,7 +1461,7 @@
                     <line x1="8" y1="12" x2="16" y2="12" />
                     <line x1="8" y1="16" x2="12" y2="16" />
                 </svg>
-                <span class="tooltip" id="lang-ui-history">對話紀錄</span>
+                <span class="tooltip" id="lang-ui-history">&#23565;&#35441;&#32000;&#37636;</span>
             </div>
             <div class="qa-btn" onclick="openMap()">
                 <svg class="qa-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -1427,43 +1470,42 @@
                     <line x1="9" y1="3" x2="9" y2="18" />
                     <line x1="15" y1="6" x2="15" y2="21" />
                 </svg>
-                <span class="tooltip" id="lang-ui-map">地圖</span>
+                <span class="tooltip" id="lang-ui-map">???</span>
             </div>
         </div>
 
         <!-- Choice panel (left side) -->
         <div id="choice-panel">
-            <div class="choice-label">— 選擇你的行為 —</div>
+            <div class="choice-label">?????????????????????????????</div>
             <button class="choice-btn" onclick="pickChoice(0)">
                 <span class="choice-num">1</span>
-                <span class="choice-text">撲過去摸尾巴UwU</span>
+                <span class="choice-text">??????????????????????UwU</span>
             </button>
             <button class="choice-btn" onclick="pickChoice(1)">
                 <span class="choice-num">2</span>
-                <span class="choice-text">抱住摸肚肚</span>
+                <span class="choice-text">&#25265;&#20303;&#28982;&#24460;&#25545;&#32922;&#23376;</span>
             </button>
             <button class="choice-btn" onclick="pickChoice(2)">
                 <span class="choice-num">3</span>
-                <span class="choice-text">摸摸肉球</span>
+                <span class="choice-text">????????</span>
             </button>
             <button class="choice-btn" onclick="pickChoice(3)">
                 <span class="choice-num">4</span>
-                <span class="choice-text">推倒在草地上</span>
+                <span class="choice-text">?????OOXX</span>
             </button>
         </div>
 
         <!-- Dialogue area -->
         <div id="dialogue-area">
             <div id="dialogue-box">
-                <div id="speaker-plate">提爾狐</div>
+                <div id="speaker-plate">??????</div>
                 <div id="dialogue-text"></div>
-                <div id="next-indicator">▼</div>
+                <div id="next-indicator">??</div>
 
                 <!-- Bottom controls -->
                 <div id="controls-bar">
                     <div class="ctrl-btn-group">
-                        <button class="ctrl-btn" id="lang-btn-prev" onclick="prevLine()">◀ 上一句</button>
-                        <button class="ctrl-btn" id="lang-btn-hist" onclick="openHistory()">紀錄</button>
+                        <button class="ctrl-btn" id="lang-btn-prev" onclick="prevLine()">?? ???????????</button>
                     </div>
                 </div>
             </div>
@@ -1472,28 +1514,28 @@
         <!-- Toast -->
         <div id="toast"></div>
 
-        <!-- Settings overlay -->
+                <!-- Settings overlay -->
         <div id="settings-overlay" onclick="handleSettingsClick(event)">
             <div id="settings-panel" onclick="event.stopPropagation()">
-                <h2 id="lang-ui-settings-title">⚙ 遊戲設定</h2>
+                <h2 id="lang-ui-settings-title">????????????????</h2>
 
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-text-speed">文字速度</span>
-                    <input type="range" class="setting-slider" id="text-speed" min="1" max="10" value="5"
-                        oninput="updateSlider(this)" style="--val:50%">
+                    <span class="setting-label" id="lang-ui-text-speed">??????????</span>
+                    <input type="range" class="setting-slider" id="text-speed" min="1" max="10" value="3"
+                        oninput="updateSlider(this)" style="--val:22.2%">
                 </div>
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-bgm">BGM 音量</span>
+                    <span class="setting-label" id="lang-ui-bgm">BGM ???</span>
                     <input type="range" class="setting-slider" id="bgm-vol" min="0" max="100" value="70"
                         oninput="updateSlider(this)" style="--val:70%">
                 </div>
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-sfx">音效音量</span>
+                    <span class="setting-label" id="lang-ui-sfx">??????</span>
                     <input type="range" class="setting-slider" id="sfx-vol" min="0" max="100" value="80"
                         oninput="updateSlider(this)" style="--val:80%">
                 </div>
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-voice">語音音量</span>
+                    <span class="setting-label" id="lang-ui-voice">??????????</span>
                     <input type="range" class="setting-slider" id="voice-vol" min="0" max="100" value="90"
                         oninput="updateSlider(this)" style="--val:90%">
                 </div>
@@ -1501,37 +1543,36 @@
                 <div class="setting-divider"></div>
 
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-fullscreen">全螢幕顯示</span>
+                    <span class="setting-label" id="lang-ui-fullscreen">&#20840;&#34722;&#24149;&#39023;&#31034;</span>
                     <div class="setting-toggle">
-                        <button class="tog-btn" id="tog-fs-off" onclick="setToggle('fs','off')">關閉</button>
+                        <button class="tog-btn" id="tog-fs-off" onclick="setToggle('fs','off')">??</button>
                         <button class="tog-btn on" id="tog-fs-on"
-                            onclick="setToggle('fs','on');toggleFullscreen()">開啟</button>
+                            onclick="setToggle('fs','on');toggleFullscreen()">On</button>
                     </div>
                 </div>
 
                 <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-lang">字幕語言</span>
+                    <span class="setting-label" id="lang-ui-lang">???????????</span>
                     <div class="setting-toggle">
-                        <button class="tog-btn on" id="tog-lang-tw" onclick="setLanguage('tw')">繁中</button>
-                        <button class="tog-btn" id="tog-lang-jp" onclick="setLanguage('jp')">日本語</button>
+                        <button class="tog-btn on" id="tog-lang-tw" onclick="setLanguage('tw')">?????????????????</button>
+                        <button class="tog-btn" id="tog-lang-jp" onclick="setLanguage('jp')">????????????????????</button>
                         <button class="tog-btn" id="tog-lang-en" onclick="setLanguage('en')">EN</button>
                     </div>
                 </div>
 
                 <div class="setting-divider"></div>
 
-                <button id="close-settings" onclick="closeSettings()">關閉設定</button>
+                <button id="close-settings" onclick="closeSettings()">???????????????</button>
             </div>
         </div>
 
     </div>
-
-    <!-- Title Screen -->
+<!-- Title Screen -->
     <div id="title-screen" class="overlay-screen">
 
         <div class="setting-toggle" style="margin-bottom: 40px; transform: scale(1.2);">
-            <button class="tog-btn on" id="title-lang-tw" onclick="setLanguage('tw')">繁中</button>
-            <button class="tog-btn" id="title-lang-jp" onclick="setLanguage('jp')">日本語</button>
+            <button class="tog-btn on" id="title-lang-tw" onclick="setLanguage('tw')">&#32321;&#20013;</button>
+            <button class="tog-btn" id="title-lang-jp" onclick="setLanguage('jp')">&#26085;&#26412;&#35486;</button>
             <button class="tog-btn" id="title-lang-en" onclick="setLanguage('en')">EN</button>
         </div>
 
@@ -1542,12 +1583,17 @@
             </div>
         </div>
 
-        <button id="start-btn" onclick="startGame()" style="display: none; margin-top: 20px;">開始</button>
+        <button id="start-btn" onclick="startGame()" style="display: none; margin-top: 20px;">???</button>
     </div>
 
     <!-- Death Screen -->
     <div id="death-screen" class="overlay-screen hidden">
-        <div id="death-text">你被咬死了</div>
+        <div id="death-text">??????????????</div>
+    </div>
+
+    <!-- To Be Continued Screen -->
+    <div id="to-be-continued-screen" class="overlay-screen hidden">
+        <div id="to-be-continued-text">&#24453;&#32396;...</div>
     </div>
 
     <!-- OOXX Game Screen -->
@@ -1561,23 +1607,23 @@
 
     <!-- Map View -->
     <div id="map-overlay" class="overlay-screen hidden" onclick="closeMap()">
-        <button id="close-map" onclick="closeMap(event)">×</button>
+        <button id="close-map" onclick="closeMap(event)">?</button>
         <img src="ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg" alt="Map" onclick="event.stopPropagation()">
     </div>
 
     <!-- History Panel -->
     <div id="history-overlay" class="overlay-screen hidden" onclick="handleHistoryClick(event)">
         <div id="history-panel" onclick="event.stopPropagation()">
-            <h2 id="lang-ui-hist-title">📜 對話紀錄</h2>
+            <h2 id="lang-ui-hist-title">?? ??????????</h2>
             <div id="history-list">
                 <!-- Records injected here -->
             </div>
-            <button id="close-history" onclick="closeHistory()">關閉</button>
+            <button id="close-history" onclick="closeHistory()">???</button>
         </div>
     </div>
 
     <script type="text/plain" id="legacy-inline-script">
-        // ── Audio Engine ──────────────────────────────────────────────────
+        // ???? Audio Engine ????????????????????????????????????????????????????????????????????????????????????????????????????
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioMuted = false;
 
@@ -1595,7 +1641,7 @@
             }
         }
 
-        // Tiny synth tap: short band-pass burst → typewriter feel
+        // Tiny synth tap: short band-pass burst ??typewriter feel
         function playTap() {
             if (audioMuted) return;
             const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
@@ -1678,7 +1724,7 @@
             });
         }
 
-        // ── Particles Generation ──────────────────────────────────────────
+        // ???? Particles Generation ????????????????????????????????????????????????????????????????????????????????????
         function createParticles() {
             const container = document.getElementById('particles-container');
             const particleCount = 45; // Amount of floating particles
@@ -1720,54 +1766,54 @@
         // Also start BGM on first click anywhere
         document.addEventListener('click', startBGM, { once: true });
 
-        // ── Dialogue Script & L10n ────────────────────────────────────
+        // ???? Dialogue Script & L10n ????????????????????????????????????????????????????????????????????????
         let currentLang = 'tw';
 
         const l10n = {
             tw: {
-                startBtn: '開始',
-                deathText: '你被咬死了',
-                speaker: '提爾狐',
+                startBtn: '???',
+                deathText: '??????????????,
+                speaker: '??????,
                 lines: [
-                    '你真的不是什麼奇怪獸人控嗎？',
-                    '哪有第一次見面就說要跟我回家的...',
-                    '先說好等等不准碰我的尾巴!',
-                    '亂摸我會...咬你喔!!',
-                    '你...想幹什麼？'
+                    '???????????????????????????',
+                    '?????????????????????????????????..',
+                    '????????????????????????????????????!',
+                    '???????...?????!',
+                    '??..????????????????'
                 ],
-                choiceTitle: '— 選擇你的行為 —',
+                choiceTitle: '?????????????????????????????,
                 choices: [
-                    '撲過去摸尾巴UwU',
-                    '抱住摸肚肚',
-                    '摸摸肉球',
-                    '和你OOXX'
+                    '??????????????????????UwU',
+                    '????????,
+                    '????????',
+                    '???OOXX'
                 ],
                 responses: [
-                    '不行!!(咬咬咬)',
-                    '什..什麼？',
-                    '不行! 變態!!!',
-                    '救命阿阿阿'
+                    '????!!(??????',
+                    '??????..??????????',
+                    '????! ????!!!',
+                    '???????????
                 ],
                 ui: {
-                    docTitle: '大安森林公園 - 草地', gameTitle: '大安森林公園 ‧ 草地',
-                    save: '存檔', load: '讀檔', autoBtn: '自動', skip: '跳過', gearBtn: '⚙ 設定', chapTitle: '初次邂逅',
-                    cg: 'CG 圖庫', audioOn: '音樂 (開)', audioOff: '音樂 (關)', history: '對話紀錄', map: '地圖',
-                    prev: '◀ 上一句', histBtn: '紀錄',
-                    histTitle: '📜 對話紀錄', closeHist: '關閉',
-                    settingTitle: '⚙ 遊戲設定', textSpeed: '文字速度', bgm: 'BGM 音量', sfx: '音效音量', voice: '語音音量',
-                    fullScreen: '全螢幕顯示', lang: '字幕語言', closeSet: '關閉設定',
-                    on: '開啟', off: '關閉', tw: '繁中', jp: '日本語', en: 'EN',
-                    socialPrompt: '是否要前往 TERU FOX 的社群媒體頁面？', social: '社群媒體',
-                    toastSave: '📂 已存檔', toastLoad: '📖 讀取中...', toastSkip: '⏩ 快進模式', toastAutoOn: '▶ 自動播放 ON',
-                    toastAutoOff: '⏸ 自動播放 OFF', toastContinue: '✨ 故事繼續中...', noHistory: '暫無紀錄...',
-                    ooxxTitle: 'OOXX 遊戲', ooxxYourTurn: '你的回合 (O)', ooxxAiTurn: '提爾在想...',
-                    ooxxDraw: '平手', ooxxLose: '你輸了', ooxxTapReturn: '點擊任意處返回'
+                    docTitle: '????????????????????????????? - ?????, gameTitle: '????????????????????????????? ???????,
+                    save: '?????????', load: '??????, autoBtn: '???', skip: '???????', gearBtn: '??????????????', chapTitle: '?????????????????????????,
+                    cg: 'CG ??????????', audioOn: '??? (??', audioOff: '??? (??', history: '??????????, map: '???',
+                    prev: '?? ???????????, histBtn: '?????????,
+                    histTitle: '?? ??????????, closeHist: '???',
+                    settingTitle: '??????????????????', textSpeed: '??????????, bgm: 'BGM ???', sfx: '??????', voice: '??????????',
+                    fullScreen: '?????????????????, lang: '???????????', closeSet: '???????????????',
+                    on: '???', off: '???', tw: '?????????????????, jp: '????????????????????, en: 'EN',
+                    socialPrompt: '???????????????????? TERU FOX ???????????????', social: '?????????',
+                    toastSave: '?? ???????, toastLoad: '?? ????????????...', toastSkip: '???????????, toastAutoOn: '????????? ON',
+                    toastAutoOff: '????????? OFF', toastContinue: '???????????..', noHistory: '?????????????..',
+                    ooxxTitle: 'OOXX ????', ooxxYourTurn: '??????? (O)', ooxxAiTurn: '????????...',
+                    ooxxDraw: '???????', ooxxLose: '???????????, ooxxTapReturn: '????????????????????
                 }
             },
             en: {
                 startBtn: 'Start',
                 deathText: 'You were bitten to death',
-                speaker: '提爾狐',
+                speaker: '??????,
                 lines: [
                     'Are you seriously not some weird furry?',
                     'Who asks to go home with me right after meeting...',
@@ -1775,7 +1821,7 @@
                     'If you touch it, I will... bite you!!',
                     'W-What are you trying to do?'
                 ],
-                choiceTitle: '— Choose your action —',
+                choiceTitle: '??Choose your action ??,
                 choices: [
                     'Pounce and touch the tail UwU',
                     'Hug and rub the belly',
@@ -1789,59 +1835,59 @@
                     'Help meee'
                 ],
                 ui: {
-                    docTitle: "Da'an Forest Park - Meadow", gameTitle: "Da'an Forest Park ‧ Meadow",
-                    save: 'Save', load: 'Load', skip: 'Skip', gearBtn: '⚙ Settings', chapTitle: 'First Encounter',
+                    docTitle: "Da'an Forest Park - Meadow", gameTitle: "Da'an Forest Park ??Meadow",
+                    save: 'Save', load: 'Load', skip: 'Skip', gearBtn: '??Settings', chapTitle: 'First Encounter',
                     audioOn: 'Music (On)', audioOff: 'Music (Off)', history: 'Log', map: 'Map',
-                    prev: '◀ Prev', histBtn: 'Log',
-                    histTitle: '📜 Dialogue Log', closeHist: 'Close',
-                    settingTitle: '⚙ Settings', textSpeed: 'Text Speed', bgm: 'BGM Vol', sfx: 'SFX Vol', voice: 'Voice Vol',
+                    prev: '?? Prev', histBtn: 'Log',
+                    histTitle: '?? Dialogue Log', closeHist: 'Close',
+                    settingTitle: '??Settings', textSpeed: 'Text Speed', bgm: 'BGM Vol', sfx: 'SFX Vol', voice: 'Voice Vol',
                     fullScreen: 'Fullscreen', lang: 'Language', closeSet: 'Close Settings',
                     on: 'On', off: 'Off', tw: 'TW', jp: 'JP', en: 'EN',
                     socialPrompt: "Would you like to visit TERU FOX's social media page?", social: 'Social',
-                    toastSave: '📂 Saved', toastLoad: '📖 Loading...', toastSkip: '⏩ Skipping', toastAutoOn: '▶ Auto Play ON',
-                    toastAutoOff: '⏸ Auto Play OFF', toastContinue: '✨ Story continues...', noHistory: 'No history...',
-                    ooxxTitle: 'OOXX Game', ooxxYourTurn: 'Your turn (O)', ooxxAiTurn: '提爾狐 is thinking...',
+                    toastSave: '?? Saved', toastLoad: '?? Loading...', toastSkip: '??Skipping', toastAutoOn: '??Auto Play ON',
+                    toastAutoOff: '??Auto Play OFF', toastContinue: '??Story continues...', noHistory: 'No history...',
+                    ooxxTitle: 'OOXX Game', ooxxYourTurn: 'Your turn (O)', ooxxAiTurn: '??????is thinking...',
                     ooxxDraw: 'Draw', ooxxLose: 'You Lost', ooxxTapReturn: 'Tap anywhere to return'
                 }
             },
             jp: {
-                startBtn: 'スタート',
-                deathText: '噛み殺されました',
-                speaker: 'テール',
+                startBtn: '?????????',
+                deathText: '??????????????????????????',
+                speaker: '??????,
                 lines: [
-                    '……ねぇ、キミ。本当に変なケモラーじゃないよね？',
-                    '初対面なのに『一緒に帰ろう』だなんて……ボク、怪しいと思うな！',
-                    'いい？先に言っておくけど、しっぽは、絶対に！触らないでよ！',
-                    'もし勝手に触ったりしたら……ボク、ガブって噛んじゃうからね！！',
-                    'ひゃっ！？な……なな、なにするつもり！？'
+                    '????????????????????????????????????????????????????????????????????????????????????????????????????????,
+                    '??????????????????????????????????????????????????????????????????????????????????????????',
+                    '??????????????????????????????????????????????????????????????????????????????????????',
+                    '?????????????????????????????????????????????????????????????????????????????????????,
+                    '?????????????????????????????????????????????????????????????????????????'
                 ],
-                choiceTitle: '— どうする？ —',
+                choiceTitle: '????????????,
                 choices: [
-                    '飛びかかってしっぽを触る UwU',
-                    '抱きしめてお腹を撫でる',
-                    'OOを触る',
-                    'あなたとOOXXしたい'
+                    '?????????????????????????? UwU',
+                    '?????????????????????,
+                    'OO???????,
+                    '???????????????????????????????????????
                 ],
                 responses: [
-                    'ダメ!! (ガブガブッ)',
-                    'えっ..何？',
-                    'ダメ！変態!!!',
-                    '助けてぇぇぇ'
+                    '????! (????????',
+                    '?????..?????',
+                    '??????????!!!',
+                    '?????????'
                 ],
                 ui: {
-                    docTitle: '大安森林公園 - 芝生', gameTitle: '大安森林公園 ‧ 芝生',
-                    save: 'セーブ', load: 'ロード', skip: 'スキップ', gearBtn: '⚙ 設定', chapTitle: '初めての出会い',
-                    audioOn: '音楽 (オン)', audioOff: '音楽 (オフ)', history: '履歴', map: 'マップ',
-                    prev: '◀ 戻る', histBtn: '履歴',
-                    histTitle: '📜 会話の履歴', closeHist: '閉じる',
-                    settingTitle: '⚙ 設定', textSpeed: 'テキスト速度', bgm: 'BGM音量', sfx: 'SE音量', voice: 'ボイス音量',
-                    fullScreen: '全画面表示', lang: '言語', closeSet: '設定を閉じる',
-                    on: 'オン', off: 'オフ', tw: 'TW', jp: 'JP', en: 'EN',
-                    socialPrompt: 'TERU FOXのソーシャルメディアへ移動しますか？', social: 'ソーシャル',
-                    toastSave: '📂 セーブ完了', toastLoad: '📖 ロード中...', toastSkip: '⏩ スキップモード', toastAutoOn: '▶ オートON',
-                    toastAutoOff: '⏸ オートOFF', toastContinue: '✨ 物語は続く...', noHistory: '記録がありません...',
-                    ooxxTitle: 'OOXXゲーム', ooxxYourTurn: 'あなたのターン (O)', ooxxAiTurn: 'テルが考えてる...',
-                    ooxxDraw: '引き分け', ooxxLose: 'あなたの負け', ooxxTapReturn: 'タップして戻る'
+                    docTitle: '????????????????????????????? - ???', gameTitle: '????????????????????????????? ?????',
+                    save: '???????, load: '??????, skip: '?????????', gearBtn: '??????????????', chapTitle: '????????????,
+                    audioOn: '????????(????)', audioOff: '????????(???)', history: '?????????, map: '?????,
+                    prev: '?? ???', histBtn: '?????????,
+                    histTitle: '?? ???????????????????, closeHist: '?????,
+                    settingTitle: '??????????????', textSpeed: '??????????????, bgm: 'BGM???', sfx: 'SE???', voice: '??????????????????????,
+                    fullScreen: '???????????????, lang: '????????????, closeSet: '??????????????????',
+                    on: '????', off: '???', tw: 'TW', jp: 'JP', en: 'EN',
+                    socialPrompt: 'TERU FOX??????????????????????????????????', social: '????????????????Ⅹ????????????????,
+                    toastSave: '?? ??????????, toastLoad: '?? ????????...', toastSkip: '??????????????????, toastAutoOn: '??????????,
+                    toastAutoOff: '???????????, toastContinue: '??????????..', noHistory: '???????????????????...',
+                    ooxxTitle: 'OOXX??????, ooxxYourTurn: '???????????????????????????????(O)', ooxxAiTurn: '??????????????????????????????...',
+                    ooxxDraw: '???????', ooxxLose: '????????????????????????????', ooxxTapReturn: '?????????????
                 }
             }
         };
@@ -2049,7 +2095,7 @@
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
 
-            // Choice 3 → launch OOXX minigame instead of normal response
+            // Choice 3 ??launch OOXX minigame instead of normal response
             if (idx === 3) {
                 startOOXX();
                 return;
@@ -2084,7 +2130,7 @@
             }, textSpeedMs);
         }
 
-        // ── OOXX MINI-GAME ──────────────────────────────────────────────
+        // ???? OOXX MINI-GAME ????????????????????????????????????????????????????????????????????????????????????????????
         const OOXX_AI = 'X', OOXX_HU = 'O';
         let ooxxBoard = [], ooxxLocked = false;
 
@@ -2290,9 +2336,9 @@
             const resultText = isDraw ? ui.ooxxDraw : ui.ooxxLose;
             const cls = isDraw ? 'draw' : 'lose';
             const subText = isDraw ? '' : (
-                currentLang === 'jp' ? '勝てばご褒美イラストが見れるぞ！' :
+                currentLang === 'jp' ? '?????????????????????????????????' :
                     currentLang === 'en' ? 'Win and you\'d get a special CG...' :
-                        '贏了才有色圖看'
+                        '?????????????
             );
 
             setTimeout(async () => {
@@ -2438,7 +2484,7 @@
             }
         }
 
-        // ── OOXX PIECE PLACEMENT SOUND ──────────────────────────────
+        // ???? OOXX PIECE PLACEMENT SOUND ????????????????????????????????????????????????????????????
         // Short crisp tone, similar in character to playTap() but deeper
         function playOOXXPlace(isAI) {
             if (audioMuted) return;
@@ -2511,7 +2557,7 @@
             this.classList.add('show-text');
         });
 
-        // ── Settings ──────────────────────────────────────────────────────
+        // ???? Settings ????????????????????????????????????????????????????????????????????????????????????????????????????????????
         const overlay = document.getElementById('settings-overlay');
         function openSettings() { overlay.style.display = 'flex'; setTimeout(() => overlay.classList.add('open'), 10); }
         function closeSettings() { overlay.classList.remove('open'); setTimeout(() => overlay.style.display = 'none', 300); }
@@ -2553,7 +2599,7 @@
 
             document.getElementById('lang-ui-social').textContent = ui.social;
             document.getElementById('lang-ui-audio').textContent = audioMuted ? ui.audioOff : ui.audioOn;
-            document.getElementById('lang-ui-history').textContent = ui.history;
+            <span class="tooltip" id="lang-ui-history">&#23565;&#35441;&#32000;&#37636;</span>
             document.getElementById('lang-ui-map').textContent = ui.map;
 
             document.getElementById('lang-btn-prev').textContent = ui.prev;
@@ -2567,7 +2613,7 @@
             document.getElementById('lang-ui-bgm').textContent = ui.bgm;
             document.getElementById('lang-ui-sfx').textContent = ui.sfx;
             document.getElementById('lang-ui-voice').textContent = ui.voice;
-            document.getElementById('lang-ui-fullscreen').textContent = ui.fullScreen;
+            <span class="setting-label" id="lang-ui-fullscreen">&#20840;&#34722;&#24149;&#39023;&#31034;</span>
             const autoEl = document.getElementById('lang-ui-auto');
             if (autoEl) autoEl.textContent = ui.autoPlay;
             document.getElementById('lang-ui-lang').textContent = ui.lang;
@@ -2612,8 +2658,8 @@
             else document.exitFullscreen();
         }
 
-        // ── GYROSCOPE PARALLAX (mobile only) ──────────────────────────────
-        // Uses object-position to shift the visible crop of character images — safe,
+        // ???? GYROSCOPE PARALLAX (mobile only) ????????????????????????????????????????????????????????????
+        // Uses object-position to shift the visible crop of character images ??safe,
         // no edge bleed, no transform override conflicts.
         (function () {
             if (!window.DeviceOrientationEvent) return;
@@ -2673,7 +2719,7 @@
             document.addEventListener('click', startGyro, { once: true });
         })();
 
-        // ── ASSET PRELOADER FOR GITHUB PAGES ──────────────────────────────
+        // ???? ASSET PRELOADER FOR GITHUB PAGES ????????????????????????????????????????????????????????????
 
         const assetsToLoad = [
             'no speak.jpg',
@@ -2717,7 +2763,7 @@
             });
         }
 
-        // ── MAP AND HISTORY ──────────────────────────────────────────────
+        // ???? MAP AND HISTORY ????????????????????????????????????????????????????????????????????????????????????????????
 
         function openSocial() {
             if (confirm(l10n[currentLang].ui.socialPrompt)) {
@@ -2744,7 +2790,7 @@
                     const div = document.createElement('div');
                     div.className = 'history-entry';
                     if (r.isChoice) {
-                        div.innerHTML = `<div class="history-text history-choice">► ${r.text}</div>`;
+                        div.innerHTML = `<div class="history-text history-choice">??${r.text}</div>`;
                     } else {
                         div.innerHTML = `
                             <div class="history-speaker">${r.speaker}</div>
@@ -2763,9 +2809,9 @@
         function closeHistory() { histOverlay.classList.add('hidden'); }
         function handleHistoryClick(e) { if (e.target === histOverlay) closeHistory(); }
 
-        // function showHistory() { showToast('📜 顯示對話紀錄'); } (Replaced by real history panel)
+        // function showHistory() { showToast('?? ??????????????????); } (Replaced by real history panel)
 
-        // ── Game Flow Control ────────────────────────────────────────────
+        // ???? Game Flow Control ????????????????????????????????????????????????????????????????????????????????????????
         function startGame() {
             ensureAudio();
             startBGM();
@@ -2834,7 +2880,7 @@
             transitionToTitleWithCover(sourceOverlayEl, cleanupFn);
         }
 
-        // ── Start ────────────────────────────────────────────────────────
+        // ???? Start ????????????????????????????????????????????????????????????????????????????????????????????????????????????????
         scheduleNextBlink();
         // Do not renderLine(0) immediately, wait for Start
         // renderLine(0);

@@ -65,34 +65,108 @@
       "choice_title": "你想做什麼？",
       "choice_1": "撲上去摸尾巴",
       "choice_2": "抱住然後揉肚子",
-      "choice_3": "摸摸狐泥的 OO",
+      "choice_3": "遞出 500 $",
       "choice_4": "和狐泥 OOXX",
       "resp_1": "不可以！(咬咬咬)",
       "resp_2": "喂！太近了！",
-      "resp_3": "不行！你這個變態！"
+      "resp_3": "什...什麼...那這個服務只有...今天有喔..."
     }
   },
   "nodes": [
-    { "id": "line_1", "type": "line", "textKey": "line_1", "nextNodeId": "line_2" },
-    { "id": "line_2", "type": "line", "textKey": "line_2", "nextNodeId": "line_3" },
-    { "id": "line_3", "type": "line", "textKey": "line_3", "nextNodeId": "line_4" },
-    { "id": "line_4", "type": "line", "textKey": "line_4", "nextNodeId": "line_5" },
-    { "id": "line_5", "type": "line", "textKey": "line_5", "nextNodeId": "choice_1" },
+    {
+      "id": "line_1",
+      "type": "line",
+      "textKey": "line_1",
+      "nextNodeId": "line_2"
+    },
+    {
+      "id": "line_2",
+      "type": "line",
+      "textKey": "line_2",
+      "nextNodeId": "line_3"
+    },
+    {
+      "id": "line_3",
+      "type": "line",
+      "textKey": "line_3",
+      "nextNodeId": "line_4"
+    },
+    {
+      "id": "line_4",
+      "type": "line",
+      "textKey": "line_4",
+      "nextNodeId": "line_5"
+    },
+    {
+      "id": "line_5",
+      "type": "line",
+      "textKey": "line_5",
+      "nextNodeId": "choice_1"
+    },
     {
       "id": "choice_1",
       "type": "choice",
       "titleKey": "choice_title",
       "options": [
-        { "id": "tail", "textKey": "choice_1", "nextNodeId": "resp_1" },
-        { "id": "belly", "textKey": "choice_2", "nextNodeId": "resp_2" },
-        { "id": "touch", "textKey": "choice_3", "nextNodeId": "resp_3" },
-        { "id": "ooxx", "textKey": "choice_4", "actionId": "start_ooxx" }
+        {
+          "id": "tail",
+          "textKey": "choice_1",
+          "nextNodeId": "resp_1"
+        },
+        {
+          "id": "belly",
+          "textKey": "choice_2",
+          "nextNodeId": "resp_2"
+        },
+        {
+          "id": "touch",
+          "textKey": "choice_3",
+          "nextNodeId": "resp_3"
+        },
+        {
+          "id": "ooxx",
+          "textKey": "choice_4",
+          "actionId": "start_ooxx"
+        }
       ]
     },
-    { "id": "resp_1", "type": "line", "textKey": "resp_1", "nextNodeId": "death_action" },
-    { "id": "resp_2", "type": "line", "textKey": "resp_2", "nextNodeId": "death_action" },
-    { "id": "resp_3", "type": "line", "textKey": "resp_3", "nextNodeId": "death_action" },
-    { "id": "death_action", "type": "action", "actionId": "trigger_death", "nextNodeId": "death_end" },
-    { "id": "death_end", "type": "end" }
+    {
+      "id": "resp_1",
+      "type": "line",
+      "textKey": "resp_1",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_2",
+      "type": "line",
+      "textKey": "resp_2",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_3",
+      "type": "line",
+      "textKey": "resp_3",
+      "nextNodeId": "ending_action"
+    },
+    {
+      "id": "ending_action",
+      "type": "action",
+      "actionId": "show_to_be_continued",
+      "nextNodeId": "ending_end"
+    },
+    {
+      "id": "ending_end",
+      "type": "end"
+    },
+    {
+      "id": "death_action",
+      "type": "action",
+      "actionId": "trigger_death",
+      "nextNodeId": "death_end"
+    },
+    {
+      "id": "death_end",
+      "type": "end"
+    }
   ]
 }

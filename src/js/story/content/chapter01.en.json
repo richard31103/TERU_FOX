@@ -147,7 +147,17 @@
       "id": "resp_3",
       "type": "line",
       "textKey": "resp_3",
-      "nextNodeId": "death_action"
+      "nextNodeId": "ending_action"
+    },
+    {
+      "id": "ending_action",
+      "type": "action",
+      "actionId": "show_to_be_continued",
+      "nextNodeId": "ending_end"
+    },
+    {
+      "id": "ending_end",
+      "type": "end"
     },
     {
       "id": "death_action",
