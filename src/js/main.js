@@ -1294,6 +1294,7 @@ console.log('[BOOT] main.js module active');
             'angry head.png',
             'happy head.png',
             'money.png',
+            'pet fox.jpg',
             'pet fox_M.jpg',
             'BG.jpg',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
