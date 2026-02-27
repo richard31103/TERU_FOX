@@ -723,6 +723,25 @@
             transform: translateY(0);
         }
 
+        #pet-fox-screen {
+            background: #000;
+            z-index: 101;
+        }
+
+        #pet-fox-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: 50% 50%;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.24s ease-out;
+        }
+
+        #pet-fox-screen:not(.hidden) #pet-fox-image {
+            opacity: 1;
+        }
+
         /* ???? MAP OVERLAY ???? */
         #map-overlay {
             background: rgba(10, 5, 0, 0.90);
@@ -1600,6 +1619,11 @@
     <!-- To Be Continued Screen -->
     <div id="to-be-continued-screen" class="overlay-screen hidden">
         <div id="to-be-continued-text">&#24453;&#32396;...</div>
+    </div>
+
+    <!-- Pet Fox Screen -->
+    <div id="pet-fox-screen" class="overlay-screen hidden">
+        <img src="pet fox.jpg" id="pet-fox-image" alt="Pet Fox">
     </div>
 
     <!-- OOXX Game Screen -->

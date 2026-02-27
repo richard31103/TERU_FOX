@@ -21,6 +21,7 @@ console.log('[BOOT] main.js module active');
             '#ooxx-result',
             '#ooxx-screen',
             '#money-popup',
+            '#pet-fox-screen',
             '#to-be-continued-screen',
             '#title-screen'
         ].join(', ');
@@ -238,6 +239,7 @@ console.log('[BOOT] main.js module active');
         const charHappy = document.getElementById('char-head-happy');
         const moneyPopupEl = document.getElementById('money-popup');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
+        const petFoxScreenEl = document.getElementById('pet-fox-screen');
         const gameContainerEl = document.getElementById('game-container');
         const MOBILE_MONEY_FOCUS_SHIFT_PX = -46;
         const MONEY_SOURCE_WIDTH = 2752;
@@ -251,6 +253,12 @@ console.log('[BOOT] main.js module active');
         const speakerPlate = document.getElementById('speaker-plate');
         const dialogueArea = document.getElementById('dialogue-area');
         const choicePanel = document.getElementById('choice-panel');
+        const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
+        const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
+        const PET_FOX_DISPLAY_MS = 3000;
+        let currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
+        let petFoxTimer = null;
+        const choiceButtonEls = Array.from(choicePanel.querySelectorAll('.choice-btn'));
         // const totalDots = script.length; (Removed)
 
         function setCharState(state) {
@@ -274,6 +282,48 @@ console.log('[BOOT] main.js module active');
             else if (state === 'speak') charSpeak.classList.add('active');
             else if (state === 'angry') { if (charAngry) charAngry.classList.add('active'); }
             else if (state === 'happy') { if (charHappy) charHappy.classList.add('active'); }
+        }
+
+        function setChoiceButtons(sourceIndices) {
+            const t = l10n[currentLang];
+            if (!t) return;
+            currentChoiceSourceIndices = sourceIndices.slice();
+
+            const labelEl = choicePanel.querySelector('.choice-label');
+            if (labelEl) labelEl.textContent = t.choiceTitle;
+
+            choiceButtonEls.forEach((btn, slotIndex) => {
+                const sourceIndex = sourceIndices[slotIndex];
+                const numEl = btn.querySelector('.choice-num');
+                const textEl = btn.querySelector('.choice-text');
+                const text = typeof sourceIndex === 'number' ? t.choices[sourceIndex] : '';
+
+                if (typeof sourceIndex !== 'number' || !text) {
+                    btn.style.display = 'none';
+                    return;
+                }
+
+                btn.style.display = '';
+                if (numEl) numEl.textContent = String(slotIndex + 1);
+                if (textEl) textEl.textContent = text;
+                btn.setAttribute('onclick', `pickChoice(${sourceIndex})`);
+            });
+        }
+
+        function showChoicePanel(sourceIndices = DEFAULT_CHOICE_SOURCE_INDICES) {
+            if (appState && appState.getState() !== GAME_STATES.CHOICE) {
+                try { appState.transition(GAME_STATES.CHOICE, { source: 'show_choice_panel' }); } catch (e) { }
+            }
+            inChoiceMode = true;
+            dialogueArea.classList.add('choices-mode');
+            choicePanel.classList.add('visible');
+            document.getElementById('chapter-badge').style.opacity = '0';
+            document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            setChoiceButtons(sourceIndices);
+
+            // Preload OOXX UI/AI while user is still on choice screen.
+            warmupOOXXEngine();
+            prepareOOXXScreen();
         }
 
         function scheduleNextBlink() {
@@ -350,23 +400,7 @@ console.log('[BOOT] main.js module active');
             if (!entry || !t) return;
 
             if (entry.type === 'choice') {
-                if (appState && appState.getState() !== GAME_STATES.CHOICE) {
-                    try { appState.transition(GAME_STATES.CHOICE, { source: 'render_choice' }); } catch (e) { }
-                }
-                inChoiceMode = true;
-                dialogueArea.classList.add('choices-mode');
-                choicePanel.classList.add('visible');
-                document.getElementById('chapter-badge').style.opacity = '0';
-                document.getElementById('chapter-badge').style.pointerEvents = 'none';
-
-                // Update choice labels
-                document.querySelector('.choice-label').textContent = t.choiceTitle;
-                const choiceBtns = document.querySelectorAll('.choice-btn .choice-text');
-                t.choices.forEach((text, i) => choiceBtns[i].textContent = text);
-                // Preload OOXX UI/AI while user is still on choice screen.
-                warmupOOXXEngine();
-                prepareOOXXScreen();
-
+                showChoicePanel(DEFAULT_CHOICE_SOURCE_INDICES);
                 return;
             }
 
@@ -447,6 +481,12 @@ console.log('[BOOT] main.js module active');
                 case 'show_to_be_continued':
                     setTimeout(showToBeContinued, context.delayMs ?? 700);
                     return;
+                case 'show_pet_fox':
+                    setTimeout(showPetFox, context.delayMs ?? 700);
+                    return;
+                case 'show_followup_choices':
+                    setTimeout(showFollowupChoices, context.delayMs ?? 0);
+                    return;
                 default:
                     console.warn('[ACTION] Unknown action:', actionId);
             }
@@ -473,6 +513,10 @@ console.log('[BOOT] main.js module active');
                         pendingPostChoiceAction = actionId;
                         return;
                     }
+                    if (actionId === 'show_followup_choices') {
+                        dispatchAction(actionId, { delayMs: 0 });
+                        return;
+                    }
                     dispatchAction(actionId, { delayMs: 1000 });
                 }
             }, textSpeedMs);
@@ -488,7 +532,7 @@ console.log('[BOOT] main.js module active');
             const t = l10n[currentLang];
             const fallbackActionId = idx === 3
                 ? 'start_ooxx'
-                : (idx === 2 ? 'show_to_be_continued' : 'trigger_death');
+                : (idx === 2 ? 'show_to_be_continued' : (idx === 1 ? 'show_pet_fox' : 'trigger_death'));
             const outcome = storyEngine
                 ? storyEngine.getChoiceOutcomeByIndex(idx)
                 : { actionId: fallbackActionId, responseText: t.responses[idx] };
@@ -930,6 +974,34 @@ console.log('[BOOT] main.js module active');
             }
         }
 
+        function showFollowupChoices() {
+            isDeathSequence = false;
+            showChoicePanel(FOLLOWUP_CHOICE_SOURCE_INDICES);
+        }
+
+        function showPetFox() {
+            isDeathSequence = false;
+            setTyping(false);
+            resetMoneyIntermission();
+            if (petFoxTimer) {
+                clearTimeout(petFoxTimer);
+                petFoxTimer = null;
+            }
+            if (!petFoxScreenEl) {
+                const line = (storyEngine && storyEngine.getTextByKey('resp_2_after_pet', currentLang)) || '摸...摸夠了吧...你還想幹嘛?';
+                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '');
+                return;
+            }
+
+            petFoxScreenEl.classList.remove('hidden');
+            petFoxTimer = setTimeout(() => {
+                petFoxTimer = null;
+                petFoxScreenEl.classList.add('hidden');
+                const line = (storyEngine && storyEngine.getTextByKey('resp_2_after_pet', currentLang)) || '摸...摸夠了吧...你還想幹嘛?';
+                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '');
+            }, PET_FOX_DISPLAY_MS);
+        }
+
         // Click anywhere to advance
         document.getElementById('game-container').addEventListener('click', function (e) {
             if (isMoneyIntermission) {
@@ -1010,10 +1082,7 @@ console.log('[BOOT] main.js module active');
                 speakerPlate.textContent = t.speaker;
                 dialogueText.textContent = t.lines[lineIndex];
             } else if (inChoiceMode) {
-                const t = l10n[lang];
-                document.querySelector('.choice-label').textContent = t.choiceTitle;
-                const choiceBtns = document.querySelectorAll('.choice-btn .choice-text');
-                t.choices.forEach((text, i) => choiceBtns[i].textContent = text);
+                setChoiceButtons(currentChoiceSourceIndices);
             }
         }
 
@@ -1225,6 +1294,7 @@ console.log('[BOOT] main.js module active');
             'angry head.png',
             'happy head.png',
             'money.png',
+            'pet fox.jpg',
             'BG.jpg',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
@@ -1361,6 +1431,7 @@ console.log('[BOOT] main.js module active');
             isAngry = false;
             isHappy = false;
             pendingPostChoiceAction = null;
+            currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             dialogueHistory.length = 0;
 
             // Reset UI elements that may be dirty
@@ -1380,6 +1451,12 @@ console.log('[BOOT] main.js module active');
             ooxxResultEl.classList.remove('show-text');
             resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
+            if (petFoxTimer) {
+                clearTimeout(petFoxTimer);
+                petFoxTimer = null;
+            }
+            if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
 
             // Fade out BG.jpg splash as character fades in
             const splash = document.getElementById('bg-splash');
@@ -1416,10 +1493,17 @@ console.log('[BOOT] main.js module active');
             isAngry = false;
             isHappy = false;
             pendingPostChoiceAction = null;
+            currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
             resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
+            if (petFoxTimer) {
+                clearTimeout(petFoxTimer);
+                petFoxTimer = null;
+            }
+            if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
             cancelOOXXTransitions('returnToTitle reset');
             if (storyEngine) {
                 storyEngine.setLanguage(currentLang);

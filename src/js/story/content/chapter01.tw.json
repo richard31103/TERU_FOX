@@ -65,13 +65,14 @@
       "line_5": "你……你想做什麼？",
       "choice_title": "你想做什麼？",
       "choice_1": "撲上去摸尾巴",
-      "choice_2": "抱住然後揉肚子",
+      "choice_2": "揉肚子",
       "choice_3": "遞出 500 $",
       "choice_4": "和狐泥 OOXX",
       "resp_1": "不可以！(咬咬咬)",
-      "resp_2": "喂！太近了！",
+      "resp_2": "等...等一下",
       "resp_3": "什...什麼...那這個服務只有...今天有喔...",
-      "resp_4": "救命啊..."
+      "resp_4": "救命啊...",
+      "resp_2_after_pet": "摸...摸夠了吧...你還想幹嘛?"
     }
   },
   "nodes": [
@@ -142,7 +143,7 @@
       "id": "resp_2",
       "type": "line",
       "textKey": "resp_2",
-      "nextNodeId": "death_action"
+      "nextNodeId": "pet_fox_action"
     },
     {
       "id": "resp_3",
@@ -158,6 +159,16 @@
     },
     {
       "id": "ending_end",
+      "type": "end"
+    },
+    {
+      "id": "pet_fox_action",
+      "type": "action",
+      "actionId": "show_pet_fox",
+      "nextNodeId": "pet_fox_end"
+    },
+    {
+      "id": "pet_fox_end",
       "type": "end"
     },
     {
