@@ -365,6 +365,11 @@ console.log('[BOOT] main.js module active');
         const choiceButtonEls = Array.from(choicePanel.querySelectorAll('.choice-btn'));
         // const totalDots = script.length; (Removed)
 
+        function syncMobileChoiceUi() {
+            if (!gameContainerEl) return;
+            gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
+        }
+
         function setCharState(state) {
             charIdle.classList.remove('active');
             charBlink.classList.remove('active');
@@ -524,6 +529,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.remove('visible');
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+            syncMobileChoiceUi();
         }
 
         function playTailWagBurst() {
@@ -573,6 +579,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.add('visible');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            syncMobileChoiceUi();
             setChoiceButtons(sourceIndices);
 
             // Preload OOXX UI/AI while user is still on choice screen.
@@ -617,6 +624,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.add('visible');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            syncMobileChoiceUi();
             renderRuntimeChoicePanel();
             warmupOOXXEngine();
             prepareOOXXScreen();
@@ -741,6 +749,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.remove('visible');
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+            syncMobileChoiceUi();
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'render_line' }); } catch (e) { }
             }
@@ -1995,6 +2004,7 @@ console.log('[BOOT] main.js module active');
             dialogueText.textContent = '';
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+            syncMobileChoiceUi();
 
             // Clear any inline styles that could interfere with hiding/showing
             document.getElementById('title-screen').style.opacity = '';
