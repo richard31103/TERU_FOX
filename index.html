@@ -2100,14 +2100,47 @@
         }
 
         const OVERLAY_FADE_MS = 1000;
-        const OOXX_ENTRY_FADE_MS = 1200;
-        const OOXX_RESULT_FADE_MS = 900;
-        const OOXX_ENTRY_BLACK_HOLD_MS = 1800;
-        const OOXX_RESULT_BLACK_HOLD_MS = 700;
-        let ooxxTransitioning = false;
+        const OOXX_ENTRY_TRANSITION = { fadeInMs: 1200, holdMs: 1800, fadeOutMs: 1200 };
+        const OOXX_RESULT_TRANSITION = { fadeInMs: 900, holdMs: 700, fadeOutMs: 900 };
+        const OOXX_TRANSITION_CANCELLED = 'OOXX_TRANSITION_CANCELLED';
+        let ooxxTransitionLock = false;
+        let ooxxTransitionToken = 0;
 
         function waitMs(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function logOOXXTransition(token, phase, detail) {
+            const ts = new Date().toISOString();
+            const msg = detail ? `${phase} | ${detail}` : phase;
+            console.log(`[OOXX][${ts}][token:${token}] ${msg}`);
+        }
+
+        function beginOOXXTransition(label) {
+            ooxxTransitionLock = true;
+            ooxxTransitionToken += 1;
+            const token = ooxxTransitionToken;
+            logOOXXTransition(token, `${label} begin`);
+            return token;
+        }
+
+        function endOOXXTransition(token, label) {
+            if (token !== ooxxTransitionToken) return;
+            ooxxTransitionLock = false;
+            logOOXXTransition(token, `${label} end`);
+        }
+
+        function cancelOOXXTransitions(reason) {
+            ooxxTransitionToken += 1;
+            ooxxTransitionLock = false;
+            setOOXXCurtainInstant(false);
+            logOOXXTransition(ooxxTransitionToken, 'cancel', reason || 'manual reset');
+        }
+
+        function ensureOOXXToken(token) {
+            if (token !== ooxxTransitionToken) {
+                throw new Error(OOXX_TRANSITION_CANCELLED);
+            }
         }
 
         function setOOXXCurtainInstant(visible) {
@@ -2120,41 +2153,87 @@
             curtain.style.transition = '';
         }
 
-        function fadeOOXXCurtain(visible, durationMs) {
+        function animateOOXXCurtainTo({ token, visible, durationMs, phase }) {
             const curtain = document.getElementById('ooxx-curtain');
             const targetOpacity = visible ? '1' : '0';
+            const fromOpacity = visible ? '0' : '1';
 
             return new Promise(resolve => {
                 let settled = false;
-                const settle = () => {
+                const settle = (reason) => {
                     if (settled) return;
                     settled = true;
                     curtain.removeEventListener('transitionend', onEnd);
                     curtain.style.pointerEvents = visible ? 'all' : 'none';
+                    logOOXXTransition(token, `${phase} end`, `reason=${reason}`);
                     resolve();
                 };
                 const onEnd = (e) => {
-                    if (e.target === curtain && e.propertyName === 'opacity') settle();
+                    if (e.target === curtain && e.propertyName === 'opacity') settle('transitionend');
                 };
 
-                curtain.addEventListener('transitionend', onEnd);
-                curtain.classList.remove('dark');
+                logOOXXTransition(token, `${phase} start`, `duration=${durationMs}ms`);
                 curtain.style.pointerEvents = 'all';
+                curtain.classList.remove('dark');
 
-                const currentOpacity = getComputedStyle(curtain).opacity;
-                if (currentOpacity === targetOpacity) {
+                const currentOpacity = parseFloat(getComputedStyle(curtain).opacity);
+                if (Number.isNaN(currentOpacity) || Math.abs(currentOpacity - parseFloat(targetOpacity)) < 0.01 || durationMs <= 0) {
                     curtain.style.transition = 'none';
-                    curtain.style.opacity = visible ? '0' : '1';
+                    curtain.style.opacity = targetOpacity;
+                    curtain.style.pointerEvents = visible ? 'all' : 'none';
+                    logOOXXTransition(token, `${phase} end`, 'reason=instant');
+                    resolve();
+                    return;
+                }
+
+                if (Math.abs(currentOpacity - parseFloat(fromOpacity)) > 0.01) {
+                    curtain.style.transition = 'none';
+                    curtain.style.opacity = fromOpacity;
                     void curtain.offsetWidth;
                 }
 
+                curtain.addEventListener('transitionend', onEnd);
                 curtain.style.transition = `opacity ${durationMs}ms ease`;
                 requestAnimationFrame(() => {
                     curtain.style.opacity = targetOpacity;
                 });
 
-                setTimeout(settle, durationMs + 120);
+                setTimeout(() => settle('timeout'), durationMs + 180);
             });
+        }
+
+        async function runCurtainTransition({ fadeInMs, holdMs, fadeOutMs }, { token, label, onBlack } = {}) {
+            const activeToken = token || ooxxTransitionToken;
+            const tag = label || 'transition';
+
+            ensureOOXXToken(activeToken);
+            await animateOOXXCurtainTo({
+                token: activeToken,
+                visible: true,
+                durationMs: fadeInMs,
+                phase: `${tag}: fade-in`
+            });
+            ensureOOXXToken(activeToken);
+
+            if (typeof onBlack === 'function') {
+                logOOXXTransition(activeToken, `${tag}: on-black start`);
+                await onBlack();
+                logOOXXTransition(activeToken, `${tag}: on-black end`);
+                ensureOOXXToken(activeToken);
+            }
+
+            logOOXXTransition(activeToken, `${tag}: hold start`, `${holdMs}ms`);
+            await waitMs(holdMs);
+            ensureOOXXToken(activeToken);
+            logOOXXTransition(activeToken, `${tag}: hold end`);
+
+            await animateOOXXCurtainTo({
+                token: activeToken,
+                visible: false,
+                durationMs: fadeOutMs,
+                phase: `${tag}: fade-out`
+            });
+            ensureOOXXToken(activeToken);
         }
 
         function endOOXX(winnerMark, line) {
@@ -2171,53 +2250,69 @@
             );
 
             setTimeout(async () => {
-                const screen = document.getElementById('ooxx-screen');
-                stopOOXXAmbience();
+                if (ooxxTransitionLock) return;
+                const token = beginOOXXTransition('result');
+                try {
+                    const screen = document.getElementById('ooxx-screen');
+                    stopOOXXAmbience();
 
-                // Stop BGM
-                document.getElementById('bgm').pause();
+                    // Stop BGM
+                    document.getElementById('bgm').pause();
 
-                // Play death sound effect on a loss (same as triggerDeath)
-                if (!isDraw && !audioMuted) {
-                    const deathSfx = document.getElementById('sfx-death');
-                    deathSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
-                    deathSfx.currentTime = 0;
-                    deathSfx.play().catch(() => { });
-                }
+                    // Play death sound effect on a loss (same as triggerDeath)
+                    if (!isDraw && !audioMuted) {
+                        const deathSfx = document.getElementById('sfx-death');
+                        deathSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
+                        deathSfx.currentTime = 0;
+                        deathSfx.play().catch(() => { });
+                    }
 
-                const resultEl = document.getElementById('ooxx-result');
-                const textEl = document.getElementById('ooxx-result-text');
-                const subEl = document.getElementById('ooxx-result-sub');
-                textEl.textContent = resultText;
-                textEl.className = cls;
-                subEl.textContent = subText;
+                    const resultEl = document.getElementById('ooxx-result');
+                    const textEl = document.getElementById('ooxx-result-text');
+                    const subEl = document.getElementById('ooxx-result-sub');
+                    textEl.textContent = resultText;
+                    textEl.className = cls;
+                    subEl.textContent = subText;
 
-                await fadeOOXXCurtain(true, OOXX_RESULT_FADE_MS);
+                    await runCurtainTransition(OOXX_RESULT_TRANSITION, {
+                        token,
+                        label: 'result',
+                        onBlack: async () => {
+                            screen.style.transition = 'none';
+                            screen.classList.add('hidden');
+                            void screen.offsetWidth;
+                            screen.style.transition = '';
 
-                screen.style.transition = 'none';
-                screen.classList.add('hidden');
-                void screen.offsetWidth;
-                screen.style.transition = '';
-
-                resultEl.style.transition = 'none';
-                resultEl.classList.remove('hidden');
-                void resultEl.offsetWidth;
-                resultEl.style.transition = '';
-
-                await waitMs(OOXX_RESULT_BLACK_HOLD_MS);
-                await fadeOOXXCurtain(false, OOXX_RESULT_FADE_MS);
-                setTimeout(() => resultEl.classList.add('show-text'), 120);
-
-                resultEl.addEventListener('click', function once() {
-                    resultEl.removeEventListener('click', once);
-                    resultEl.classList.remove('show-text'); // reset for next time
-                    // Return to title and restart BGM
-                    returnToTitle(resultEl, () => {
-                        lineIndex = 0;
-                        document.getElementById('bgm').currentTime = 0;
-                        startBGM();
+                            resultEl.style.transition = 'none';
+                            resultEl.classList.remove('hidden');
+                            resultEl.classList.remove('show-text');
+                            void resultEl.offsetWidth;
+                            resultEl.style.transition = '';
+                        }
                     });
-                });
+
+                    setTimeout(() => {
+                        if (token !== ooxxTransitionToken) return;
+                        resultEl.classList.add('show-text');
+                    }, 120);
+
+                    resultEl.addEventListener('click', function once() {
+                        resultEl.removeEventListener('click', once);
+                        resultEl.classList.remove('show-text'); // reset for next time
+                        // Return to title and restart BGM
+                        returnToTitle(resultEl, () => {
+                            lineIndex = 0;
+                            document.getElementById('bgm').currentTime = 0;
+                            startBGM();
+                        });
+                    });
+                } catch (err) {
+                    if (!err || err.message !== OOXX_TRANSITION_CANCELLED) {
+                        console.error('OOXX result transition error:', err);
+                    }
+                } finally {
+                    endOOXXTransition(token, 'result');
+                }
             }, 900);
         }
 
@@ -2237,51 +2332,63 @@
         }
 
         async function startOOXX() {
-            if (ooxxTransitioning) return;
-            ooxxTransitioning = true;
+            if (ooxxTransitionLock) return;
+            const token = beginOOXXTransition('entry');
 
             try {
                 ooxxBoard = Array(9).fill('');
                 ooxxLocked = true;
                 const ui = l10n[currentLang].ui;
                 const screen = document.getElementById('ooxx-screen');
+                const resultEl = document.getElementById('ooxx-result');
 
-                await fadeOOXXCurtain(true, OOXX_ENTRY_FADE_MS);
-
-                // Build OOXX while fully black.
-                screen.innerHTML = `
+                await runCurtainTransition(OOXX_ENTRY_TRANSITION, {
+                    token,
+                    label: 'entry',
+                    onBlack: async () => {
+                        // Build OOXX while fully black.
+                        screen.innerHTML = `
                     <div id="ooxx-title">${ui.ooxxTitle}</div>
                     <div id="ooxx-grid">${Array.from({ length: 9 }, (_, i) => `<div class="ooxx-cell" data-i="${i}"></div>`).join('')}</div>
                     <div id="ooxx-status">${ui.ooxxAiTurn}</div>`;
-                screen.querySelectorAll('.ooxx-cell').forEach(cell => {
-                    cell.addEventListener('click', () => {
-                        const i = +cell.dataset.i;
-                        if (ooxxLocked || ooxxBoard[i]) return;
-                        ooxxLocked = true;
-                        ooxxBoard[i] = OOXX_HU;
-                        playOOXXPlace(false);
-                        const res = checkOOXX(ooxxBoard);
-                        if (res || ooxxBoard.every(c => c)) {
-                            endOOXX(res ? res.winner : null, res ? res.line : null);
-                            return;
-                        }
-                        renderOOXX();
-                        ooxxSetStatus('ooxxAiTurn');
-                        setTimeout(aiOOXXMove, 500);
-                    });
+                        screen.querySelectorAll('.ooxx-cell').forEach(cell => {
+                            cell.addEventListener('click', () => {
+                                const i = +cell.dataset.i;
+                                if (ooxxLocked || ooxxBoard[i]) return;
+                                ooxxLocked = true;
+                                ooxxBoard[i] = OOXX_HU;
+                                playOOXXPlace(false);
+                                const res = checkOOXX(ooxxBoard);
+                                if (res || ooxxBoard.every(c => c)) {
+                                    endOOXX(res ? res.winner : null, res ? res.line : null);
+                                    return;
+                                }
+                                renderOOXX();
+                                ooxxSetStatus('ooxxAiTurn');
+                                setTimeout(aiOOXXMove, 500);
+                            });
+                        });
+
+                        // Show OOXX instantly behind black curtain.
+                        screen.style.transition = 'none';
+                        screen.classList.remove('hidden');
+                        void screen.offsetWidth;
+                        screen.style.transition = '';
+                        resultEl.classList.add('hidden');
+                        resultEl.classList.remove('show-text');
+                    }
                 });
 
-                // Show OOXX instantly behind black curtain.
-                screen.style.transition = 'none';
-                screen.classList.remove('hidden');
-                void screen.offsetWidth;
-                screen.style.transition = '';
-
-                await waitMs(OOXX_ENTRY_BLACK_HOLD_MS);
-                await fadeOOXXCurtain(false, OOXX_ENTRY_FADE_MS);
-                setTimeout(aiOOXXMove, 90);
+                setTimeout(() => {
+                    if (token !== ooxxTransitionToken) return;
+                    aiOOXXMove();
+                }, 90);
+            } catch (err) {
+                if (!err || err.message !== OOXX_TRANSITION_CANCELLED) {
+                    console.error('OOXX entry transition error:', err);
+                }
             } finally {
-                ooxxTransitioning = false;
+                endOOXXTransition(token, 'entry');
             }
         }
 
@@ -2639,7 +2746,7 @@
             // Clear any inline styles that could interfere with hiding/showing
             document.getElementById('title-screen').style.opacity = '';
             document.getElementById('title-screen').classList.add('hidden');
-            setOOXXCurtainInstant(false);
+            cancelOOXXTransitions('startGame reset');
             document.getElementById('ooxx-screen').classList.add('hidden');
             const ooxxResultEl = document.getElementById('ooxx-result');
             ooxxResultEl.classList.add('hidden');
@@ -2677,7 +2784,7 @@
             isAngry = false;
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
-            setOOXXCurtainInstant(false);
+            cancelOOXXTransitions('returnToTitle reset');
             transitionToTitleWithCover(sourceOverlayEl, cleanupFn);
         }
 
