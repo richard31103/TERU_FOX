@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title id="lang-ui-docTitle">大安森林公園 - 草地</title>
+    <title id="lang-ui-docTitle">提爾模擬器</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Cinzel:wght@600&family=Orbitron:wght@700&family=M+PLUS+Rounded+1c:wght@700&display=swap"
         rel="stylesheet" />
@@ -88,6 +88,22 @@
             inset: 0;
             background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
             pointer-events: none;
+        }
+
+        /* ── OOXX transition curtain ── */
+        #ooxx-curtain {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 102;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.55s ease;
+        }
+
+        #ooxx-curtain.dark {
+            opacity: 1;
+            pointer-events: all;
         }
 
         /* ── Particles ── */
@@ -1297,6 +1313,8 @@
         <div id="vignette"></div>
         <!-- BG.jpg splash: covers character during title, fades out on game start -->
         <div id="bg-splash"></div>
+        <!-- OOXX transition curtain: fades to black before showing OOXX game -->
+        <div id="ooxx-curtain"></div>
 
         <!-- Particles -->
         <div id="particles-container"></div>
@@ -2015,7 +2033,7 @@
                     setTyping(false);
                     dialogueHistory.push({ speaker: t.speaker, text: responseText, isChoice: false });
                     isDeathSequence = true;
-                    triggerDeath();
+                    setTimeout(triggerDeath, 1000); // 1s pause after text before death screen
                 }
             }, textSpeedMs);
         }
@@ -2081,6 +2099,64 @@
             if (el) el.textContent = l10n[currentLang].ui[key] || key;
         }
 
+        const OVERLAY_FADE_MS = 1000;
+        const OOXX_ENTRY_FADE_MS = 1200;
+        const OOXX_RESULT_FADE_MS = 900;
+        const OOXX_ENTRY_BLACK_HOLD_MS = 1800;
+        const OOXX_RESULT_BLACK_HOLD_MS = 700;
+        let ooxxTransitioning = false;
+
+        function waitMs(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function setOOXXCurtainInstant(visible) {
+            const curtain = document.getElementById('ooxx-curtain');
+            curtain.classList.remove('dark');
+            curtain.style.transition = 'none';
+            curtain.style.opacity = visible ? '1' : '0';
+            curtain.style.pointerEvents = visible ? 'all' : 'none';
+            void curtain.offsetWidth;
+            curtain.style.transition = '';
+        }
+
+        function fadeOOXXCurtain(visible, durationMs) {
+            const curtain = document.getElementById('ooxx-curtain');
+            const targetOpacity = visible ? '1' : '0';
+
+            return new Promise(resolve => {
+                let settled = false;
+                const settle = () => {
+                    if (settled) return;
+                    settled = true;
+                    curtain.removeEventListener('transitionend', onEnd);
+                    curtain.style.pointerEvents = visible ? 'all' : 'none';
+                    resolve();
+                };
+                const onEnd = (e) => {
+                    if (e.target === curtain && e.propertyName === 'opacity') settle();
+                };
+
+                curtain.addEventListener('transitionend', onEnd);
+                curtain.classList.remove('dark');
+                curtain.style.pointerEvents = 'all';
+
+                const currentOpacity = getComputedStyle(curtain).opacity;
+                if (currentOpacity === targetOpacity) {
+                    curtain.style.transition = 'none';
+                    curtain.style.opacity = visible ? '0' : '1';
+                    void curtain.offsetWidth;
+                }
+
+                curtain.style.transition = `opacity ${durationMs}ms ease`;
+                requestAnimationFrame(() => {
+                    curtain.style.opacity = targetOpacity;
+                });
+
+                setTimeout(settle, durationMs + 120);
+            });
+        }
+
         function endOOXX(winnerMark, line) {
             ooxxLocked = true;
             renderOOXX(line);
@@ -2094,8 +2170,8 @@
                         '贏了才有色圖看'
             );
 
-            setTimeout(() => {
-                document.getElementById('ooxx-screen').classList.add('hidden');
+            setTimeout(async () => {
+                const screen = document.getElementById('ooxx-screen');
                 stopOOXXAmbience();
 
                 // Stop BGM
@@ -2115,23 +2191,32 @@
                 textEl.textContent = resultText;
                 textEl.className = cls;
                 subEl.textContent = subText;
+
+                await fadeOOXXCurtain(true, OOXX_RESULT_FADE_MS);
+
+                screen.style.transition = 'none';
+                screen.classList.add('hidden');
+                void screen.offsetWidth;
+                screen.style.transition = '';
+
+                resultEl.style.transition = 'none';
                 resultEl.classList.remove('hidden');
-                setTimeout(() => resultEl.classList.add('show-text'), 300);
+                void resultEl.offsetWidth;
+                resultEl.style.transition = '';
+
+                await waitMs(OOXX_RESULT_BLACK_HOLD_MS);
+                await fadeOOXXCurtain(false, OOXX_RESULT_FADE_MS);
+                setTimeout(() => resultEl.classList.add('show-text'), 120);
 
                 resultEl.addEventListener('click', function once() {
                     resultEl.removeEventListener('click', once);
-                    resultEl.classList.add('hidden');       // hide the result overlay
                     resultEl.classList.remove('show-text'); // reset for next time
                     // Return to title and restart BGM
-                    lineIndex = 0;
-                    isDeathSequence = false;
-                    isAngry = false;
-                    setCharState('idle');
-                    document.getElementById('bgm').currentTime = 0;
-                    startBGM();
-                    const ts = document.getElementById('title-screen');
-                    ts.style.opacity = '';  // clear any inline style so .hidden can work next time
-                    ts.classList.remove('hidden');
+                    returnToTitle(resultEl, () => {
+                        lineIndex = 0;
+                        document.getElementById('bgm').currentTime = 0;
+                        startBGM();
+                    });
                 });
             }, 900);
         }
@@ -2151,38 +2236,53 @@
             }
         }
 
-        function startOOXX() {
-            ooxxBoard = Array(9).fill('');
-            ooxxLocked = true;
-            const ui = l10n[currentLang].ui;
-            const screen = document.getElementById('ooxx-screen');
-            // Build UI while still hidden (opacity 0), then fade in
-            screen.innerHTML = `
-                <div id="ooxx-title">${ui.ooxxTitle}</div>
-                <div id="ooxx-grid">${Array.from({ length: 9 }, (_, i) => `<div class="ooxx-cell" data-i="${i}"></div>`).join('')}</div>
-                <div id="ooxx-status">${ui.ooxxAiTurn}</div>`;
-            screen.querySelectorAll('.ooxx-cell').forEach(cell => {
-                cell.addEventListener('click', () => {
-                    const i = +cell.dataset.i;
-                    if (ooxxLocked || ooxxBoard[i]) return;
-                    ooxxLocked = true;
-                    ooxxBoard[i] = OOXX_HU;
-                    playOOXXPlace(false); // Player piece sound
-                    const res = checkOOXX(ooxxBoard);
-                    if (res || ooxxBoard.every(c => c)) {
-                        endOOXX(res ? res.winner : null, res ? res.line : null);
-                        return;
-                    }
-                    renderOOXX();
-                    ooxxSetStatus('ooxxAiTurn');
-                    setTimeout(aiOOXXMove, 500);
+        async function startOOXX() {
+            if (ooxxTransitioning) return;
+            ooxxTransitioning = true;
+
+            try {
+                ooxxBoard = Array(9).fill('');
+                ooxxLocked = true;
+                const ui = l10n[currentLang].ui;
+                const screen = document.getElementById('ooxx-screen');
+
+                await fadeOOXXCurtain(true, OOXX_ENTRY_FADE_MS);
+
+                // Build OOXX while fully black.
+                screen.innerHTML = `
+                    <div id="ooxx-title">${ui.ooxxTitle}</div>
+                    <div id="ooxx-grid">${Array.from({ length: 9 }, (_, i) => `<div class="ooxx-cell" data-i="${i}"></div>`).join('')}</div>
+                    <div id="ooxx-status">${ui.ooxxAiTurn}</div>`;
+                screen.querySelectorAll('.ooxx-cell').forEach(cell => {
+                    cell.addEventListener('click', () => {
+                        const i = +cell.dataset.i;
+                        if (ooxxLocked || ooxxBoard[i]) return;
+                        ooxxLocked = true;
+                        ooxxBoard[i] = OOXX_HU;
+                        playOOXXPlace(false);
+                        const res = checkOOXX(ooxxBoard);
+                        if (res || ooxxBoard.every(c => c)) {
+                            endOOXX(res ? res.winner : null, res ? res.line : null);
+                            return;
+                        }
+                        renderOOXX();
+                        ooxxSetStatus('ooxxAiTurn');
+                        setTimeout(aiOOXXMove, 500);
+                    });
                 });
-            });
-            // Fade in smoothly: remove hidden (sets opacity→1 via CSS transition)
-            screen.classList.remove('hidden');
-            startOOXXAmbience();
-            // AI goes first after fade begins
-            setTimeout(aiOOXXMove, 600);
+
+                // Show OOXX instantly behind black curtain.
+                screen.style.transition = 'none';
+                screen.classList.remove('hidden');
+                void screen.offsetWidth;
+                screen.style.transition = '';
+
+                await waitMs(OOXX_ENTRY_BLACK_HOLD_MS);
+                await fadeOOXXCurtain(false, OOXX_ENTRY_FADE_MS);
+                setTimeout(aiOOXXMove, 90);
+            } finally {
+                ooxxTransitioning = false;
+            }
         }
 
         // ── OOXX PIECE PLACEMENT SOUND ──────────────────────────────
@@ -2231,8 +2331,7 @@
                 // Return to title after keeping death screen for a few seconds
                 setTimeout(() => {
                     deathScreen.classList.remove('show-text');
-                    deathScreen.classList.add('hidden');
-                    returnToTitle();
+                    returnToTitle(deathScreen);
                 }, 4000);
             }, 1000);
         }
@@ -2540,6 +2639,11 @@
             // Clear any inline styles that could interfere with hiding/showing
             document.getElementById('title-screen').style.opacity = '';
             document.getElementById('title-screen').classList.add('hidden');
+            setOOXXCurtainInstant(false);
+            document.getElementById('ooxx-screen').classList.add('hidden');
+            const ooxxResultEl = document.getElementById('ooxx-result');
+            ooxxResultEl.classList.add('hidden');
+            ooxxResultEl.classList.remove('show-text');
 
             // Fade out BG.jpg splash as character fades in
             const splash = document.getElementById('bg-splash');
@@ -2553,14 +2657,28 @@
             setTimeout(() => renderLine(0), 1400);
         }
 
-        function returnToTitle() {
-            document.getElementById('title-screen').classList.remove('hidden');
+        function transitionToTitleWithCover(sourceOverlayEl, cleanupFn) {
+            if (typeof cleanupFn === 'function') cleanupFn();
+            const title = document.getElementById('title-screen');
+            title.style.opacity = '';
+            title.classList.remove('hidden');
+            setTimeout(() => {
+                if (sourceOverlayEl) {
+                    sourceOverlayEl.classList.add('hidden');
+                    sourceOverlayEl.classList.remove('show-text');
+                }
+            }, OVERLAY_FADE_MS + 40);
+        }
+
+        function returnToTitle(sourceOverlayEl, cleanupFn) {
             // Stop logic / reset
             clearInterval(typeTimer);
             isDeathSequence = false;
             isAngry = false;
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
+            setOOXXCurtainInstant(false);
+            transitionToTitleWithCover(sourceOverlayEl, cleanupFn);
         }
 
         // ── Start ────────────────────────────────────────────────────────
