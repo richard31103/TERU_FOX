@@ -1,0 +1,163 @@
+{
+  "meta": {
+    "chapterId": "chapter01",
+    "lang": "en"
+  },
+  "entryNode": "line_1",
+  "strings": {
+    "startBtn": "Start",
+    "deathText": "You were bitten to death",
+    "speaker": "Teru Fox",
+    "ui": {
+      "docTitle": "Da'an Forest Park - Meadow",
+      "gameTitle": "Da'an Forest Park ‧ Meadow",
+      "save": "Save",
+      "load": "Load",
+      "autoBtn": "Auto",
+      "skip": "Skip",
+      "gearBtn": "⚙ Settings",
+      "chapTitle": "First Encounter",
+      "cg": "CG Gallery",
+      "audioOn": "Music (On)",
+      "audioOff": "Music (Off)",
+      "history": "Log",
+      "map": "Map",
+      "prev": "◀ Prev",
+      "histBtn": "Log",
+      "histTitle": "📜 Dialogue Log",
+      "closeHist": "Close",
+      "settingTitle": "⚙ Settings",
+      "textSpeed": "Text Speed",
+      "bgm": "BGM Vol",
+      "sfx": "SFX Vol",
+      "voice": "Voice Vol",
+      "fullScreen": "Fullscreen",
+      "autoPlay": "Auto Play",
+      "lang": "Language",
+      "closeSet": "Close Settings",
+      "on": "On",
+      "off": "Off",
+      "tw": "TW",
+      "jp": "JP",
+      "en": "EN",
+      "socialPrompt": "Would you like to visit TERU FOX's social media page?",
+      "social": "Social",
+      "toastSave": "📂 Saved",
+      "toastLoad": "📖 Loading...",
+      "toastSkip": "⏩ Skipping",
+      "toastAutoOn": "▶ Auto Play ON",
+      "toastAutoOff": "⏸ Auto Play OFF",
+      "toastContinue": "✨ Story continues...",
+      "noHistory": "No history...",
+      "ooxxTitle": "OOXX Game",
+      "ooxxYourTurn": "Your turn (O)",
+      "ooxxAiTurn": "Teru is thinking...",
+      "ooxxDraw": "Draw",
+      "ooxxLose": "You Lost",
+      "ooxxTapReturn": "Tap anywhere to return"
+    },
+    "text": {
+      "line_1": "Are you seriously not some weird furry?",
+      "line_2": "Who asks to go home with me right after meeting...",
+      "line_3": "And absolutely NO touching my tail!",
+      "line_4": "If you touch it, I will... bite you!!",
+      "line_5": "W-What are you trying to do?",
+      "choice_title": "— Choose your action —",
+      "choice_1": "Pounce and touch the tail UwU",
+      "choice_2": "Hug and rub the belly",
+      "choice_3": "Touch the OO",
+      "choice_4": "I want to OOXX with you",
+      "resp_1": "No!! (bite bite bite)",
+      "resp_2": "W..What?",
+      "resp_3": "No! Pervert!!!",
+      "resp_4": "Help meee"
+    }
+  },
+  "nodes": [
+    {
+      "id": "line_1",
+      "type": "line",
+      "textKey": "line_1",
+      "nextNodeId": "line_2"
+    },
+    {
+      "id": "line_2",
+      "type": "line",
+      "textKey": "line_2",
+      "nextNodeId": "line_3"
+    },
+    {
+      "id": "line_3",
+      "type": "line",
+      "textKey": "line_3",
+      "nextNodeId": "line_4"
+    },
+    {
+      "id": "line_4",
+      "type": "line",
+      "textKey": "line_4",
+      "nextNodeId": "line_5"
+    },
+    {
+      "id": "line_5",
+      "type": "line",
+      "textKey": "line_5",
+      "nextNodeId": "choice_1"
+    },
+    {
+      "id": "choice_1",
+      "type": "choice",
+      "titleKey": "choice_title",
+      "options": [
+        {
+          "id": "tail",
+          "textKey": "choice_1",
+          "nextNodeId": "resp_1"
+        },
+        {
+          "id": "belly",
+          "textKey": "choice_2",
+          "nextNodeId": "resp_2"
+        },
+        {
+          "id": "touch",
+          "textKey": "choice_3",
+          "nextNodeId": "resp_3"
+        },
+        {
+          "id": "ooxx",
+          "textKey": "choice_4",
+          "actionId": "start_ooxx"
+        }
+      ]
+    },
+    {
+      "id": "resp_1",
+      "type": "line",
+      "textKey": "resp_1",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_2",
+      "type": "line",
+      "textKey": "resp_2",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_3",
+      "type": "line",
+      "textKey": "resp_3",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "death_action",
+      "type": "action",
+      "actionId": "trigger_death",
+      "nextNodeId": "death_end"
+    },
+    {
+      "id": "death_end",
+      "type": "end"
+    }
+  ]
+}

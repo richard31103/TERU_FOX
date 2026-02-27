@@ -1,0 +1,163 @@
+{
+  "meta": {
+    "chapterId": "chapter01",
+    "lang": "jp"
+  },
+  "entryNode": "line_1",
+  "strings": {
+    "startBtn": "スタート",
+    "deathText": "噛み殺されました",
+    "speaker": "テール",
+    "ui": {
+      "docTitle": "大安森林公園 - 芝生",
+      "gameTitle": "大安森林公園 ‧ 芝生",
+      "save": "セーブ",
+      "load": "ロード",
+      "autoBtn": "オート",
+      "skip": "スキップ",
+      "gearBtn": "⚙ 設定",
+      "chapTitle": "初めての出会い",
+      "cg": "CG ギャラリー",
+      "audioOn": "音楽 (オン)",
+      "audioOff": "音楽 (オフ)",
+      "history": "履歴",
+      "map": "マップ",
+      "prev": "◀ 戻る",
+      "histBtn": "履歴",
+      "histTitle": "📜 会話の履歴",
+      "closeHist": "閉じる",
+      "settingTitle": "⚙ 設定",
+      "textSpeed": "テキスト速度",
+      "bgm": "BGM音量",
+      "sfx": "SE音量",
+      "voice": "ボイス音量",
+      "fullScreen": "全画面表示",
+      "autoPlay": "自動再生",
+      "lang": "言語",
+      "closeSet": "設定を閉じる",
+      "on": "オン",
+      "off": "オフ",
+      "tw": "TW",
+      "jp": "JP",
+      "en": "EN",
+      "socialPrompt": "TERU FOXのソーシャルメディアへ移動しますか？",
+      "social": "ソーシャル",
+      "toastSave": "📂 セーブ完了",
+      "toastLoad": "📖 ロード中...",
+      "toastSkip": "⏩ スキップモード",
+      "toastAutoOn": "▶ オートON",
+      "toastAutoOff": "⏸ オートOFF",
+      "toastContinue": "✨ 物語は続く...",
+      "noHistory": "記録がありません...",
+      "ooxxTitle": "OOXXゲーム",
+      "ooxxYourTurn": "あなたのターン (O)",
+      "ooxxAiTurn": "テルが考えてる...",
+      "ooxxDraw": "引き分け",
+      "ooxxLose": "あなたの負け",
+      "ooxxTapReturn": "タップして戻る"
+    },
+    "text": {
+      "line_1": "……ねぇ、キミ。本当に変なケモラーじゃないよね？",
+      "line_2": "初対面なのに『一緒に帰ろう』だなんて……ボク、怪しいと思うな！",
+      "line_3": "いい？先に言っておくけど、しっぽは、絶対に！触らないでよ！",
+      "line_4": "もし勝手に触ったりしたら……ボク、ガブって噛んじゃうからね！！",
+      "line_5": "ひゃっ！？な……なな、なにするつもり！？",
+      "choice_title": "— どうする？ —",
+      "choice_1": "飛びかかってしっぽを触る UwU",
+      "choice_2": "抱きしめてお腹を撫でる",
+      "choice_3": "OOを触る",
+      "choice_4": "あなたとOOXXしたい",
+      "resp_1": "ダメ!! (ガブガブッ)",
+      "resp_2": "えっ..何？",
+      "resp_3": "ダメ！変態!!!",
+      "resp_4": "助けてぇぇぇ"
+    }
+  },
+  "nodes": [
+    {
+      "id": "line_1",
+      "type": "line",
+      "textKey": "line_1",
+      "nextNodeId": "line_2"
+    },
+    {
+      "id": "line_2",
+      "type": "line",
+      "textKey": "line_2",
+      "nextNodeId": "line_3"
+    },
+    {
+      "id": "line_3",
+      "type": "line",
+      "textKey": "line_3",
+      "nextNodeId": "line_4"
+    },
+    {
+      "id": "line_4",
+      "type": "line",
+      "textKey": "line_4",
+      "nextNodeId": "line_5"
+    },
+    {
+      "id": "line_5",
+      "type": "line",
+      "textKey": "line_5",
+      "nextNodeId": "choice_1"
+    },
+    {
+      "id": "choice_1",
+      "type": "choice",
+      "titleKey": "choice_title",
+      "options": [
+        {
+          "id": "tail",
+          "textKey": "choice_1",
+          "nextNodeId": "resp_1"
+        },
+        {
+          "id": "belly",
+          "textKey": "choice_2",
+          "nextNodeId": "resp_2"
+        },
+        {
+          "id": "touch",
+          "textKey": "choice_3",
+          "nextNodeId": "resp_3"
+        },
+        {
+          "id": "ooxx",
+          "textKey": "choice_4",
+          "actionId": "start_ooxx"
+        }
+      ]
+    },
+    {
+      "id": "resp_1",
+      "type": "line",
+      "textKey": "resp_1",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_2",
+      "type": "line",
+      "textKey": "resp_2",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "resp_3",
+      "type": "line",
+      "textKey": "resp_3",
+      "nextNodeId": "death_action"
+    },
+    {
+      "id": "death_action",
+      "type": "action",
+      "actionId": "trigger_death",
+      "nextNodeId": "death_end"
+    },
+    {
+      "id": "death_end",
+      "type": "end"
+    }
+  ]
+}
