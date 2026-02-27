@@ -226,18 +226,6 @@
             opacity: 1;
         }
 
-        @media (hover: none) and (pointer: coarse) {
-            #character-container,
-            #money-popup {
-                transition: transform 0.22s ease-out, opacity 0.15s ease-out;
-            }
-
-            #game-container.money-focus-mobile #character-container,
-            #game-container.money-focus-mobile #money-popup {
-                transform: translateX(-9vw);
-            }
-        }
-
         @keyframes tailSway {
             from {
                 transform: rotate(-2.5deg);

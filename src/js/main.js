@@ -227,6 +227,7 @@ console.log('[BOOT] main.js module active');
         let skipMoneyResolveClick = false;
         let pendingPostChoiceAction = null;
         let moneyIntermissionDone = null;
+        let mobileMoneyFocusActive = false;
         let blinkTimeout = null;
         let speakInterval = null;
 
@@ -238,6 +239,13 @@ console.log('[BOOT] main.js module active');
         const moneyPopupEl = document.getElementById('money-popup');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
         const gameContainerEl = document.getElementById('game-container');
+        const MOBILE_MONEY_FOCUS_SHIFT_PX = -46;
+        const MONEY_SOURCE_WIDTH = 2752;
+        const MONEY_SOURCE_HEIGHT = 1536;
+        const MONEY_FOCUS_X = 432;
+        const MONEY_FOCUS_Y = 560;
+        const MONEY_FOCUS_X_PCT = `${((MONEY_FOCUS_X / MONEY_SOURCE_WIDTH) * 100).toFixed(4)}%`;
+        const MONEY_FOCUS_Y_PCT = `${((MONEY_FOCUS_Y / MONEY_SOURCE_HEIGHT) * 100).toFixed(4)}%`;
 
         const dialogueText = document.getElementById('dialogue-text');
         const speakerPlate = document.getElementById('speaker-plate');
@@ -865,13 +873,14 @@ console.log('[BOOT] main.js module active');
         }
 
         function setMobileMoneyFocus(enabled) {
-            if (!gameContainerEl) return;
             const isMobileLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            mobileMoneyFocusActive = Boolean(enabled && isMobileLike);
+            if (!gameContainerEl) return;
             if (!isMobileLike) {
                 gameContainerEl.classList.remove('money-focus-mobile');
                 return;
             }
-            gameContainerEl.classList.toggle('money-focus-mobile', Boolean(enabled));
+            gameContainerEl.classList.toggle('money-focus-mobile', mobileMoneyFocusActive);
         }
 
         function beginMoneyIntermission(onDone) {
@@ -1130,8 +1139,9 @@ console.log('[BOOT] main.js module active');
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
+                const focusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_FOCUS_SHIFT_PX : 0;
 
-                const bgShiftX = clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
+                const bgShiftX = clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX) + focusShiftX;
                 const bgShiftY = clamp(smoothY * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
                 const bgPos = `calc(50% + ${bgShiftX.toFixed(2)}px) calc(50% + ${bgShiftY.toFixed(2)}px)`;
                 if (bgEl) bgEl.style.backgroundPosition = bgPos;
@@ -1142,11 +1152,14 @@ console.log('[BOOT] main.js module active');
                 const rootStyle = getComputedStyle(document.documentElement);
                 const baseX = rootStyle.getPropertyValue('--char-focus-x').trim() || '50%';
                 const baseY = rootStyle.getPropertyValue('--char-focus-y').trim() || '22%';
-                const px = `calc(${baseX} + ${smoothX.toFixed(2)}px)`;
+                const px = `calc(${baseX} + ${(smoothX + focusShiftX).toFixed(2)}px)`;
                 const py = `calc(${baseY} + ${smoothY.toFixed(2)}px)`;
                 document.querySelectorAll('.char-img').forEach(img => {
                     img.style.objectPosition = `${px} ${py}`;
                 });
+                if (moneyPopupEl) {
+                    moneyPopupEl.style.objectPosition = `calc(${MONEY_FOCUS_X_PCT} + ${focusShiftX.toFixed(2)}px) ${MONEY_FOCUS_Y_PCT}`;
+                }
 
                 requestAnimationFrame(tick);
             }
