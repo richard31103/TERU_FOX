@@ -993,6 +993,7 @@ console.log('[BOOT] main.js module active');
                 return;
             }
 
+            petFoxScreenEl.style.setProperty('--pet-fox-pan-duration', `${PET_FOX_DISPLAY_MS}ms`);
             petFoxScreenEl.classList.remove('hidden');
             petFoxTimer = setTimeout(() => {
                 petFoxTimer = null;

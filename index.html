@@ -726,6 +726,7 @@
         #pet-fox-screen {
             background: #000;
             z-index: 101;
+            --pet-fox-pan-duration: 1300ms;
         }
 
         #pet-fox-image {
@@ -736,10 +737,31 @@
             display: block;
             opacity: 0;
             transition: opacity 0.24s ease-out;
+            animation: none;
         }
 
         #pet-fox-screen:not(.hidden) #pet-fox-image {
             opacity: 1;
+        }
+
+        @keyframes petFoxPanMobile {
+            from {
+                object-position: 0% 50%;
+            }
+
+            to {
+                object-position: 100% 50%;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #pet-fox-image {
+                object-position: 0% 50%;
+            }
+
+            #pet-fox-screen:not(.hidden) #pet-fox-image {
+                animation: petFoxPanMobile var(--pet-fox-pan-duration, 1300ms) linear both;
+            }
         }
 
         /* ???? MAP OVERLAY ???? */
