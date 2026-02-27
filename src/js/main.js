@@ -929,6 +929,8 @@ console.log('[BOOT] main.js module active');
 
             const MAX_SHIFT = 10;   // px: how far image crops can shift
             const SMOOTH = 0.1; // lerp speed (lower = smoother)
+            const BG_SHIFT_RATIO = 0.4;
+            const BG_MAX_SHIFT_PX = 6;
 
             let baseGamma = null, baseBeta = null;
             let targetX = 0, targetY = 0;
@@ -937,6 +939,8 @@ console.log('[BOOT] main.js module active');
             let starting = false;
             let rafStarted = false;
             let orientationEvents = 0;
+            const bgEl = document.getElementById('bg');
+            const bgSplashEl = document.getElementById('bg-splash');
 
             function lerp(a, b, t) { return a + (b - a) * t; }
             function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -955,6 +959,12 @@ console.log('[BOOT] main.js module active');
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
+
+                const bgShiftX = clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
+                const bgShiftY = clamp(smoothY * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
+                const bgPos = `calc(50% + ${bgShiftX.toFixed(2)}px) calc(50% + ${bgShiftY.toFixed(2)}px)`;
+                if (bgEl) bgEl.style.backgroundPosition = bgPos;
+                if (bgSplashEl) bgSplashEl.style.backgroundPosition = bgPos;
 
                 // Shift the visible crop of every char image via object-position.
                 // This never moves the element boundary, so no black edges appear.
