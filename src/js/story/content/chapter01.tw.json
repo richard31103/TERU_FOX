@@ -72,7 +72,16 @@
       "resp_2": "等...等一下",
       "resp_3": "什...什麼...那這個服務只有...今天有喔...",
       "resp_4": "救命啊...",
-      "resp_2_after_pet": "摸...摸夠了吧...你還想幹嘛?"
+      "resp_2_after_pet": "摸...摸夠了吧...你還想幹嘛?",
+      "bed_line_1": "說...說好只能摸尾巴的喔",
+      "bed_choice_tail": "摸尾巴",
+      "bed_choice_thigh": "摸大腿",
+      "bed_choice_ooxx": "和狐狸 OOXX",
+      "bed_line_2": "嗚...我尾巴很敏感的...",
+      "bed_choice_continue": "繼續摸",
+      "bed_choice_stop": "不摸了",
+      "bed_line_continue": "嗚嗚....",
+      "bed_line_continue_cry": "我受不了拉..."
     }
   },
   "nodes": [
@@ -154,7 +163,7 @@
     {
       "id": "ending_action",
       "type": "action",
-      "actionId": "show_to_be_continued",
+      "actionId": "start_bed_scene",
       "nextNodeId": "ending_end"
     },
     {

@@ -71,7 +71,16 @@
       "resp_1": "ダメ!! (ガブガブッ)",
       "resp_2": "えっ..何？",
       "resp_3": "ダメ！変態!!!",
-      "resp_4": "助けてぇぇぇ"
+      "resp_4": "助けてぇぇぇ",
+      "bed_line_1": "い...言ったでしょ、尻尾だけって...",
+      "bed_choice_tail": "尻尾を触る",
+      "bed_choice_thigh": "太ももを触る",
+      "bed_choice_ooxx": "OOXX",
+      "bed_line_2": "うぅ...尻尾はすごく敏感なの...これ以上触られたら...",
+      "bed_choice_continue": "触り続ける",
+      "bed_choice_stop": "もう触らない",
+      "bed_line_continue": "うぅぅ....",
+      "bed_line_continue_cry": "もう耐えられない..."
     }
   },
   "nodes": [
@@ -153,7 +162,7 @@
     {
       "id": "ending_action",
       "type": "action",
-      "actionId": "show_to_be_continued",
+      "actionId": "start_bed_scene",
       "nextNodeId": "ending_end"
     },
     {

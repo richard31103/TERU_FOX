@@ -71,7 +71,16 @@
       "resp_1": "No!! (bite bite bite)",
       "resp_2": "W..What?",
       "resp_3": "No! Pervert!!!",
-      "resp_4": "Help meee"
+      "resp_4": "Help meee",
+      "bed_line_1": "I... I said you can only touch my tail, okay?",
+      "bed_choice_tail": "Touch tail",
+      "bed_choice_thigh": "Touch thigh",
+      "bed_choice_ooxx": "OOXX",
+      "bed_line_2": "Ugh... my tail is really sensitive... if you keep touching it, I'm going to...",
+      "bed_choice_continue": "Keep touching",
+      "bed_choice_stop": "Stop",
+      "bed_line_continue": "Mmmh....",
+      "bed_line_continue_cry": "I can't take it anymore..."
     }
   },
   "nodes": [
@@ -153,7 +162,7 @@
     {
       "id": "ending_action",
       "type": "action",
-      "actionId": "show_to_be_continued",
+      "actionId": "start_bed_scene",
       "nextNodeId": "ending_end"
     },
     {

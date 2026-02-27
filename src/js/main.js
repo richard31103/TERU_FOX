@@ -232,11 +232,16 @@ console.log('[BOOT] main.js module active');
         let blinkTimeout = null;
         let speakInterval = null;
 
+        const bgEl = document.getElementById('bg');
+        const bgSplashEl = document.getElementById('bg-splash');
+        const charTail = document.getElementById('char-tail');
+        const charBody = document.getElementById('char-body');
         const charIdle = document.getElementById('char-head-idle');
         const charBlink = document.getElementById('char-head-blink');
         const charSpeak = document.getElementById('char-head-speak');
         const charAngry = document.getElementById('char-head-angry');
         const charHappy = document.getElementById('char-head-happy');
+        const charHappyTalk = document.getElementById('char-head-happy-talk');
         const moneyPopupEl = document.getElementById('money-popup');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
         const petFoxScreenEl = document.getElementById('pet-fox-screen');
@@ -253,11 +258,60 @@ console.log('[BOOT] main.js module active');
         const speakerPlate = document.getElementById('speaker-plate');
         const dialogueArea = document.getElementById('dialogue-area');
         const choicePanel = document.getElementById('choice-panel');
+        const SCENE_DEFAULT = 'default';
+        const SCENE_BED = 'bed';
+        const SCENE_CONFIG = {
+            [SCENE_DEFAULT]: {
+                bg: 'BG.jpg',
+                body: 'body.png',
+                tail: 'tail.png',
+                idle: 'no speak head.png',
+                blink: 'blink head.png',
+                speak: 'speak head.png',
+                angry: 'angry head.png',
+                happy: 'happy head.png',
+                happyTalk: 'happy head talk.png',
+                tailOrigin: '68.7376% 75.0098%',
+                hasSpecialHeads: true
+            },
+            [SCENE_BED]: {
+                bg: 'bed/bed.jpg',
+                body: 'bed/bed body.png',
+                tail: 'bed/bed tail.png',
+                idle: 'bed/bed no speak head.png',
+                blink: 'bed/bed blink head.png',
+                speak: 'bed/bed speak head.png',
+                idleClosed: 'bed/bed no speak eyes close head.png',
+                speakClosed: 'bed/bed speak eyes close head.png',
+                idleClosedCry: 'bed/bed no speak eyes close cry head.png',
+                speakClosedCry: 'bed/bed speak eyes close cry head.png',
+                angry: 'bed/bed no speak head.png',
+                happy: 'bed/bed no speak head.png',
+                happyTalk: 'bed/bed no speak head.png',
+                tailOrigin: '42.6980% 62.0781%',
+                hasSpecialHeads: false
+            }
+        };
         const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
         const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
         const PET_FOX_DISPLAY_MS = 3000;
+        const BED_ENTRY_TRANSITION = { fadeInMs: 700, holdMs: 200, fadeOutMs: 700 };
+        const BED_TAIL_BURST_RESET_MS = 260;
         let currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
         let petFoxTimer = null;
+        let activeSceneId = SCENE_DEFAULT;
+        let sceneSupportsSpecialHeads = true;
+        let bedHeadVariant = 'normal';
+        let isHappyTalkMode = false;
+        let happyMouthOpen = false;
+        let isRuntimeChoiceMode = false;
+        let runtimeChoiceState = null;
+        const bedFlow = {
+            active: false,
+            phase: 'none',
+            tailOptionRemoved: false,
+            continueTouchCount: 0
+        };
         const choiceButtonEls = Array.from(choicePanel.querySelectorAll('.choice-btn'));
         // const totalDots = script.length; (Removed)
 
@@ -267,27 +321,141 @@ console.log('[BOOT] main.js module active');
             charSpeak.classList.remove('active');
             if (charAngry) charAngry.classList.remove('active');
             if (charHappy) charHappy.classList.remove('active');
+            if (charHappyTalk) charHappyTalk.classList.remove('active');
 
             if (isAngry) {
-                if (charAngry) charAngry.classList.add('active');
+                if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
+                else charIdle.classList.add('active');
                 return;
             }
             if (isHappy) {
-                if (charHappy) charHappy.classList.add('active');
+                if (sceneSupportsSpecialHeads && charHappy) {
+                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
+                    else charHappy.classList.add('active');
+                }
+                else charIdle.classList.add('active');
                 return;
             }
 
             if (state === 'idle') charIdle.classList.add('active');
             else if (state === 'blink') charBlink.classList.add('active');
             else if (state === 'speak') charSpeak.classList.add('active');
-            else if (state === 'angry') { if (charAngry) charAngry.classList.add('active'); }
-            else if (state === 'happy') { if (charHappy) charHappy.classList.add('active'); }
+            else if (state === 'angry') {
+                if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
+                else charIdle.classList.add('active');
+            }
+            else if (state === 'happy') {
+                if (sceneSupportsSpecialHeads && charHappy) {
+                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
+                    else charHappy.classList.add('active');
+                }
+                else charIdle.classList.add('active');
+            }
+            else if (state === 'happyTalk') {
+                if (sceneSupportsSpecialHeads && charHappyTalk) charHappyTalk.classList.add('active');
+                else if (sceneSupportsSpecialHeads && charHappy) charHappy.classList.add('active');
+                else charIdle.classList.add('active');
+            }
+        }
+
+        function getStoryText(key, fallback = '') {
+            return (storyEngine && storyEngine.getTextByKey(key, currentLang)) || fallback;
+        }
+
+        function getSceneGameTitle(uiBundle) {
+            const ui = uiBundle || l10n[currentLang]?.ui;
+            if (!ui) return '';
+            if (activeSceneId === SCENE_BED) return ui.bedGameTitle || '君悅酒店';
+            return ui.gameTitle || '';
+        }
+
+        function applySceneTopTitle() {
+            const titleEl = document.querySelector('.lang-ui-gameTitle');
+            if (!titleEl) return;
+            const title = getSceneGameTitle();
+            if (title) titleEl.textContent = title;
+        }
+
+        function applyScene(sceneId) {
+            const cfg = SCENE_CONFIG[sceneId] || SCENE_CONFIG[SCENE_DEFAULT];
+            activeSceneId = sceneId in SCENE_CONFIG ? sceneId : SCENE_DEFAULT;
+            sceneSupportsSpecialHeads = cfg.hasSpecialHeads !== false;
+            bedHeadVariant = 'normal';
+            isHappyTalkMode = false;
+            happyMouthOpen = false;
+            if (bgEl) bgEl.style.backgroundImage = `url('${cfg.bg}')`;
+            if (bgSplashEl) bgSplashEl.style.backgroundImage = `url('${cfg.bg}')`;
+            if (charTail) charTail.src = cfg.tail;
+            if (charBody) charBody.src = cfg.body;
+            if (charIdle) charIdle.src = cfg.idle;
+            if (charBlink) charBlink.src = cfg.blink;
+            if (charSpeak) charSpeak.src = cfg.speak;
+            if (charAngry) charAngry.src = cfg.angry;
+            if (charHappy) charHappy.src = cfg.happy;
+            if (charHappyTalk) charHappyTalk.src = cfg.happyTalk || cfg.happy;
+            if (charTail) {
+                charTail.style.setProperty('--tail-origin', cfg.tailOrigin || SCENE_CONFIG[SCENE_DEFAULT].tailOrigin);
+                charTail.classList.remove('tail-burst');
+            }
+            if (gameContainerEl) {
+                gameContainerEl.classList.toggle('scene-bed', activeSceneId === SCENE_BED);
+            }
+            setCharState('idle');
+            applySceneTopTitle();
+        }
+
+        function applyBedHeadVariant(variant) {
+            if (activeSceneId !== SCENE_BED) return;
+            const cfg = SCENE_CONFIG[SCENE_BED];
+            bedHeadVariant = (variant === 'eyes_closed' || variant === 'eyes_closed_cry') ? variant : 'normal';
+            if (!charIdle || !charBlink || !charSpeak) return;
+            if (bedHeadVariant === 'eyes_closed') {
+                charIdle.src = cfg.idleClosed || cfg.idle;
+                charSpeak.src = cfg.speakClosed || cfg.speak;
+                charBlink.src = cfg.idleClosed || cfg.blink;
+            } else if (bedHeadVariant === 'eyes_closed_cry') {
+                charIdle.src = cfg.idleClosedCry || cfg.idleClosed || cfg.idle;
+                charSpeak.src = cfg.speakClosedCry || cfg.speakClosed || cfg.speak;
+                charBlink.src = cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
+            } else {
+                charIdle.src = cfg.idle;
+                charSpeak.src = cfg.speak;
+                charBlink.src = cfg.blink;
+            }
+            setCharState(isTyping ? 'speak' : 'idle');
+        }
+
+        function resetBedFlow() {
+            bedFlow.active = false;
+            bedFlow.phase = 'none';
+            bedFlow.tailOptionRemoved = false;
+            bedFlow.continueTouchCount = 0;
+        }
+
+        function hideChoicePanel() {
+            inChoiceMode = false;
+            dialogueArea.classList.remove('choices-mode');
+            choicePanel.classList.remove('visible');
+            document.getElementById('chapter-badge').style.opacity = '1';
+            document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+        }
+
+        function playTailWagBurst() {
+            if (!charTail) return;
+            charTail.classList.remove('tail-burst');
+            void charTail.offsetWidth;
+            charTail.classList.add('tail-burst');
+            setTimeout(() => {
+                charTail.classList.remove('tail-burst');
+            }, BED_TAIL_BURST_RESET_MS);
         }
 
         function setChoiceButtons(sourceIndices) {
             const t = l10n[currentLang];
             if (!t) return;
             currentChoiceSourceIndices = sourceIndices.slice();
+            isRuntimeChoiceMode = false;
+            runtimeChoiceState = null;
 
             const labelEl = choicePanel.querySelector('.choice-label');
             if (labelEl) labelEl.textContent = t.choiceTitle;
@@ -306,7 +474,7 @@ console.log('[BOOT] main.js module active');
                 btn.style.display = '';
                 if (numEl) numEl.textContent = String(slotIndex + 1);
                 if (textEl) textEl.textContent = text;
-                btn.setAttribute('onclick', `pickChoice(${sourceIndex})`);
+                btn.onclick = () => pickChoice(sourceIndex);
             });
         }
 
@@ -324,6 +492,62 @@ console.log('[BOOT] main.js module active');
             // Preload OOXX UI/AI while user is still on choice screen.
             warmupOOXXEngine();
             prepareOOXXScreen();
+        }
+
+        function renderRuntimeChoicePanel() {
+            if (!runtimeChoiceState) return;
+            const t = l10n[currentLang];
+            const labelEl = choicePanel.querySelector('.choice-label');
+            const title = getStoryText(runtimeChoiceState.titleKey, t?.choiceTitle || '');
+            if (labelEl) labelEl.textContent = title;
+
+            choiceButtonEls.forEach((btn, slotIndex) => {
+                const option = runtimeChoiceState.options[slotIndex];
+                const numEl = btn.querySelector('.choice-num');
+                const textEl = btn.querySelector('.choice-text');
+                if (!option) {
+                    btn.style.display = 'none';
+                    btn.onclick = null;
+                    return;
+                }
+                btn.style.display = '';
+                if (numEl) numEl.textContent = String(slotIndex + 1);
+                if (textEl) textEl.textContent = getStoryText(option.textKey, option.fallbackText || '');
+                btn.onclick = () => handleRuntimeChoice(slotIndex);
+            });
+        }
+
+        function showRuntimeChoicePanel({ titleKey, options }) {
+            runtimeChoiceState = {
+                titleKey,
+                options: options.slice()
+            };
+            isRuntimeChoiceMode = true;
+            if (appState && appState.getState() !== GAME_STATES.CHOICE) {
+                try { appState.transition(GAME_STATES.CHOICE, { source: 'runtime_choice' }); } catch (e) { }
+            }
+            inChoiceMode = true;
+            dialogueArea.classList.add('choices-mode');
+            choicePanel.classList.add('visible');
+            document.getElementById('chapter-badge').style.opacity = '0';
+            document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            renderRuntimeChoicePanel();
+            warmupOOXXEngine();
+            prepareOOXXScreen();
+        }
+
+        function handleRuntimeChoice(slotIndex) {
+            if (!runtimeChoiceState) return;
+            const option = runtimeChoiceState.options[slotIndex];
+            if (!option || typeof option.onSelect !== 'function') return;
+            const choiceText = getStoryText(option.textKey, option.fallbackText || '');
+            if (choiceText) {
+                dialogueHistory.push({ speaker: '', text: choiceText, isChoice: true });
+            }
+            isRuntimeChoiceMode = false;
+            runtimeChoiceState = null;
+            hideChoicePanel();
+            option.onSelect();
         }
 
         function scheduleNextBlink() {
@@ -364,11 +588,22 @@ console.log('[BOOT] main.js module active');
             }, 120); // Fast toggle every 120ms
         }
 
+        function startHappySpeakingAnimation() {
+            if (speakInterval) clearInterval(speakInterval);
+            happyMouthOpen = true;
+            setCharState('happy');
+            speakInterval = setInterval(() => {
+                happyMouthOpen = !happyMouthOpen;
+                setCharState('happy');
+            }, 120);
+        }
+
         function stopSpeakingAnimation() {
             if (speakInterval) {
                 clearInterval(speakInterval);
                 speakInterval = null;
             }
+            happyMouthOpen = false;
         }
 
         function setTyping(flag) {
@@ -377,10 +612,21 @@ console.log('[BOOT] main.js module active');
 
             isSpeaking = flag;
 
-            if (isAngry || isHappy) {
+            if (isAngry) {
                 stopSpeakingAnimation();
                 clearTimeout(blinkTimeout);
-                setCharState(isAngry ? 'angry' : 'happy');
+                setCharState('angry');
+                return;
+            }
+
+            if (isHappy) {
+                clearTimeout(blinkTimeout);
+                if (isHappyTalkMode && isSpeaking) {
+                    startHappySpeakingAnimation();
+                } else {
+                    stopSpeakingAnimation();
+                    setCharState('happy');
+                }
                 return;
             }
 
@@ -484,6 +730,9 @@ console.log('[BOOT] main.js module active');
                 case 'show_pet_fox':
                     setTimeout(showPetFox, context.delayMs ?? 700);
                     return;
+                case 'start_bed_scene':
+                    setTimeout(startBedScene, context.delayMs ?? 0);
+                    return;
                 case 'show_followup_choices':
                     setTimeout(showFollowupChoices, context.delayMs ?? 0);
                     return;
@@ -492,7 +741,7 @@ console.log('[BOOT] main.js module active');
             }
         }
 
-        function runChoiceResponse(responseText, actionId, speakerName) {
+        function runScriptedLine(responseText, speakerName, onDone) {
             speakerPlate.textContent = speakerName;
             dialogueText.textContent = '';
             charIndex = 0;
@@ -509,30 +758,32 @@ console.log('[BOOT] main.js module active');
                     if (responseText) {
                         dialogueHistory.push({ speaker: speakerName, text: responseText, isChoice: false });
                     }
-                    if (actionId === 'show_to_be_continued') {
-                        pendingPostChoiceAction = actionId;
-                        return;
-                    }
-                    if (actionId === 'show_followup_choices') {
-                        dispatchAction(actionId, { delayMs: 0 });
-                        return;
-                    }
-                    dispatchAction(actionId, { delayMs: 1000 });
+                    if (typeof onDone === 'function') onDone();
                 }
             }, textSpeedMs);
         }
 
+        function runChoiceResponse(responseText, actionId, speakerName) {
+            runScriptedLine(responseText, speakerName, () => {
+                if (actionId === 'show_to_be_continued') {
+                    pendingPostChoiceAction = actionId;
+                    return;
+                }
+                if (actionId === 'show_followup_choices') {
+                    dispatchAction(actionId, { delayMs: 0 });
+                    return;
+                }
+                dispatchAction(actionId, { delayMs: 1000 });
+            });
+        }
+
         function pickChoice(idx) {
-            inChoiceMode = false;
-            dialogueArea.classList.remove('choices-mode');
-            choicePanel.classList.remove('visible');
-            document.getElementById('chapter-badge').style.opacity = '1';
-            document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+            hideChoicePanel();
 
             const t = l10n[currentLang];
             const fallbackActionId = idx === 3
                 ? 'start_ooxx'
-                : (idx === 2 ? 'show_to_be_continued' : (idx === 1 ? 'show_pet_fox' : 'trigger_death'));
+                : (idx === 2 ? 'start_bed_scene' : (idx === 1 ? 'show_pet_fox' : 'trigger_death'));
             const outcome = storyEngine
                 ? storyEngine.getChoiceOutcomeByIndex(idx)
                 : { actionId: fallbackActionId, responseText: t.responses[idx] };
@@ -548,10 +799,11 @@ console.log('[BOOT] main.js module active');
             }
 
             isAngry = actionId === 'trigger_death';
-            isHappy = actionId === 'show_to_be_continued';
+            isHappy = actionId === 'show_to_be_continued' || actionId === 'start_bed_scene';
+            isHappyTalkMode = actionId === 'start_bed_scene';
             if (!isHappy) hideMoneyPopup();
             setCharState(isHappy ? 'happy' : (isAngry ? 'angry' : 'idle'));
-            if (actionId === 'show_to_be_continued') {
+            if (actionId === 'show_to_be_continued' || actionId === 'start_bed_scene') {
                 setTyping(false);
                 beginMoneyIntermission(() => {
                     runChoiceResponse(responseText, actionId, t.speaker);
@@ -560,6 +812,105 @@ console.log('[BOOT] main.js module active');
             }
 
             runChoiceResponse(responseText, actionId, t.speaker);
+        }
+
+        function showBedPhase1() {
+            if (!bedFlow.active) return;
+            bedFlow.phase = 'phase1';
+            applyBedHeadVariant('normal');
+            const options = [];
+            if (!bedFlow.tailOptionRemoved) {
+                options.push({ textKey: 'bed_choice_tail', onSelect: onBedTailTouched });
+            }
+            options.push({ textKey: 'bed_choice_thigh', onSelect: onBedTouchThigh });
+            options.push({ textKey: 'bed_choice_ooxx', onSelect: onBedStartOOXX });
+            showRuntimeChoicePanel({ titleKey: 'choice_title', options });
+        }
+
+        function showBedPhase2() {
+            if (!bedFlow.active) return;
+            bedFlow.phase = 'phase2';
+            applyBedHeadVariant(bedFlow.continueTouchCount >= 5 ? 'eyes_closed_cry' : 'eyes_closed');
+            showRuntimeChoicePanel({
+                titleKey: 'choice_title',
+                options: [
+                    { textKey: 'bed_choice_continue', onSelect: onBedContinueTouch },
+                    { textKey: 'bed_choice_stop', onSelect: onBedStopTouch }
+                ]
+            });
+        }
+
+        function onBedTailTouched() {
+            playTailWagBurst();
+            bedFlow.continueTouchCount = 0;
+            applyBedHeadVariant('eyes_closed');
+            const line = getStoryText('bed_line_2', '嗚...我尾巴很敏感的...你再摸我就要...');
+            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
+        }
+
+        function onBedContinueTouch() {
+            playTailWagBurst();
+            bedFlow.continueTouchCount += 1;
+            const isCryMode = bedFlow.continueTouchCount >= 5;
+            applyBedHeadVariant(isCryMode ? 'eyes_closed_cry' : 'eyes_closed');
+            const line = isCryMode
+                ? getStoryText('bed_line_continue_cry', '我受不了拉...')
+                : getStoryText('bed_line_continue', '嗚嗚....');
+            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
+        }
+
+        function onBedStopTouch() {
+            bedFlow.tailOptionRemoved = true;
+            bedFlow.continueTouchCount = 0;
+            applyBedHeadVariant('normal');
+            const line = getStoryText('bed_line_1', '說...說好只能摸尾巴的喔');
+            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
+        }
+
+        function onBedTouchThigh() {
+            dispatchAction('trigger_death', { delayMs: 0 });
+        }
+
+        function onBedStartOOXX() {
+            dispatchAction('start_ooxx');
+        }
+
+        async function startBedScene() {
+            if (bedFlow.active) return;
+            setTyping(false);
+            resetMoneyIntermission();
+            hideMoneyPopup();
+            isDeathSequence = false;
+            isAngry = false;
+            isHappy = false;
+            isHappyTalkMode = false;
+            hideChoicePanel();
+            if (bgmEl) bgmEl.pause();
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'bed-entry',
+                    fadeInMs: BED_ENTRY_TRANSITION.fadeInMs,
+                    holdMs: BED_ENTRY_TRANSITION.holdMs,
+                    fadeOutMs: BED_ENTRY_TRANSITION.fadeOutMs,
+                    onBlack: async () => {
+                        applyScene(SCENE_BED);
+                    }
+                });
+                if (!result || result.cancelled) return;
+            } catch (err) {
+                console.error('Bed scene transition error:', err);
+                return;
+            }
+
+            bedFlow.active = true;
+            bedFlow.phase = 'phase1';
+            bedFlow.tailOptionRemoved = false;
+            bedFlow.continueTouchCount = 0;
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_scene' }); } catch (e) { }
+            }
+            const line = getStoryText('bed_line_1', '說...說好只能摸尾巴的喔');
+            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
         }
 
         // OOXX mini-game
@@ -806,6 +1157,7 @@ console.log('[BOOT] main.js module active');
 
         async function startOOXX() {
             if (ooxxTransitionLock) return;
+            resetBedFlow();
             const token = beginOOXXTransition('entry');
             if (!token) return;
 
@@ -876,6 +1228,7 @@ console.log('[BOOT] main.js module active');
         function stopOOXXAmbience() { }
 
         function triggerDeath() {
+            resetBedFlow();
             const deathScreen = document.getElementById('death-screen');
             if (appState && appState.getState() !== GAME_STATES.DEATH) {
                 try { appState.transition(GAME_STATES.DEATH, { source: 'trigger_death' }); } catch (e) { }
@@ -1082,7 +1435,8 @@ console.log('[BOOT] main.js module active');
                 speakerPlate.textContent = t.speaker;
                 dialogueText.textContent = t.lines[lineIndex];
             } else if (inChoiceMode) {
-                setChoiceButtons(currentChoiceSourceIndices);
+                if (isRuntimeChoiceMode) renderRuntimeChoicePanel();
+                else setChoiceButtons(currentChoiceSourceIndices);
             }
         }
 
@@ -1092,7 +1446,7 @@ console.log('[BOOT] main.js module active');
             const ui = t.ui;
 
             document.getElementById('lang-ui-docTitle').textContent = ui.docTitle;
-            document.querySelector('.lang-ui-gameTitle').textContent = ui.gameTitle;
+            document.querySelector('.lang-ui-gameTitle').textContent = getSceneGameTitle(ui);
             document.getElementById('lang-btn-gear').textContent = ui.gearBtn;
             document.getElementById('lang-ui-chapTitle').textContent = ui.chapTitle;
             speakerPlate.textContent = t.speaker;
@@ -1209,9 +1563,15 @@ console.log('[BOOT] main.js module active');
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
                 const focusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_FOCUS_SHIFT_PX : 0;
+                const charShiftX = smoothX + focusShiftX;
+                const charShiftY = smoothY;
 
-                const bgShiftX = clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX) + focusShiftX;
-                const bgShiftY = clamp(smoothY * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
+                const bgShiftX = activeSceneId === SCENE_BED
+                    ? clamp(charShiftX, -MAX_SHIFT, MAX_SHIFT)
+                    : clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX) + focusShiftX;
+                const bgShiftY = activeSceneId === SCENE_BED
+                    ? clamp(charShiftY, -MAX_SHIFT, MAX_SHIFT)
+                    : clamp(smoothY * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
                 const bgPos = `calc(50% + ${bgShiftX.toFixed(2)}px) calc(50% + ${bgShiftY.toFixed(2)}px)`;
                 if (bgEl) bgEl.style.backgroundPosition = bgPos;
                 if (bgSplashEl) bgSplashEl.style.backgroundPosition = bgPos;
@@ -1221,8 +1581,8 @@ console.log('[BOOT] main.js module active');
                 const rootStyle = getComputedStyle(document.documentElement);
                 const baseX = rootStyle.getPropertyValue('--char-focus-x').trim() || '50%';
                 const baseY = rootStyle.getPropertyValue('--char-focus-y').trim() || '22%';
-                const px = `calc(${baseX} + ${(smoothX + focusShiftX).toFixed(2)}px)`;
-                const py = `calc(${baseY} + ${smoothY.toFixed(2)}px)`;
+                const px = `calc(${baseX} + ${charShiftX.toFixed(2)}px)`;
+                const py = `calc(${baseY} + ${charShiftY.toFixed(2)}px)`;
                 document.querySelectorAll('.char-img').forEach(img => {
                     img.style.objectPosition = `${px} ${py}`;
                 });
@@ -1293,10 +1653,21 @@ console.log('[BOOT] main.js module active');
             'speak head.png',
             'angry head.png',
             'happy head.png',
+            'happy head talk.png',
             'money.png',
             'pet fox.jpg',
             'pet fox_M.jpg',
             'BG.jpg',
+            'bed/bed.jpg',
+            'bed/bed body.png',
+            'bed/bed tail.png',
+            'bed/bed no speak head.png',
+            'bed/bed blink head.png',
+            'bed/bed speak head.png',
+            'bed/bed no speak eyes close head.png',
+            'bed/bed speak eyes close head.png',
+            'bed/bed no speak eyes close cry head.png',
+            'bed/bed speak eyes close cry head.png',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
         ];
@@ -1431,8 +1802,10 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isHappyTalkMode = false;
             pendingPostChoiceAction = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
+            resetBedFlow();
             dialogueHistory.length = 0;
 
             // Reset UI elements that may be dirty
@@ -1457,6 +1830,7 @@ console.log('[BOOT] main.js module active');
                 petFoxTimer = null;
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            applyScene(SCENE_DEFAULT);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
 
             // Fade out BG.jpg splash as character fades in
@@ -1493,8 +1867,11 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isHappyTalkMode = false;
             pendingPostChoiceAction = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
+            resetBedFlow();
+            hideChoicePanel();
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
             resetMoneyIntermission();
@@ -1504,6 +1881,7 @@ console.log('[BOOT] main.js module active');
                 petFoxTimer = null;
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            applyScene(SCENE_DEFAULT);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
             cancelOOXXTransitions('returnToTitle reset');
             if (storyEngine) {
