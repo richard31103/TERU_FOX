@@ -271,6 +271,7 @@ console.log('[BOOT] main.js module active');
                 speak: 'speak head.png',
                 angry: 'angry head.png',
                 happy: 'happy head.png',
+                moneyHead: 'money head.png',
                 happyTalk: 'happy head talk.png',
                 tailOrigin: '68.7376% 75.0098%',
                 hasSpecialHeads: true
@@ -483,6 +484,15 @@ console.log('[BOOT] main.js module active');
             }
             setCharState('idle');
             applySceneTopTitle();
+        }
+
+        function applyMoneyHeadState(showing) {
+            if (!charHappy) return;
+            const cfg = SCENE_CONFIG[activeSceneId] || SCENE_CONFIG[SCENE_DEFAULT];
+            const normalHappy = cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
+            const moneyHappy = cfg.moneyHead || normalHappy;
+            charHappy.src = showing ? moneyHappy : normalHappy;
+            if (isHappy) setCharState('happy');
         }
 
         function applyBedHeadVariant(variant) {
@@ -1439,11 +1449,13 @@ console.log('[BOOT] main.js module active');
             // Force restart fade-in for repeated route entries.
             void moneyPopupEl.offsetWidth;
             moneyPopupEl.classList.add('visible');
+            applyMoneyHeadState(true);
         }
 
         function hideMoneyPopup() {
             if (!moneyPopupEl) return;
             moneyPopupEl.classList.remove('visible');
+            applyMoneyHeadState(false);
         }
 
         function setMobileMoneyFocus(enabled) {
@@ -1839,6 +1851,7 @@ console.log('[BOOT] main.js module active');
             'speak head.png',
             'angry head.png',
             'happy head.png',
+            'money head.png',
             'happy head talk.png',
             'money.png',
             'pet fox.jpg',
