@@ -928,8 +928,8 @@ console.log('[BOOT] main.js module active');
             if (!window.DeviceOrientationEvent) return;
             if (window.matchMedia('(hover: hover)').matches) return; // skip on desktop
 
-            const MAX_SHIFT = 5;   // px: how far image crops can shift
-            const SMOOTH = 0.07; // lerp speed (lower = smoother)
+            const MAX_SHIFT = 20;   // px: how far image crops can shift
+            const SMOOTH = 1; // lerp speed (lower = smoother)
 
             let baseGamma = null, baseBeta = null;
             let targetX = 0, targetY = 0;
