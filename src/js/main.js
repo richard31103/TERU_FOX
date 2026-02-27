@@ -20,6 +20,7 @@ console.log('[BOOT] main.js module active');
             '#map-overlay',
             '#ooxx-result',
             '#ooxx-screen',
+            '#money-popup',
             '#to-be-continued-screen',
             '#title-screen'
         ].join(', ');
@@ -222,6 +223,10 @@ console.log('[BOOT] main.js module active');
         let isSpeaking = false;
         let isAngry = false;
         let isHappy = false;
+        let isMoneyIntermission = false;
+        let skipMoneyResolveClick = false;
+        let pendingPostChoiceAction = null;
+        let moneyIntermissionDone = null;
         let blinkTimeout = null;
         let speakInterval = null;
 
@@ -232,6 +237,7 @@ console.log('[BOOT] main.js module active');
         const charHappy = document.getElementById('char-head-happy');
         const moneyPopupEl = document.getElementById('money-popup');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
+        const gameContainerEl = document.getElementById('game-container');
 
         const dialogueText = document.getElementById('dialogue-text');
         const speakerPlate = document.getElementById('speaker-plate');
@@ -438,6 +444,32 @@ console.log('[BOOT] main.js module active');
             }
         }
 
+        function runChoiceResponse(responseText, actionId, speakerName) {
+            speakerPlate.textContent = speakerName;
+            dialogueText.textContent = '';
+            charIndex = 0;
+            setTyping(true);
+            clearInterval(typeTimer);
+
+            typeTimer = setInterval(() => {
+                if (charIndex < responseText.length) {
+                    dialogueText.textContent += responseText[charIndex++];
+                    playTap();
+                } else {
+                    clearInterval(typeTimer);
+                    setTyping(false);
+                    if (responseText) {
+                        dialogueHistory.push({ speaker: speakerName, text: responseText, isChoice: false });
+                    }
+                    if (actionId === 'show_to_be_continued') {
+                        pendingPostChoiceAction = actionId;
+                        return;
+                    }
+                    dispatchAction(actionId, { delayMs: 1000 });
+                }
+            }, textSpeedMs);
+        }
+
         function pickChoice(idx) {
             inChoiceMode = false;
             dialogueArea.classList.remove('choices-mode');
@@ -465,28 +497,17 @@ console.log('[BOOT] main.js module active');
 
             isAngry = actionId === 'trigger_death';
             isHappy = actionId === 'show_to_be_continued';
-            if (isHappy) showMoneyPopup();
-            else hideMoneyPopup();
+            if (!isHappy) hideMoneyPopup();
             setCharState(isHappy ? 'happy' : (isAngry ? 'angry' : 'idle'));
-            speakerPlate.textContent = t.speaker;
-            dialogueText.textContent = '';
-            charIndex = 0;
-            setTyping(true);
-            clearInterval(typeTimer);
+            if (actionId === 'show_to_be_continued') {
+                setTyping(false);
+                beginMoneyIntermission(() => {
+                    runChoiceResponse(responseText, actionId, t.speaker);
+                });
+                return;
+            }
 
-            typeTimer = setInterval(() => {
-                if (charIndex < responseText.length) {
-                    dialogueText.textContent += responseText[charIndex++];
-                    playTap();
-                } else {
-                    clearInterval(typeTimer);
-                    setTyping(false);
-                    if (responseText) {
-                        dialogueHistory.push({ speaker: t.speaker, text: responseText, isChoice: false });
-                    }
-                    dispatchAction(actionId, { delayMs: 1000 });
-                }
-            }, textSpeedMs);
+            runChoiceResponse(responseText, actionId, t.speaker);
         }
 
         // OOXX mini-game
@@ -833,7 +854,7 @@ console.log('[BOOT] main.js module active');
         function showMoneyPopup() {
             if (!moneyPopupEl) return;
             moneyPopupEl.classList.remove('visible');
-            // Force restart animation for repeated route entries.
+            // Force restart fade-in for repeated route entries.
             void moneyPopupEl.offsetWidth;
             moneyPopupEl.classList.add('visible');
         }
@@ -843,10 +864,58 @@ console.log('[BOOT] main.js module active');
             moneyPopupEl.classList.remove('visible');
         }
 
+        function setMobileMoneyFocus(enabled) {
+            if (!gameContainerEl) return;
+            const isMobileLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (!isMobileLike) {
+                gameContainerEl.classList.remove('money-focus-mobile');
+                return;
+            }
+            gameContainerEl.classList.toggle('money-focus-mobile', Boolean(enabled));
+        }
+
+        function beginMoneyIntermission(onDone) {
+            isMoneyIntermission = true;
+            skipMoneyResolveClick = true;
+            moneyIntermissionDone = typeof onDone === 'function' ? onDone : null;
+            dialogueArea.classList.add('money-hidden');
+            showMoneyPopup();
+            setMobileMoneyFocus(true);
+        }
+
+        function resolveMoneyIntermission() {
+            if (!isMoneyIntermission) return;
+            isMoneyIntermission = false;
+            const resume = moneyIntermissionDone;
+            moneyIntermissionDone = null;
+            skipMoneyResolveClick = false;
+
+            hideMoneyPopup();
+            setMobileMoneyFocus(false);
+
+            setTimeout(() => {
+                dialogueArea.classList.remove('money-hidden');
+                if (typeof resume === 'function') resume();
+            }, 180);
+        }
+
+        function resetMoneyIntermission() {
+            isMoneyIntermission = false;
+            skipMoneyResolveClick = false;
+            pendingPostChoiceAction = null;
+            moneyIntermissionDone = null;
+            dialogueArea.classList.remove('money-hidden');
+            setMobileMoneyFocus(false);
+            hideMoneyPopup();
+        }
+
         function showToBeContinued() {
             isDeathSequence = true;
             setTyping(false);
-            hideMoneyPopup();
+            resetMoneyIntermission();
+            const tbcText = l10n[currentLang]?.ui?.toBeContinued || 'To Be Continued...';
+            const tbcTextEl = document.getElementById('to-be-continued-text');
+            if (tbcTextEl) tbcTextEl.textContent = tbcText;
             if (toBeContinuedEl) {
                 toBeContinuedEl.classList.remove('hidden');
             }
@@ -854,8 +923,22 @@ console.log('[BOOT] main.js module active');
 
         // Click anywhere to advance
         document.getElementById('game-container').addEventListener('click', function (e) {
+            if (isMoneyIntermission) {
+                if (skipMoneyResolveClick) {
+                    skipMoneyResolveClick = false;
+                    return;
+                }
+                resolveMoneyIntermission();
+                return;
+            }
             const targetEl = e.target instanceof Element ? e.target : null;
             if (targetEl && targetEl.closest(NO_ADVANCE_SELECTORS)) return;
+            if (pendingPostChoiceAction && !isTyping && !isMoneyIntermission) {
+                const actionId = pendingPostChoiceAction;
+                pendingPostChoiceAction = null;
+                dispatchAction(actionId, { delayMs: 0 });
+                return;
+            }
             const r = document.createElement('div');
             r.className = 'ripple';
             const rect = this.getBoundingClientRect();
@@ -874,6 +957,19 @@ console.log('[BOOT] main.js module active');
             // If we've started the sequence but the text hasn't shown up yet, fast-forward it
             this.classList.add('show-text');
         });
+        if (toBeContinuedEl) {
+            toBeContinuedEl.addEventListener('click', function (e) {
+                if (toBeContinuedEl.classList.contains('hidden')) return;
+                e.stopPropagation();
+                returnToTitle(toBeContinuedEl, () => {
+                    const bgm = document.getElementById('bgm');
+                    if (bgm) {
+                        bgm.pause();
+                        bgm.currentTime = 0;
+                    }
+                });
+            });
+        }
 
         // Settings
         const overlay = document.getElementById('settings-overlay');
@@ -921,9 +1017,12 @@ console.log('[BOOT] main.js module active');
             document.querySelector('.lang-ui-gameTitle').textContent = ui.gameTitle;
             document.getElementById('lang-btn-gear').textContent = ui.gearBtn;
             document.getElementById('lang-ui-chapTitle').textContent = ui.chapTitle;
+            speakerPlate.textContent = t.speaker;
 
             document.getElementById('start-btn').textContent = t.startBtn;
             document.getElementById('death-text').textContent = t.deathText;
+            const tbcTextEl = document.getElementById('to-be-continued-text');
+            if (tbcTextEl) tbcTextEl.textContent = ui.toBeContinued || 'To Be Continued...';
 
             document.getElementById('lang-ui-social').textContent = ui.social;
             document.getElementById('lang-ui-audio').textContent = audioMuted ? ui.audioOff : ui.audioOn;
@@ -1248,6 +1347,7 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            pendingPostChoiceAction = null;
             dialogueHistory.length = 0;
 
             // Reset UI elements that may be dirty
@@ -1265,7 +1365,7 @@ console.log('[BOOT] main.js module active');
             const ooxxResultEl = document.getElementById('ooxx-result');
             ooxxResultEl.classList.add('hidden');
             ooxxResultEl.classList.remove('show-text');
-            hideMoneyPopup();
+            resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
 
             // Fade out BG.jpg splash as character fades in
@@ -1302,9 +1402,10 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            pendingPostChoiceAction = null;
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
-            hideMoneyPopup();
+            resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
             cancelOOXXTransitions('returnToTitle reset');
             if (storyEngine) {

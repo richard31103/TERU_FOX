@@ -226,6 +226,18 @@
             opacity: 1;
         }
 
+        @media (hover: none) and (pointer: coarse) {
+            #character-container,
+            #money-popup {
+                transition: transform 0.22s ease-out, opacity 0.15s ease-out;
+            }
+
+            #game-container.money-focus-mobile #character-container,
+            #game-container.money-focus-mobile #money-popup {
+                transform: translateX(-9vw);
+            }
+        }
+
         @keyframes tailSway {
             from {
                 transform: rotate(-2.5deg);
@@ -460,6 +472,12 @@
             right: 0;
             height: 160px;
             z-index: 20;
+            transition: opacity 0.15s ease-out;
+        }
+
+        #dialogue-area.money-hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         /* Glass backdrop ??warm semi-transparent */
@@ -520,7 +538,7 @@
 
         /* Inline typing cursor ??only visible while .typing class is present */
         #dialogue-text.typing::after {
-            content: '??;
+            content: '|';
             color: #f0ae40;
             text-shadow: 0 0 10px rgba(220, 140, 20, 0.95);
             animation: cursorBlink 0.65s steps(1) infinite;
@@ -1498,9 +1516,9 @@
         <!-- Dialogue area -->
         <div id="dialogue-area">
             <div id="dialogue-box">
-                <div id="speaker-plate">??????</div>
+                <div id="speaker-plate">&#25552;&#29246;&#29392;</div>
                 <div id="dialogue-text"></div>
-                <div id="next-indicator">??</div>
+                <div id="next-indicator">&#9662;</div>
 
                 <!-- Bottom controls -->
                 <div id="controls-bar">
@@ -1554,8 +1572,8 @@
                 <div class="setting-row">
                     <span class="setting-label" id="lang-ui-lang">???????????</span>
                     <div class="setting-toggle">
-                        <button class="tog-btn on" id="tog-lang-tw" onclick="setLanguage('tw')">?????????????????</button>
-                        <button class="tog-btn" id="tog-lang-jp" onclick="setLanguage('jp')">????????????????????</button>
+                        <button class="tog-btn on" id="tog-lang-tw" onclick="setLanguage('tw')">&#32321;&#20013;</button>
+                        <button class="tog-btn" id="tog-lang-jp" onclick="setLanguage('jp')">&#26085;&#26412;&#35486;</button>
                         <button class="tog-btn" id="tog-lang-en" onclick="setLanguage('en')">EN</button>
                     </div>
                 </div>

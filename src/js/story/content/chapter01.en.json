@@ -54,7 +54,8 @@
       "ooxxAiTurn": "Teru is thinking...",
       "ooxxDraw": "Draw",
       "ooxxLose": "You Lost",
-      "ooxxTapReturn": "Tap anywhere to return"
+      "ooxxTapReturn": "Tap anywhere to return",
+      "toBeContinued": "To Be Continued..."
     },
     "text": {
       "line_1": "Are you seriously not some weird furry?",

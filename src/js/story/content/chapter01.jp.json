@@ -54,7 +54,8 @@
       "ooxxAiTurn": "テルが考えてる...",
       "ooxxDraw": "引き分け",
       "ooxxLose": "あなたの負け",
-      "ooxxTapReturn": "タップして戻る"
+      "ooxxTapReturn": "タップして戻る",
+      "toBeContinued": "つづく..."
     },
     "text": {
       "line_1": "……ねぇ、キミ。本当に変なケモラーじゃないよね？",
