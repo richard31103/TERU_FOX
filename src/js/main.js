@@ -927,8 +927,8 @@ console.log('[BOOT] main.js module active');
         (function () {
             if (!window.DeviceOrientationEvent) return;
 
-            const MAX_SHIFT = 20;   // px: how far image crops can shift
-            const SMOOTH = 1; // lerp speed (lower = smoother)
+            const MAX_SHIFT = 10;   // px: how far image crops can shift
+            const SMOOTH = 0.1; // lerp speed (lower = smoother)
 
             let baseGamma = null, baseBeta = null;
             let targetX = 0, targetY = 0;
@@ -946,8 +946,8 @@ console.log('[BOOT] main.js module active');
                 const gamma = e.gamma != null ? e.gamma : 0;
                 const beta = e.beta != null ? e.beta : 0;
                 if (baseGamma === null) { baseGamma = gamma; baseBeta = beta; return; }
-                const dg = clamp(gamma - baseGamma, -50, 50);
-                const db = clamp(beta - baseBeta, -40, 40);
+                const dg = clamp(gamma - baseGamma, -40, 40);
+                const db = clamp(beta - baseBeta, -20, 20);
                 targetX = (dg / 25) * MAX_SHIFT;
                 targetY = (db / 20) * MAX_SHIFT;
             }
