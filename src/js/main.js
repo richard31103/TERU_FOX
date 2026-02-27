@@ -926,7 +926,6 @@ console.log('[BOOT] main.js module active');
         // no edge bleed, no transform override conflicts.
         (function () {
             if (!window.DeviceOrientationEvent) return;
-            if (window.matchMedia('(hover: hover)').matches) return; // skip on desktop
 
             const MAX_SHIFT = 20;   // px: how far image crops can shift
             const SMOOTH = 1; // lerp speed (lower = smoother)
@@ -934,11 +933,16 @@ console.log('[BOOT] main.js module active');
             let baseGamma = null, baseBeta = null;
             let targetX = 0, targetY = 0;
             let smoothX = 0, smoothY = 0;
+            let started = false;
+            let starting = false;
+            let rafStarted = false;
+            let orientationEvents = 0;
 
             function lerp(a, b, t) { return a + (b - a) * t; }
             function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
             function onOrientation(e) {
+                orientationEvents += 1;
                 const gamma = e.gamma != null ? e.gamma : 0;
                 const beta = e.beta != null ? e.beta : 0;
                 if (baseGamma === null) { baseGamma = gamma; baseBeta = beta; return; }
@@ -966,23 +970,54 @@ console.log('[BOOT] main.js module active');
                 requestAnimationFrame(tick);
             }
 
-            function startGyro() {
-                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission()
-                        .then(state => {
-                            if (state === 'granted') {
-                                window.addEventListener('deviceorientation', onOrientation);
-                                requestAnimationFrame(tick);
-                            }
-                        }).catch(() => { });
-                } else {
-                    window.addEventListener('deviceorientation', onOrientation);
-                    requestAnimationFrame(tick);
+            function removeStartListeners() {
+                document.removeEventListener('pointerdown', startGyro);
+                document.removeEventListener('touchstart', startGyro);
+                document.removeEventListener('click', startGyro);
+            }
+
+            function ensureTick() {
+                if (rafStarted) return;
+                rafStarted = true;
+                requestAnimationFrame(tick);
+            }
+
+            function attachOrientation() {
+                window.addEventListener('deviceorientation', onOrientation, { passive: true });
+                ensureTick();
+                setTimeout(() => {
+                    if (orientationEvents === 0) {
+                        console.warn('[GYRO] deviceorientation did not fire. Check browser permissions/settings.');
+                    }
+                }, 1200);
+            }
+
+            async function startGyro() {
+                if (started || starting) return;
+                starting = true;
+                try {
+                    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        const state = await DeviceOrientationEvent.requestPermission();
+                        if (state !== 'granted') {
+                            console.warn('[GYRO] permission not granted:', state);
+                            return;
+                        }
+                    }
+                    started = true;
+                    removeStartListeners();
+                    attachOrientation();
+                    console.log('[GYRO] started');
+                } catch (err) {
+                    console.warn('[GYRO] start failed:', err);
+                } finally {
+                    starting = false;
                 }
             }
 
-            // First tap satisfies iOS gesture requirement for permission dialog
-            document.addEventListener('click', startGyro, { once: true });
+            // User gesture is required on some browsers (especially iOS).
+            document.addEventListener('pointerdown', startGyro, { passive: true });
+            document.addEventListener('touchstart', startGyro, { passive: true });
+            document.addEventListener('click', startGyro);
         })();
 
         // Asset preloader
