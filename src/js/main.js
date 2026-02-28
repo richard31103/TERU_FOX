@@ -247,8 +247,10 @@ console.log('[BOOT] main.js module active');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
         const petFoxScreenEl = document.getElementById('pet-fox-screen');
         const gameContainerEl = document.getElementById('game-container');
-        // Keep character framing stable on mobile during money popup.
-        const MOBILE_MONEY_FOCUS_SHIFT_PX = 0;
+        // Decouple mobile money popup offset from character framing:
+        // character stays stable while money popup can be repositioned.
+        const MOBILE_MONEY_CHARACTER_SHIFT_PX = 0;
+        const MOBILE_MONEY_POPUP_SHIFT_PX = -200;
         const MONEY_SOURCE_WIDTH = 2752;
         const MONEY_SOURCE_HEIGHT = 1536;
         const MONEY_FOCUS_X = 432;
@@ -1885,13 +1887,14 @@ console.log('[BOOT] main.js module active');
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
-                const focusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_FOCUS_SHIFT_PX : 0;
-                const charShiftX = smoothX + focusShiftX;
+                const charFocusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_CHARACTER_SHIFT_PX : 0;
+                const moneyPopupShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_POPUP_SHIFT_PX : 0;
+                const charShiftX = smoothX + charFocusShiftX;
                 const charShiftY = smoothY;
 
                 const bgShiftX = activeSceneId === SCENE_BED
                     ? clamp(charShiftX, -MAX_SHIFT, MAX_SHIFT)
-                    : clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX) + focusShiftX;
+                    : clamp(smoothX * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX) + charFocusShiftX;
                 const bgShiftY = activeSceneId === SCENE_BED
                     ? clamp(charShiftY, -MAX_SHIFT, MAX_SHIFT)
                     : clamp(smoothY * BG_SHIFT_RATIO, -BG_MAX_SHIFT_PX, BG_MAX_SHIFT_PX);
@@ -1910,7 +1913,7 @@ console.log('[BOOT] main.js module active');
                     img.style.objectPosition = `${px} ${py}`;
                 });
                 if (moneyPopupEl) {
-                    moneyPopupEl.style.objectPosition = `calc(${MONEY_FOCUS_X_PCT} + ${focusShiftX.toFixed(2)}px) ${MONEY_FOCUS_Y_PCT}`;
+                    moneyPopupEl.style.objectPosition = `calc(${MONEY_FOCUS_X_PCT} + ${moneyPopupShiftX.toFixed(2)}px) ${MONEY_FOCUS_Y_PCT}`;
                 }
 
                 requestAnimationFrame(tick);
