@@ -19,6 +19,9 @@ import {
     FIGHT_TAIL_PIVOT_SOURCE,
     FIGHT_TEXT,
     FOLLOWUP_CHOICE_SOURCE_INDICES,
+    HEAD_TOUCH_ASSETS,
+    HEAD_TOUCH_TEXT,
+    HEAD_TOUCH_THRESHOLDS,
     OPENING_HEADS,
     OPENING_TEXT,
     PET_FOX_DISPLAY_MS,
@@ -47,6 +50,7 @@ debugLog('[BOOT] game_app module active');
             '#top-bar',
             '#chapter-badge',
             '#choice-panel',
+            '#head-touch-zone',
             '#controls-bar',
             '#settings-overlay',
             '#history-overlay',
@@ -242,6 +246,7 @@ debugLog('[BOOT] game_app module active');
             createParticles();
             startAssetLoader();
             updateUIText();
+            syncFullscreenToggle();
             const textSpeedSlider = document.getElementById('text-speed');
             if (textSpeedSlider) {
                 textSpeedSlider.value = String(DEFAULT_TEXT_SPEED_LEVEL);
@@ -274,6 +279,7 @@ debugLog('[BOOT] game_app module active');
         let isTyping = false;
         let autoPlay = false;
         let textSpeedMs = textSpeedLevelToMs(DEFAULT_TEXT_SPEED_LEVEL);
+        let currentDialogueLineText = '';
         let inChoiceMode = false;
 
         // Character Animation State
@@ -319,6 +325,8 @@ debugLog('[BOOT] game_app module active');
         const dialogueArea = dialogueUI.refs.dialogueArea;
         const choicePanel = dialogueUI.refs.choicePanel;
         const characterContainerEl = ctxRefs.characterContainer;
+        const headTouchFaceEl = document.getElementById('char-head-touch');
+        const headTouchZoneEl = document.getElementById('head-touch-zone');
         const fightDamageNumberEl = ctxRefs.fightDamageNumber;
         const fightRedFlashEl = ctxRefs.fightRedFlash;
         const chapterBadgeEl = dialogueUI.refs.chapterBadge;
@@ -346,6 +354,22 @@ debugLog('[BOOT] game_app module active');
         let isRuntimeChoiceMode = false;
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
+        let headTouchStage = 0;
+        let headTouchTapCount = 0;
+        let headTouchInterruptActive = false;
+        let headTouchAwaitResumeClick = false;
+        let headTouchInterruptFaceMode = 'normal';
+        let headTouchSnapshot = null;
+        let headTouchRestoreTimer = null;
+        const HEAD_TOUCH_ANGRY_BLINK_MIN_MS = 1400;
+        const HEAD_TOUCH_ANGRY_BLINK_MAX_MS = 2400;
+        const HEAD_TOUCH_ANGRY_BLINK_HOLD_MS = 140;
+        const HEAD_TOUCH_FACE_FLASH_MS = 220;
+        let headTouchAngryBlinkTimer = null;
+        let headTouchAngryBlinkHoldTimer = null;
+        let headTouchAngryRestoreTimer = null;
+        let isOpeningDialogueLocked = false;
+        let isOpeningGreetingHeadTouchLocked = false;
         const bedFlow = createBedFlowState();
         const choiceButtonEls = choiceController.choiceButtons;
         // const totalDots = script.length; (Removed)
@@ -441,6 +465,373 @@ debugLog('[BOOT] game_app module active');
 
         function getOpeningTextBundle() {
             return OPENING_TEXT[currentLang] || OPENING_TEXT.tw;
+        }
+
+        function getHeadTouchTextBundle() {
+            return HEAD_TOUCH_TEXT[currentLang] || HEAD_TOUCH_TEXT.tw;
+        }
+
+        function applyDefaultSceneHeadByContext() {
+            if (activeSceneId !== SCENE_DEFAULT) return;
+            if (!charIdle || !charBlink || !charSpeak) return;
+            if (isAfraidHeadMode) {
+                charIdle.src = AFRAID_HEADS.idle;
+                charBlink.src = AFRAID_HEADS.blink;
+                charSpeak.src = AFRAID_HEADS.speak;
+                return;
+            }
+            if (isOpeningPrologueActive) {
+                charIdle.src = OPENING_HEADS.idle;
+                charBlink.src = OPENING_HEADS.blink;
+                charSpeak.src = OPENING_HEADS.speak;
+                return;
+            }
+            const cfg = SCENE_CONFIG[SCENE_DEFAULT];
+            charIdle.src = cfg.idle;
+            charBlink.src = cfg.blink;
+            charSpeak.src = cfg.speak;
+        }
+
+        function applyHeadTouchMildNeutralHeads() {
+            if (activeSceneId !== SCENE_DEFAULT) return;
+            if (!charIdle || !charBlink || !charSpeak) return;
+            const cfg = SCENE_CONFIG[SCENE_DEFAULT];
+            charIdle.src = cfg.idle;
+            charBlink.src = cfg.blink;
+            charSpeak.src = cfg.speak;
+            setCharState('idle');
+        }
+
+        function isHeadTouchAngryFaceActive() {
+            return headTouchInterruptFaceMode === 'angry' && (headTouchInterruptActive || headTouchAwaitResumeClick);
+        }
+
+        function stopHeadTouchAngryBlinkLoop() {
+            if (headTouchAngryBlinkTimer) {
+                clearTimeout(headTouchAngryBlinkTimer);
+                headTouchAngryBlinkTimer = null;
+            }
+            if (headTouchAngryBlinkHoldTimer) {
+                clearTimeout(headTouchAngryBlinkHoldTimer);
+                headTouchAngryBlinkHoldTimer = null;
+            }
+            if (headTouchAngryRestoreTimer) {
+                clearTimeout(headTouchAngryRestoreTimer);
+                headTouchAngryRestoreTimer = null;
+            }
+        }
+
+        function scheduleHeadTouchAngryBlink() {
+            stopHeadTouchAngryBlinkLoop();
+            if (!isHeadTouchAngryFaceActive() || !headTouchFaceEl) return;
+            const delayMs = Math.round(
+                HEAD_TOUCH_ANGRY_BLINK_MIN_MS
+                + Math.random() * (HEAD_TOUCH_ANGRY_BLINK_MAX_MS - HEAD_TOUCH_ANGRY_BLINK_MIN_MS)
+            );
+            headTouchAngryBlinkTimer = setTimeout(() => {
+                headTouchAngryBlinkTimer = null;
+                if (!isHeadTouchAngryFaceActive() || !headTouchFaceEl) return;
+                headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angryBlink || HEAD_TOUCH_ASSETS.angry;
+                headTouchAngryBlinkHoldTimer = setTimeout(() => {
+                    headTouchAngryBlinkHoldTimer = null;
+                    if (!isHeadTouchAngryFaceActive() || !headTouchFaceEl) return;
+                    headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
+                    scheduleHeadTouchAngryBlink();
+                }, HEAD_TOUCH_ANGRY_BLINK_HOLD_MS);
+            }, delayMs);
+        }
+
+        function startHeadTouchAngryBlinkLoop() {
+            if (!headTouchFaceEl) return;
+            headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
+            headTouchFaceEl.classList.add('active');
+            scheduleHeadTouchAngryBlink();
+        }
+
+        function flashHeadTouchThenRestoreAngry() {
+            showHeadTouchFace('angry-touch');
+            if (headTouchAngryRestoreTimer) {
+                clearTimeout(headTouchAngryRestoreTimer);
+                headTouchAngryRestoreTimer = null;
+            }
+            headTouchAngryRestoreTimer = setTimeout(() => {
+                headTouchAngryRestoreTimer = null;
+                if (!isHeadTouchAngryFaceActive()) return;
+                showHeadTouchFace('angry', { sticky: true });
+                startHeadTouchAngryBlinkLoop();
+            }, HEAD_TOUCH_FACE_FLASH_MS);
+        }
+
+        function hideHeadTouchFace() {
+            stopHeadTouchAngryBlinkLoop();
+            if (headTouchRestoreTimer) {
+                clearTimeout(headTouchRestoreTimer);
+                headTouchRestoreTimer = null;
+            }
+            if (headTouchFaceEl) headTouchFaceEl.classList.remove('active');
+        }
+
+        function showHeadTouchFace(mode = 'normal', { sticky = false } = {}) {
+            if (!headTouchFaceEl) return;
+            hideHeadTouchFace();
+            if (mode === 'angry') headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
+            else if (mode === 'angry-touch') headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angryTouch || HEAD_TOUCH_ASSETS.normal;
+            else headTouchFaceEl.src = HEAD_TOUCH_ASSETS.normal;
+            headTouchFaceEl.classList.add('active');
+            if (!sticky) {
+                headTouchRestoreTimer = setTimeout(() => {
+                    if (headTouchFaceEl) headTouchFaceEl.classList.remove('active');
+                    headTouchRestoreTimer = null;
+                }, 220);
+            }
+        }
+
+        function playHeadTouchBump() {
+            if (!characterContainerEl) return;
+            characterContainerEl.classList.remove('head-touch-bump');
+            void characterContainerEl.offsetWidth;
+            characterContainerEl.classList.add('head-touch-bump');
+        }
+
+        function resetHeadTouchChain(reason = '') {
+            headTouchStage = 0;
+            headTouchTapCount = 0;
+            headTouchInterruptActive = false;
+            headTouchAwaitResumeClick = false;
+            headTouchInterruptFaceMode = 'normal';
+            headTouchSnapshot = null;
+            hideHeadTouchFace();
+            if (reason) debugLog(`[HEAD_TOUCH] reset (${reason})`);
+        }
+
+        function canTriggerHeadTouch() {
+            if (!headTouchZoneEl || !characterContainerEl) return false;
+            if (activeSceneId !== SCENE_DEFAULT) return false;
+            if (isOpeningDialogueLocked) return false;
+            if (isOpeningGreetingHeadTouchLocked) return false;
+            if (isDeathSequence || isMoneyIntermission) return false;
+            if (headTouchInterruptActive || headTouchAwaitResumeClick) return false;
+            if (appState) {
+                const state = appState.getState();
+                if (state !== GAME_STATES.DIALOGUE && state !== GAME_STATES.CHOICE) return false;
+            }
+            if (overlay && overlay.classList.contains('open')) return false;
+            if (mapOverlay && !mapOverlay.classList.contains('hidden')) return false;
+            if (histOverlay && !histOverlay.classList.contains('hidden')) return false;
+            const deathScreen = document.getElementById('death-screen');
+            if (deathScreen && !deathScreen.classList.contains('hidden')) return false;
+            if (toBeContinuedEl && !toBeContinuedEl.classList.contains('hidden')) return false;
+            if (petFoxScreenEl && !petFoxScreenEl.classList.contains('hidden')) return false;
+            const ooxxScreen = document.getElementById('ooxx-screen');
+            if (ooxxScreen && !ooxxScreen.classList.contains('hidden')) return false;
+            const ooxxResult = document.getElementById('ooxx-result');
+            if (ooxxResult && !ooxxResult.classList.contains('hidden')) return false;
+            return true;
+        }
+
+        function snapshotCurrentDialogue() {
+            return {
+                speaker: speakerPlate.textContent || '',
+                typedText: dialogueText.textContent || '',
+                wasTyping: isTyping,
+                lineIndex,
+                charIndex,
+                fullLineText: currentDialogueLineText || l10n[currentLang]?.lines?.[lineIndex] || dialogueText.textContent || ''
+            };
+        }
+
+        function pauseDialogueForHeadTouch() {
+            if (!headTouchSnapshot) {
+                headTouchSnapshot = snapshotCurrentDialogue();
+            }
+            clearInterval(typeTimer);
+            typeTimer = null;
+            setTyping(false);
+        }
+
+        function restoreHeadTouchSnapshot() {
+            const snapshot = headTouchSnapshot;
+            headTouchSnapshot = null;
+            headTouchInterruptActive = false;
+            headTouchAwaitResumeClick = false;
+            headTouchInterruptFaceMode = 'normal';
+            hideHeadTouchFace();
+            applyDefaultSceneHeadByContext();
+            if (!snapshot) return;
+
+            lineIndex = snapshot.lineIndex;
+            speakerPlate.textContent = snapshot.speaker;
+            const fullLineText = snapshot.fullLineText || snapshot.typedText || '';
+            currentDialogueLineText = fullLineText;
+
+            if (!fullLineText) {
+                dialogueText.textContent = '';
+                setTyping(false);
+                applyAfraidHeadMode(false);
+                return;
+            }
+
+            dialogueText.textContent = '';
+            charIndex = 0;
+            applyAfraidHeadMode(isAfraidTargetLineText(fullLineText));
+            setTyping(true);
+            clearInterval(typeTimer);
+            typeTimer = setInterval(() => {
+                if (charIndex < fullLineText.length) {
+                    dialogueText.textContent += fullLineText[charIndex++];
+                    playTap();
+                } else {
+                    clearInterval(typeTimer);
+                    typeTimer = null;
+                    setTyping(false);
+                    if (!dialogueHistory.some(r => r.text === fullLineText && (!r.isChoice))) {
+                        dialogueHistory.push({ speaker: snapshot.speaker, text: fullLineText, isChoice: false });
+                    }
+                    if (snapshot.wasTyping && autoPlay && lineIndex < script.length - 1) setTimeout(nextLine, 1800);
+                }
+            }, textSpeedMs);
+        }
+
+        function rememberCurrentLineText(text) {
+            currentDialogueLineText = typeof text === 'string' ? text : '';
+        }
+
+        function runHeadTouchInsertedLine({ text, waitClickResume = false, resumeDelayMs = 0, faceMode = 'normal' } = {}) {
+            if (!text) {
+                if (waitClickResume) headTouchAwaitResumeClick = true;
+                else if (resumeDelayMs > 0) setTimeout(restoreHeadTouchSnapshot, resumeDelayMs);
+                else restoreHeadTouchSnapshot();
+                return;
+            }
+
+            const keepIdleFace = faceMode !== 'angry';
+            pauseDialogueForHeadTouch();
+            headTouchInterruptActive = true;
+            headTouchAwaitResumeClick = false;
+            stopHeadTouchAngryBlinkLoop();
+            headTouchInterruptFaceMode = faceMode === 'angry' ? 'angry' : (faceMode === 'mild' ? 'mild' : 'normal');
+            if (headTouchInterruptFaceMode === 'angry') {
+                showHeadTouchFace('angry', { sticky: true });
+                startHeadTouchAngryBlinkLoop();
+            } else if (headTouchInterruptFaceMode === 'mild') {
+                hideHeadTouchFace();
+                applyHeadTouchMildNeutralHeads();
+            } else {
+                hideHeadTouchFace();
+                setCharState('idle');
+            }
+
+            let insertIndex = 0;
+            speakerPlate.textContent = l10n[currentLang]?.speaker || speakerPlate.textContent;
+            dialogueText.textContent = '';
+            setTyping(!keepIdleFace);
+            clearInterval(typeTimer);
+            typeTimer = setInterval(() => {
+                if (insertIndex < text.length) {
+                    dialogueText.textContent += text[insertIndex++];
+                    playTap();
+                } else {
+                    clearInterval(typeTimer);
+                    typeTimer = null;
+                    setTyping(false);
+                    if (text) {
+                        dialogueHistory.push({ speaker: l10n[currentLang]?.speaker || '', text, isChoice: false });
+                    }
+                    if (waitClickResume) {
+                        headTouchInterruptActive = false;
+                        headTouchAwaitResumeClick = true;
+                        if (faceMode === 'angry') {
+                            showHeadTouchFace('angry', { sticky: true });
+                            startHeadTouchAngryBlinkLoop();
+                        } else if (faceMode === 'mild') {
+                            applyHeadTouchMildNeutralHeads();
+                        } else {
+                            headTouchInterruptFaceMode = 'normal';
+                            hideHeadTouchFace();
+                            setCharState('idle');
+                        }
+                        return;
+                    }
+                    if (resumeDelayMs > 0) {
+                        setTimeout(() => {
+                            restoreHeadTouchSnapshot();
+                        }, resumeDelayMs);
+                        return;
+                    }
+                    restoreHeadTouchSnapshot();
+                }
+            }, textSpeedMs);
+        }
+
+        function handleHeadTouchAction(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (headTouchInterruptActive) {
+                playHeadTouchBump();
+                if (headTouchInterruptFaceMode === 'angry') {
+                    flashHeadTouchThenRestoreAngry();
+                } else {
+                    showHeadTouchFace('normal');
+                    if (headTouchInterruptFaceMode === 'mild') {
+                        applyHeadTouchMildNeutralHeads();
+                    }
+                }
+                return;
+            }
+
+            const headTouchText = getHeadTouchTextBundle();
+
+            if (headTouchAwaitResumeClick && !isTyping) {
+                playHeadTouchBump();
+                if (headTouchStage >= 2) {
+                    flashHeadTouchThenRestoreAngry();
+                } else {
+                    showHeadTouchFace('normal');
+                    applyHeadTouchMildNeutralHeads();
+                }
+                headTouchTapCount += 1;
+                if (headTouchStage === 1 && headTouchTapCount >= HEAD_TOUCH_THRESHOLDS.second) {
+                    headTouchStage = 2;
+                    headTouchTapCount = 0;
+                    runHeadTouchInsertedLine({ text: headTouchText.angry, waitClickResume: true, faceMode: 'angry' });
+                    return;
+                }
+                if (headTouchStage === 2 && headTouchTapCount >= HEAD_TOUCH_THRESHOLDS.fatal) {
+                    resetHeadTouchChain('fatal');
+                    dispatchAction('trigger_death', { delayMs: 0, overrideDeathText: headTouchText.fatal });
+                }
+                return;
+            }
+
+            if (!canTriggerHeadTouch()) return;
+
+            playHeadTouchBump();
+            showHeadTouchFace('normal');
+
+            headTouchTapCount += 1;
+            if (headTouchStage === 0 && headTouchTapCount >= HEAD_TOUCH_THRESHOLDS.first) {
+                headTouchStage = 1;
+                headTouchTapCount = 0;
+                runHeadTouchInsertedLine({
+                    text: headTouchText.mild,
+                    waitClickResume: true,
+                    faceMode: 'mild'
+                });
+                return;
+            }
+            if (headTouchStage === 1 && headTouchTapCount >= HEAD_TOUCH_THRESHOLDS.second) {
+                headTouchStage = 2;
+                headTouchTapCount = 0;
+                runHeadTouchInsertedLine({ text: headTouchText.angry, waitClickResume: true, faceMode: 'angry' });
+                return;
+            }
+            if (headTouchStage === 2 && headTouchTapCount >= HEAD_TOUCH_THRESHOLDS.fatal) {
+                resetHeadTouchChain('fatal');
+                dispatchAction('trigger_death', { delayMs: 0, overrideDeathText: headTouchText.fatal });
+            }
         }
 
         function clearFightVisualFx() {
@@ -549,7 +940,11 @@ debugLog('[BOOT] game_app module active');
 
         function applyScene(sceneId) {
             const cfg = SCENE_CONFIG[sceneId] || SCENE_CONFIG[SCENE_DEFAULT];
-            activeSceneId = sceneId in SCENE_CONFIG ? sceneId : SCENE_DEFAULT;
+            const nextSceneId = sceneId in SCENE_CONFIG ? sceneId : SCENE_DEFAULT;
+            if (nextSceneId !== activeSceneId) {
+                resetHeadTouchChain('scene_change');
+            }
+            activeSceneId = nextSceneId;
             sceneSupportsSpecialHeads = cfg.hasSpecialHeads !== false;
             bedHeadVariant = 'normal';
             isHappyTalkMode = false;
@@ -850,7 +1245,7 @@ debugLog('[BOOT] game_app module active');
             });
         }
 
-        function startFightEncounter() {
+        async function startFightEncounter() {
             isFightSequenceActive = true;
             isDeathSequence = false;
             setTyping(false);
@@ -859,9 +1254,36 @@ debugLog('[BOOT] game_app module active');
             applyAfraidHeadMode(false);
             resetMoneyIntermission();
             hideChoicePanel();
-            applyScene(SCENE_FIGHT);
             const fight = getFightTextBundle();
-            runScriptedLine(fight.intro, l10n[currentLang]?.speaker || '', showFightOptions);
+            const startFightIntro = () => runScriptedLine(fight.intro, l10n[currentLang]?.speaker || '', showFightOptions);
+
+            if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
+                try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_entry' }); } catch (e) { }
+            }
+
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'fight-entry',
+                    fadeInMs: FIGHT_ENTRY_TRANSITION.fadeInMs,
+                    holdMs: FIGHT_ENTRY_TRANSITION.holdMs,
+                    fadeOutMs: FIGHT_ENTRY_TRANSITION.fadeOutMs,
+                    onBlack: async () => {
+                        applyScene(SCENE_FIGHT);
+                    }
+                });
+                if (!result || result.cancelled) {
+                    applyScene(SCENE_FIGHT);
+                }
+            } catch (err) {
+                console.error('Fight entry transition error:', err);
+                applyScene(SCENE_FIGHT);
+            }
+
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'fight_entry' }); } catch (e) { }
+            }
+
+            startFightIntro();
         }
 
         function onFightAttack() {
@@ -881,13 +1303,46 @@ debugLog('[BOOT] game_app module active');
             );
         }
 
-        function onFightJoke() {
+        async function onFightJoke() {
             isFightSequenceActive = false;
             isDeathSequence = false;
             setTyping(false);
             clearFightVisualFx();
-            applyScene(SCENE_DEFAULT);
-            showChoicePanel(FOLLOWUP_CHOICE_SOURCE_INDICES);
+            const line = currentLang === 'tw'
+                ? '那你到底想要幹麻?'
+                : (currentLang === 'jp' ? 'それで、結局何がしたいの？' : 'So what do you actually want?');
+
+            if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
+                try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_exit_joke' }); } catch (e) { }
+            }
+
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'fight-exit-joke',
+                    fadeInMs: FIGHT_ENTRY_TRANSITION.fadeInMs,
+                    holdMs: FIGHT_ENTRY_TRANSITION.holdMs,
+                    fadeOutMs: FIGHT_ENTRY_TRANSITION.fadeOutMs,
+                    onBlack: async () => {
+                        applyScene(SCENE_DEFAULT);
+                    }
+                });
+                if (!result || result.cancelled) {
+                    applyScene(SCENE_DEFAULT);
+                }
+            } catch (err) {
+                console.error('Fight exit transition error:', err);
+                applyScene(SCENE_DEFAULT);
+            }
+
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'fight_exit_joke' }); } catch (e) { }
+            }
+
+            runScriptedLine(
+                line,
+                l10n[currentLang]?.speaker || '',
+                () => showChoicePanel(FOLLOWUP_CHOICE_SOURCE_INDICES)
+            );
         }
 
         if (choicePanel) {
@@ -1015,6 +1470,7 @@ debugLog('[BOOT] game_app module active');
             dialogueText.textContent = '';
             charIndex = 0;
             const lineText = t.lines[idx];
+            rememberCurrentLineText(lineText);
             applyAfraidHeadMode(isAfraidTargetLineText(lineText));
             setTyping(true);
             clearInterval(typeTimer);
@@ -1044,10 +1500,14 @@ debugLog('[BOOT] game_app module active');
                 setTyping(false);
                 // Use localized text, not the undefined script[].text
                 const lineText = l10n[currentLang].lines[lineIndex];
-                if (lineText) dialogueText.textContent = lineText;
+                if (lineText) {
+                    dialogueText.textContent = lineText;
+                    rememberCurrentLineText(lineText);
+                }
                 return;
             }
             if (lineIndex < script.length - 1) {
+                resetHeadTouchChain('next_line');
                 lineIndex++;
                 renderLine(lineIndex);
             } else {
@@ -1057,6 +1517,7 @@ debugLog('[BOOT] game_app module active');
 
         function prevLine() {
             if (lineIndex > 0) {
+                resetHeadTouchChain('prev_line');
                 lineIndex--;
                 renderLine(lineIndex);
             }
@@ -1072,7 +1533,7 @@ debugLog('[BOOT] game_app module active');
                     return;
                 case 'trigger_death':
                     isDeathSequence = true;
-                    setTimeout(triggerDeath, context.delayMs ?? 1000);
+                    setTimeout(() => triggerDeath({ overrideText: context.overrideDeathText || '' }), context.delayMs ?? 1000);
                     return;
                 case 'return_title':
                     returnToTitle(context.sourceOverlayEl, context.cleanupFn);
@@ -1098,6 +1559,7 @@ debugLog('[BOOT] game_app module active');
             speakerPlate.textContent = speakerName;
             dialogueText.textContent = '';
             charIndex = 0;
+            rememberCurrentLineText(responseText || '');
             applyAfraidHeadMode(isAfraidTargetLineText(responseText));
             setTyping(true);
             clearInterval(typeTimer);
@@ -1201,13 +1663,19 @@ debugLog('[BOOT] game_app module active');
         }
 
         function startOpeningPrologue() {
+            isOpeningDialogueLocked = false;
+            isOpeningGreetingHeadTouchLocked = true;
             applyOpeningHeadMode(true);
             const opening = getOpeningTextBundle();
-            runScriptedLine(opening.greeting, l10n[currentLang]?.speaker || '', showOpeningFirstChoice);
+            runScriptedLine(opening.greeting, l10n[currentLang]?.speaker || '', () => {
+                isOpeningGreetingHeadTouchLocked = false;
+                showOpeningFirstChoice();
+            });
         }
 
         function pickChoice(idx) {
             hideChoicePanel();
+            resetHeadTouchChain('pick_choice');
 
             const t = l10n[currentLang];
             if (
@@ -1435,6 +1903,7 @@ debugLog('[BOOT] game_app module active');
         }
 
         const OVERLAY_FADE_MS = 1000;
+        const FIGHT_ENTRY_TRANSITION = { fadeInMs: 450, holdMs: 100, fadeOutMs: 400 };
         const OOXX_ENTRY_TRANSITION = { fadeInMs: 1200, holdMs: 1800, fadeOutMs: 1200 };
         const OOXX_RESULT_TRANSITION = { fadeInMs: 350, holdMs: 120, fadeOutMs: 350 };
         const OOXX_RESULT_REVEAL_DELAY_MS = 120;
@@ -1670,11 +2139,17 @@ debugLog('[BOOT] game_app module active');
             } catch (e) { }
         }
 
-        function triggerDeath() {
+        function triggerDeath({ overrideText = '' } = {}) {
             resetBedFlow();
+            resetHeadTouchChain('trigger_death');
             isFightSequenceActive = false;
             clearFightVisualFx();
             const deathScreen = document.getElementById('death-screen');
+            const deathTextEl = document.getElementById('death-text');
+            const defaultDeathText = l10n[currentLang]?.deathText || deathTextEl?.textContent || '';
+            if (deathTextEl) {
+                deathTextEl.textContent = overrideText || defaultDeathText;
+            }
             if (appState && appState.getState() !== GAME_STATES.DEATH) {
                 try { appState.transition(GAME_STATES.DEATH, { source: 'trigger_death' }); } catch (e) { }
             }
@@ -1691,6 +2166,7 @@ debugLog('[BOOT] game_app module active');
                 // Return to title after keeping death screen for a few seconds
                 setTimeout(() => {
                     deathScreen.classList.remove('show-text');
+                    if (deathTextEl) deathTextEl.textContent = defaultDeathText;
                     returnToTitle(deathScreen);
                 }, 4000);
             }, 1000);
@@ -1802,6 +2278,19 @@ debugLog('[BOOT] game_app module active');
 
         // Click anywhere to advance
         document.getElementById('game-container').addEventListener('click', function (e) {
+            const targetEl = e.target instanceof Element ? e.target : null;
+            if (isOpeningDialogueLocked) {
+                return;
+            }
+            if (headTouchAwaitResumeClick && !isTyping) {
+                if (targetEl && targetEl.closest('#head-touch-zone')) return;
+                restoreHeadTouchSnapshot();
+                e.stopPropagation();
+                return;
+            }
+            if (headTouchInterruptActive) {
+                return;
+            }
             if (isMoneyIntermission) {
                 if (skipMoneyResolveClick) {
                     skipMoneyResolveClick = false;
@@ -1810,11 +2299,11 @@ debugLog('[BOOT] game_app module active');
                 resolveMoneyIntermission();
                 return;
             }
-            const targetEl = e.target instanceof Element ? e.target : null;
             if (targetEl && targetEl.closest(NO_ADVANCE_SELECTORS)) return;
             if (pendingPostChoiceAction && !isTyping && !isMoneyIntermission) {
                 const actionId = pendingPostChoiceAction;
                 pendingPostChoiceAction = null;
+                resetHeadTouchChain('post_choice_action');
                 dispatchAction(actionId, { delayMs: 0 });
                 return;
             }
@@ -1829,6 +2318,7 @@ debugLog('[BOOT] game_app module active');
             if (pendingClickAdvance && !isTyping && !inChoiceMode) {
                 const continueFn = pendingClickAdvance;
                 pendingClickAdvance = null;
+                resetHeadTouchChain('scripted_continue');
                 continueFn();
                 return;
             }
@@ -1886,6 +2376,7 @@ debugLog('[BOOT] game_app module active');
                 const t = l10n[lang];
                 speakerPlate.textContent = t.speaker;
                 dialogueText.textContent = t.lines[lineIndex];
+                rememberCurrentLineText(t.lines[lineIndex]);
                 applyAfraidHeadMode(isAfraidTargetLineText(t.lines[lineIndex]));
             } else if (inChoiceMode) {
                 if (isRuntimeChoiceMode) {
@@ -1930,7 +2421,6 @@ debugLog('[BOOT] game_app module active');
             document.getElementById('lang-ui-text-speed').textContent = ui.textSpeed;
             document.getElementById('lang-ui-bgm').textContent = ui.bgm;
             document.getElementById('lang-ui-sfx').textContent = ui.sfx;
-            document.getElementById('lang-ui-voice').textContent = ui.voice;
             document.getElementById('lang-ui-fullscreen').textContent = ui.fullScreen;
             const autoEl = document.getElementById('lang-ui-auto');
             if (autoEl) autoEl.textContent = ui.autoPlay;
@@ -1970,10 +2460,27 @@ debugLog('[BOOT] game_app module active');
             if (el.id === 'bgm-vol') bgmEl.volume = el.value / 100;
         }
 
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
-            else document.exitFullscreen();
+        function syncFullscreenToggle() {
+            setToggle('fs', document.fullscreenElement ? 'on' : 'off');
         }
+
+        async function setFullscreenEnabled(enabled) {
+            try {
+                if (enabled) {
+                    if (!document.fullscreenElement) {
+                        await document.documentElement.requestFullscreen();
+                    }
+                } else if (document.fullscreenElement) {
+                    await document.exitFullscreen();
+                }
+            } catch (err) {
+                console.warn('Fullscreen toggle failed:', err);
+            } finally {
+                syncFullscreenToggle();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', syncFullscreenToggle);
 
         function bindUiActions() {
             bindOverlayController(document, {
@@ -1986,11 +2493,9 @@ debugLog('[BOOT] game_app module active');
                 'prev-line': () => prevLine(),
                 'start-game': () => startGame(),
                 'set-language': ({ actionEl }) => setLanguage(actionEl.dataset.lang),
+                'head-touch': ({ event }) => handleHeadTouchAction(event),
                 'set-toggle': ({ actionEl }) => setToggle(actionEl.dataset.toggleGroup, actionEl.dataset.toggleValue),
-                'set-toggle-fullscreen': ({ actionEl }) => {
-                    setToggle(actionEl.dataset.toggleGroup, actionEl.dataset.toggleValue);
-                    toggleFullscreen();
-                },
+                'set-fullscreen': ({ actionEl }) => setFullscreenEnabled(actionEl.dataset.fullscreen === 'on'),
                 'update-slider': ({ actionEl }) => updateSlider(actionEl),
                 'overlay-settings-dismiss': ({ event }) => handleSettingsClick(event),
                 'overlay-map-dismiss': () => closeMap(),
@@ -1998,6 +2503,8 @@ debugLog('[BOOT] game_app module active');
                 'overlay-history-dismiss': ({ event }) => handleHistoryClick(event),
                 'close-history': () => closeHistory(),
                 'pick-choice': ({ actionEl }) => {
+                    if (isOpeningDialogueLocked) return;
+                    if (!inChoiceMode || !choicePanel.classList.contains('visible')) return;
                     const slotIndex = Number.parseInt(actionEl.dataset.choiceIndex || '-1', 10);
                     if (Number.isNaN(slotIndex) || slotIndex < 0) return;
                     if (isRuntimeChoiceMode) {
@@ -2126,6 +2633,7 @@ debugLog('[BOOT] game_app module active');
             typeTimer = null;
             lineIndex = 0;
             charIndex = 0;
+            rememberCurrentLineText('');
             isTyping = false;
             inChoiceMode = false;
             isDeathSequence = false;
@@ -2136,10 +2644,13 @@ debugLog('[BOOT] game_app module active');
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             isFightSequenceActive = false;
+            isOpeningDialogueLocked = true;
+            isOpeningGreetingHeadTouchLocked = false;
             pendingPostChoiceAction = null;
             pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
+            resetHeadTouchChain('start_game');
             dialogueHistory.length = 0;
             clearFightVisualFx();
 
@@ -2202,15 +2713,19 @@ debugLog('[BOOT] game_app module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            rememberCurrentLineText('');
             isAfraidHeadMode = false;
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             isFightSequenceActive = false;
+            isOpeningDialogueLocked = false;
+            isOpeningGreetingHeadTouchLocked = false;
             pendingPostChoiceAction = null;
             pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
+            resetHeadTouchChain('return_to_title');
             hideChoicePanel();
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text

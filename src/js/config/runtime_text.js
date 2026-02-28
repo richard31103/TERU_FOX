@@ -108,3 +108,34 @@ export const BED_STOP_LINE_BY_LANG = {
     en: 'What else do you want?',
     jp: 'まだ何するつもり？'
 };
+
+export const HEAD_TOUCH_THRESHOLDS = {
+    first: 3,
+    second: 3,
+    fatal: 5
+};
+
+export const HEAD_TOUCH_TEXT = {
+    tw: {
+        mild: '你幹麻啦',
+        angry: '你很煩耶! 再弄我咬你喔!',
+        fatal: '你被咬死了'
+    },
+    en: {
+        mild: 'Hey, what are you doing?',
+        angry: "You're really annoying! Keep messing with me and I'll bite you!",
+        fatal: 'You were bitten to death.'
+    },
+    jp: {
+        mild: 'ちょっと、何してるの？',
+        angry: 'ほんとにうるさい！これ以上やったら噛むよ！',
+        fatal: '噛み殺された。'
+    }
+};
+
+export const HEAD_TOUCH_ASSETS = {
+    normal: 'assets/images/scenes/default/head-touch.png',
+    angry: 'assets/images/scenes/default/head-touch-angry.png',
+    angryBlink: 'assets/images/scenes/default/head-touch-angry-blink.png',
+    angryTouch: 'assets/images/scenes/default/head-touch-angry-touch.png'
+};

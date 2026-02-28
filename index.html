@@ -178,6 +178,22 @@
             z-index: 5;
         }
 
+        #head-touch-zone {
+            position: absolute;
+            left: 39%;
+            top: 8%;
+            width: 22%;
+            height: 26%;
+            clip-path: ellipse(44% 46% at 50% 50%);
+            pointer-events: auto;
+            z-index: 7;
+        }
+
+        #game-container.scene-fight #head-touch-zone,
+        #game-container.scene-bed #head-touch-zone {
+            display: none;
+        }
+
         #game-container.scene-fight #char-body {
             display: none;
         }
@@ -238,6 +254,11 @@
             z-index: 3;
         }
 
+        #char-head-touch {
+            z-index: 4;
+            pointer-events: none;
+        }
+
         #money-popup {
             position: absolute;
             inset: 0;
@@ -257,6 +278,10 @@
 
         #character-container.fight-hit-shake {
             animation: fightHitShake 0.28s linear 1;
+        }
+
+        #character-container.head-touch-bump {
+            animation: headTouchBump 0.22s ease-out 1;
         }
 
         @keyframes fightHitShake {
@@ -282,6 +307,24 @@
 
             100% {
                 transform: translateX(0);
+            }
+        }
+
+        @keyframes headTouchBump {
+            0% {
+                transform: translateX(0) scale(1);
+            }
+
+            35% {
+                transform: translateX(12px) scale(1.01);
+            }
+
+            70% {
+                transform: translateX(-4px) scale(0.995);
+            }
+
+            100% {
+                transform: translateX(0) scale(1);
             }
         }
 
@@ -555,7 +598,7 @@
         #choice-panel.visible {
             transform: translateY(-50%) translateX(0);
             opacity: 1;
-            pointer-events: all;
+            pointer-events: none;
         }
 
         .choice-label {
@@ -581,6 +624,11 @@
             text-align: left;
             width: 100%;
             font-family: 'Noto Serif TC', serif;
+            pointer-events: none;
+        }
+
+        #choice-panel.visible .choice-btn {
+            pointer-events: auto;
         }
 
         @media (hover: hover) and (pointer: fine) {
@@ -1628,6 +1676,8 @@
             <img src="assets/images/scenes/default/head-angry.png" id="char-head-angry" class="char-img" alt="Head Angry" />
             <img src="assets/images/scenes/default/head-happy.png" id="char-head-happy" class="char-img" alt="Head Happy" />
             <img src="assets/images/scenes/default/head-happy-talk.png" id="char-head-happy-talk" class="char-img" alt="Head Happy Talk" />
+            <img src="assets/images/scenes/default/head-touch.png" id="char-head-touch" class="char-img" alt="Head Touch" aria-hidden="true" />
+            <div id="head-touch-zone" data-action="head-touch" aria-label="Head touch zone"></div>
         </div>
         <img src="assets/images/scenes/default/money-popup.png" id="money-popup" alt="Money Popup" />
         <div id="fight-damage-number" aria-hidden="true">-20</div>
@@ -1751,20 +1801,14 @@
                     <input type="range" class="setting-slider" id="sfx-vol" min="0" max="100" value="80"
                         data-action="update-slider" style="--val:80%">
                 </div>
-                <div class="setting-row">
-                    <span class="setting-label" id="lang-ui-voice">??????????</span>
-                    <input type="range" class="setting-slider" id="voice-vol" min="0" max="100" value="90"
-                        data-action="update-slider" style="--val:90%">
-                </div>
 
                 <div class="setting-divider"></div>
 
                 <div class="setting-row">
                     <span class="setting-label" id="lang-ui-fullscreen">&#20840;&#34722;&#24149;&#39023;&#31034;</span>
                     <div class="setting-toggle">
-                        <button class="tog-btn" id="tog-fs-off" data-action="set-toggle" data-toggle-group="fs" data-toggle-value="off">??</button>
-                        <button class="tog-btn on" id="tog-fs-on"
-                            data-action="set-toggle-fullscreen" data-toggle-group="fs" data-toggle-value="on">On</button>
+                        <button class="tog-btn on" id="tog-fs-off" data-action="set-fullscreen" data-fullscreen="off">??</button>
+                        <button class="tog-btn" id="tog-fs-on" data-action="set-fullscreen" data-fullscreen="on">On</button>
                     </div>
                 </div>
 
