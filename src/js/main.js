@@ -32,6 +32,8 @@ console.log('[BOOT] main.js module active');
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioMuted = false;
+        const PUNCH_SFX_MIN_INTERVAL_MS = 100;
+        let lastPunchSfxAt = 0;
 
         function toggleAudioGlobal() {
             audioMuted = !audioMuted;
@@ -87,7 +89,20 @@ console.log('[BOOT] main.js module active');
             osc.stop(audioCtx.currentTime + 0.09);
         }
 
-        // Click confirm tone: two-tone short blip
+        function playPunchSfx() {
+            if (audioMuted) return;
+            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            if (vol === 0) return;
+            const now = performance.now();
+            if (now - lastPunchSfxAt < PUNCH_SFX_MIN_INTERVAL_MS) return;
+            lastPunchSfxAt = now;
+            const punchSfx = document.getElementById('sfx-punch');
+            if (!punchSfx) return;
+            punchSfx.volume = vol;
+            punchSfx.currentTime = 0;
+            punchSfx.play().catch(() => { });
+        }
+
         function playClick() {
             if (audioMuted) return;
             const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
@@ -126,7 +141,16 @@ console.log('[BOOT] main.js module active');
         function wireSfx() {
             document.querySelectorAll('button, .qa-btn, .choice-btn').forEach(el => {
                 el.addEventListener('mouseenter', () => { ensureAudio(); playHover(); });
-                el.addEventListener('click', () => { ensureAudio(); playClick(); });
+                el.addEventListener('click', () => {
+                    ensureAudio();
+                    const clickSfx = el.dataset?.clickSfx || '';
+                    if (clickSfx === 'none') return;
+                    if (clickSfx === 'punch') {
+                        playPunchSfx();
+                        return;
+                    }
+                    playClick();
+                });
             });
         }
 
@@ -809,10 +833,12 @@ console.log('[BOOT] main.js module active');
 
                 if (typeof sourceIndex !== 'number' || !text) {
                     btn.style.display = 'none';
+                    if (btn.dataset) delete btn.dataset.clickSfx;
                     return;
                 }
 
                 btn.style.display = '';
+                if (btn.dataset) delete btn.dataset.clickSfx;
                 if (numEl) numEl.textContent = String(slotIndex + 1);
                 if (textEl) textEl.textContent = text;
                 btn.onclick = () => pickChoice(sourceIndex);
@@ -857,9 +883,14 @@ console.log('[BOOT] main.js module active');
                 if (!option) {
                     btn.style.display = 'none';
                     btn.onclick = null;
+                    if (btn.dataset) delete btn.dataset.clickSfx;
                     return;
                 }
                 btn.style.display = '';
+                if (btn.dataset) {
+                    if (option.clickSfx) btn.dataset.clickSfx = option.clickSfx;
+                    else delete btn.dataset.clickSfx;
+                }
                 if (numEl) numEl.textContent = String(slotIndex + 1);
                 if (textEl) textEl.textContent = getStoryText(option.textKey, option.fallbackText || '');
                 btn.onclick = () => handleRuntimeChoice(slotIndex);
@@ -904,6 +935,7 @@ console.log('[BOOT] main.js module active');
         }
 
         function playFightHitFx() {
+            playPunchSfx();
             if (characterContainerEl) {
                 characterContainerEl.classList.remove('fight-hit-shake');
                 void characterContainerEl.offsetWidth;
@@ -958,7 +990,7 @@ console.log('[BOOT] main.js module active');
                 titleKey: '',
                 fallbackTitle: fight.choiceTitle,
                 options: [
-                    { textKey: '', fallbackText: fight.attackOption, onSelect: onFightAttack },
+                    { textKey: '', fallbackText: fight.attackOption, onSelect: onFightAttack, clickSfx: 'none' },
                     { textKey: '', fallbackText: fight.jokeOption, onSelect: onFightJoke }
                 ]
             });
@@ -2146,6 +2178,7 @@ console.log('[BOOT] main.js module active');
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
+                const isFightScene = activeSceneId === SCENE_FIGHT;
                 const charFocusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_CHARACTER_SHIFT_PX : 0;
                 const moneyPopupShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_POPUP_SHIFT_PX : 0;
                 const charShiftX = smoothX + charFocusShiftX;
@@ -2164,13 +2197,22 @@ console.log('[BOOT] main.js module active');
                 // Shift the visible crop of every char image via object-position.
                 // This never moves the element boundary, so no black edges appear.
                 const rootStyle = getComputedStyle(document.documentElement);
-                const baseX = rootStyle.getPropertyValue('--char-focus-x').trim() || '50%';
-                const baseY = rootStyle.getPropertyValue('--char-focus-y').trim() || '22%';
-                const px = `calc(${baseX} + ${charShiftX.toFixed(2)}px)`;
-                const py = `calc(${baseY} + ${charShiftY.toFixed(2)}px)`;
+                const baseX = isFightScene
+                    ? `${(FIGHT_SCENE_OBJECT_POSITION.x * 100).toFixed(2)}%`
+                    : (rootStyle.getPropertyValue('--char-focus-x').trim() || '50%');
+                const baseY = isFightScene
+                    ? `${(FIGHT_SCENE_OBJECT_POSITION.y * 100).toFixed(2)}%`
+                    : (rootStyle.getPropertyValue('--char-focus-y').trim() || '22%');
+                const effectiveShiftX = isFightScene ? 0 : charShiftX;
+                const effectiveShiftY = isFightScene ? 0 : charShiftY;
+                const px = `calc(${baseX} + ${effectiveShiftX.toFixed(2)}px)`;
+                const py = `calc(${baseY} + ${effectiveShiftY.toFixed(2)}px)`;
                 document.querySelectorAll('.char-img').forEach(img => {
                     img.style.objectPosition = `${px} ${py}`;
                 });
+                if (isFightScene) {
+                    applyFightTailPivotFromSource();
+                }
                 if (moneyPopupEl) {
                     moneyPopupEl.style.objectPosition = `calc(${MONEY_FOCUS_X_PCT} + ${moneyPopupShiftX.toFixed(2)}px) ${MONEY_FOCUS_Y_PCT}`;
                 }
