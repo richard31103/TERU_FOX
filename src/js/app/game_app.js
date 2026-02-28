@@ -354,6 +354,7 @@ debugLog('[BOOT] game_app module active');
         let isRuntimeChoiceMode = false;
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
+        let hasUsedMainOOXXChoice = false;
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -389,6 +390,10 @@ debugLog('[BOOT] game_app module active');
                 if (a[i] !== b[i]) return false;
             }
             return true;
+        }
+
+        function isMainChoiceOptionDisabled(sourceIndex) {
+            return sourceIndex === 3 && hasUsedMainOOXXChoice;
         }
 
         function isAfraidTargetLineText(text) {
@@ -1080,6 +1085,7 @@ debugLog('[BOOT] game_app module active');
                 t.choiceTitle,
                 sourceIndices.map((sourceIndex) => {
                     if (typeof sourceIndex !== 'number') return '';
+                    if (isMainChoiceOptionDisabled(sourceIndex)) return '';
                     let text = t.choices[sourceIndex] || '';
                     if (
                         sourceIndex === 1 &&
@@ -1102,6 +1108,9 @@ debugLog('[BOOT] game_app module active');
                     && sameChoiceSourceIndices(sourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
                 ) {
                     text = getFightChoiceLabel();
+                }
+                if (isMainChoiceOptionDisabled(sourceIndex)) {
+                    text = '';
                 }
 
                 if (typeof sourceIndex !== 'number' || !text) {
@@ -1676,6 +1685,7 @@ debugLog('[BOOT] game_app module active');
         function pickChoice(idx) {
             hideChoicePanel();
             resetHeadTouchChain('pick_choice');
+            if (idx === 3 && hasUsedMainOOXXChoice) return;
 
             const t = l10n[currentLang];
             if (
@@ -1700,6 +1710,7 @@ debugLog('[BOOT] game_app module active');
             dialogueHistory.push({ speaker: '', text: t.choices[idx], isChoice: true });
 
             if (actionId === 'start_ooxx' && !responseText) {
+                if (idx === 3) hasUsedMainOOXXChoice = true;
                 dispatchAction(actionId);
                 return;
             }
@@ -1731,7 +1742,9 @@ debugLog('[BOOT] game_app module active');
                 options.push({ textKey: 'bed_choice_tail', onSelect: onBedTailTouched });
             }
             options.push({ textKey: 'bed_choice_thigh', onSelect: onBedTouchThigh });
-            options.push({ textKey: 'bed_choice_ooxx', onSelect: onBedStartOOXX });
+            if (!hasUsedMainOOXXChoice) {
+                options.push({ textKey: 'bed_choice_ooxx', onSelect: onBedStartOOXX });
+            }
             showRuntimeChoicePanel({ titleKey: 'choice_title', options });
         }
 
@@ -1832,6 +1845,7 @@ debugLog('[BOOT] game_app module active');
         let ooxxCellElements = [];
         let ooxxPreparedLang = '';
         let ooxxWarmupDone = false;
+        let ooxxReturnChoiceSourceIndices = null;
 
         function renderOOXX(highlightLine) {
             const cells = ooxxCellElements.length > 0
@@ -1908,6 +1922,8 @@ debugLog('[BOOT] game_app module active');
         const OOXX_RESULT_TRANSITION = { fadeInMs: 350, holdMs: 120, fadeOutMs: 350 };
         const OOXX_RESULT_REVEAL_DELAY_MS = 120;
         const OOXX_RESULT_TEXT_SHOW_DELAY_MS = 20;
+        const OOXX_RESULT_LOCK_RETRY_MS = 80;
+        const OOXX_RESULT_LOCK_RETRY_MAX = 50;
         const OOXX_AI_RESPONSE_DELAY_MS = 500;
         const ooxxTransitionEngine = createTransitionEngine({
             curtainEl: document.getElementById('ooxx-curtain'),
@@ -1983,76 +1999,125 @@ debugLog('[BOOT] game_app module active');
                         ? 'Win and you would get a special CG...'
                         : '贏了才有色圖可以看'
             );
-
-            setTimeout(async () => {
-                if (ooxxTransitionLock) return;
-                const token = beginOOXXTransition('result');
-                if (!token) return;
-                try {
-                    const screen = document.getElementById('ooxx-screen');
-
-                    // Stop BGM
-                    document.getElementById('bgm').pause();
-
-                    // Keep OOXX lose SFX independent from the death-screen SFX.
-                    if (!isDraw && !audioMuted) {
-                        const ooxxLoseSfx = ctxRefs.ooxxLoseSfx || ctxRefs.deathSfx;
-                        if (ooxxLoseSfx) {
-                            ooxxLoseSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
-                            ooxxLoseSfx.currentTime = 0;
-                            ooxxLoseSfx.play().catch(() => { });
-                        }
+            const bindResultClick = (resultEl) => {
+                if (!resultEl) return;
+                resultEl.addEventListener('click', function once() {
+                    resultEl.removeEventListener('click', once);
+                    resultEl.classList.remove('show-text'); // reset for next time
+                    if (Array.isArray(ooxxReturnChoiceSourceIndices) && ooxxReturnChoiceSourceIndices.length > 0) {
+                        resultEl.classList.add('hidden');
+                        isDeathSequence = false;
+                        isFightSequenceActive = false;
+                        setTyping(false);
+                        resetMoneyIntermission();
+                        startBGM();
+                        showChoicePanel(ooxxReturnChoiceSourceIndices);
+                        ooxxReturnChoiceSourceIndices = null;
+                        return;
                     }
-
-                    const resultEl = document.getElementById('ooxx-result');
-                    const textEl = document.getElementById('ooxx-result-text');
-                    const subEl = document.getElementById('ooxx-result-sub');
+                    // Return to title and restart BGM
+                    returnToTitle(resultEl, () => {
+                        lineIndex = 0;
+                        document.getElementById('bgm').currentTime = 0;
+                        startBGM();
+                    });
+                });
+            };
+            const revealResultWithoutTransition = () => {
+                const screen = document.getElementById('ooxx-screen');
+                const resultEl = document.getElementById('ooxx-result');
+                const textEl = document.getElementById('ooxx-result-text');
+                const subEl = document.getElementById('ooxx-result-sub');
+                if (textEl) {
                     textEl.textContent = resultText;
                     textEl.className = cls;
-                    subEl.textContent = subText;
-
-                    await runCurtainTransition(OOXX_RESULT_TRANSITION, {
-                        token,
-                        label: 'result',
-                        onBlack: async () => {
-                            screen.style.transition = 'none';
-                            screen.classList.add('hidden');
-                            void screen.offsetWidth;
-                            screen.style.transition = '';
-
-                            resultEl.style.transition = 'none';
-                            resultEl.classList.remove('hidden');
-                            resultEl.classList.remove('show-text');
-                            void resultEl.offsetWidth;
-                            resultEl.style.transition = '';
-                        }
-                    });
-                    if (appState) {
-                        try { appState.transition(GAME_STATES.RESULT, { source: 'ooxx_result' }); } catch (e) { }
-                    }
-
-                    setTimeout(() => {
-                        if (token !== ooxxTransitionToken) return;
-                        resultEl.classList.add('show-text');
-                    }, OOXX_RESULT_TEXT_SHOW_DELAY_MS);
-
-                    resultEl.addEventListener('click', function once() {
-                        resultEl.removeEventListener('click', once);
-                        resultEl.classList.remove('show-text'); // reset for next time
-                        // Return to title and restart BGM
-                        returnToTitle(resultEl, () => {
-                            lineIndex = 0;
-                            document.getElementById('bgm').currentTime = 0;
-                            startBGM();
-                        });
-                    });
-                } catch (err) {
-                    if (!err || err.message !== OOXX_TRANSITION_CANCELLED) {
-                        console.error('OOXX result transition error:', err);
-                    }
-                } finally {
-                    endOOXXTransition(token, 'result');
                 }
+                if (subEl) subEl.textContent = subText;
+                if (screen) screen.classList.add('hidden');
+                if (resultEl) {
+                    resultEl.classList.remove('hidden');
+                    resultEl.classList.remove('show-text');
+                    void resultEl.offsetWidth;
+                    resultEl.classList.add('show-text');
+                }
+                if (appState) {
+                    try { appState.transition(GAME_STATES.RESULT, { source: 'ooxx_result_fallback' }); } catch (e) { }
+                }
+                bindResultClick(resultEl);
+            };
+
+            setTimeout(() => {
+                const tryShowResult = async (attempt = 0) => {
+                    const token = beginOOXXTransition('result');
+                    if (!token) {
+                        if (attempt >= OOXX_RESULT_LOCK_RETRY_MAX) {
+                            console.warn('OOXX result transition lock timeout, using fallback reveal.');
+                            ooxxTransitionLock = false;
+                            revealResultWithoutTransition();
+                            return;
+                        }
+                        setTimeout(() => { tryShowResult(attempt + 1); }, OOXX_RESULT_LOCK_RETRY_MS);
+                        return;
+                    }
+
+                    try {
+                        const screen = document.getElementById('ooxx-screen');
+
+                        // Stop BGM
+                        document.getElementById('bgm').pause();
+
+                        // Keep OOXX lose SFX independent from the death-screen SFX.
+                        if (!isDraw && !audioMuted) {
+                            const ooxxLoseSfx = ctxRefs.ooxxLoseSfx || ctxRefs.deathSfx;
+                            if (ooxxLoseSfx) {
+                                ooxxLoseSfx.volume = parseFloat(document.getElementById('sfx-vol').value) / 100;
+                                ooxxLoseSfx.currentTime = 0;
+                                ooxxLoseSfx.play().catch(() => { });
+                            }
+                        }
+
+                        const resultEl = document.getElementById('ooxx-result');
+                        const textEl = document.getElementById('ooxx-result-text');
+                        const subEl = document.getElementById('ooxx-result-sub');
+                        textEl.textContent = resultText;
+                        textEl.className = cls;
+                        subEl.textContent = subText;
+
+                        await runCurtainTransition(OOXX_RESULT_TRANSITION, {
+                            token,
+                            label: 'result',
+                            onBlack: async () => {
+                                screen.style.transition = 'none';
+                                screen.classList.add('hidden');
+                                void screen.offsetWidth;
+                                screen.style.transition = '';
+
+                                resultEl.style.transition = 'none';
+                                resultEl.classList.remove('hidden');
+                                resultEl.classList.remove('show-text');
+                                void resultEl.offsetWidth;
+                                resultEl.style.transition = '';
+                            }
+                        });
+                        if (appState) {
+                            try { appState.transition(GAME_STATES.RESULT, { source: 'ooxx_result' }); } catch (e) { }
+                        }
+
+                        setTimeout(() => {
+                            if (token !== ooxxTransitionToken) return;
+                            resultEl.classList.add('show-text');
+                        }, OOXX_RESULT_TEXT_SHOW_DELAY_MS);
+                        bindResultClick(resultEl);
+                    } catch (err) {
+                        if (!err || err.message !== OOXX_TRANSITION_CANCELLED) {
+                            console.error('OOXX result transition error:', err);
+                        }
+                    } finally {
+                        endOOXXTransition(token, 'result');
+                    }
+                };
+
+                tryShowResult(0);
             }, OOXX_RESULT_REVEAL_DELAY_MS);
         }
 
@@ -2073,7 +2138,16 @@ debugLog('[BOOT] game_app module active');
 
         async function startOOXX() {
             if (ooxxTransitionLock) return;
+            hasUsedMainOOXXChoice = true;
             resetBedFlow();
+            ooxxReturnChoiceSourceIndices = (
+                activeSceneId === SCENE_DEFAULT
+                && !isRuntimeChoiceMode
+                && Array.isArray(currentChoiceSourceIndices)
+                && currentChoiceSourceIndices.length > 0
+            )
+                ? currentChoiceSourceIndices.slice()
+                : null;
             const token = beginOOXXTransition('entry');
             if (!token) return;
 
@@ -2634,6 +2708,7 @@ debugLog('[BOOT] game_app module active');
             lineIndex = 0;
             charIndex = 0;
             rememberCurrentLineText('');
+            hasUsedMainOOXXChoice = false;
             isTyping = false;
             inChoiceMode = false;
             isDeathSequence = false;
@@ -2651,6 +2726,7 @@ debugLog('[BOOT] game_app module active');
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
             resetHeadTouchChain('start_game');
+            ooxxReturnChoiceSourceIndices = null;
             dialogueHistory.length = 0;
             clearFightVisualFx();
 
@@ -2714,6 +2790,7 @@ debugLog('[BOOT] game_app module active');
             isAngry = false;
             isHappy = false;
             rememberCurrentLineText('');
+            hasUsedMainOOXXChoice = false;
             isAfraidHeadMode = false;
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
@@ -2726,6 +2803,7 @@ debugLog('[BOOT] game_app module active');
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
             resetHeadTouchChain('return_to_title');
+            ooxxReturnChoiceSourceIndices = null;
             hideChoicePanel();
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
