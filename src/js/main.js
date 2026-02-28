@@ -272,6 +272,7 @@ console.log('[BOOT] main.js module active');
                 angry: 'angry head.png',
                 happy: 'happy head.png',
                 moneyHead: 'money head.png',
+                moneyBlink: 'money blink head.png',
                 happyTalk: 'happy head talk.png',
                 tailOrigin: '68.7376% 75.0098%',
                 hasSpecialHeads: true
@@ -289,6 +290,7 @@ console.log('[BOOT] main.js module active');
                 speakClosedCry: 'bed/bed speak eyes close cry head.png',
                 idleTears: 'bed/bed no speak tears head.png',
                 speakTears: 'bed/bed speak tears head.png',
+                blinkSpeakTears: 'bed/bed blink speak tears head.png',
                 angry: 'bed/bed no speak head.png',
                 happy: 'bed/bed no speak head.png',
                 happyTalk: 'bed/bed no speak head.png',
@@ -310,6 +312,21 @@ console.log('[BOOT] main.js module active');
             idle: 'no speak normal head.png',
             blink: 'blink normal head.png',
             speak: 'speak head.png'
+        };
+        const AFRAID_HEADS = {
+            idle: 'afraid head.png',
+            blink: 'afraid blink head.png',
+            speak: 'afraid speak head.png'
+        };
+        const AFRAID_TARGET_LINES_TW = new Set([
+            '你……你想做什麼？',
+            '摸...摸夠了吧...你還想幹嘛?'
+        ]);
+        const AFRAID_TARGET_CHOICE_TITLE_TW = '你想做什麼？';
+        const SHY_BED_TRANSITION_HEADS = {
+            happy: 'shy head.png',
+            speak: 'shy speak head.png',
+            blink: 'shy blink head.png'
         };
         const OPENING_TEXT = {
             tw: {
@@ -351,6 +368,8 @@ console.log('[BOOT] main.js module active');
         let activeSceneId = SCENE_DEFAULT;
         let sceneSupportsSpecialHeads = true;
         let bedHeadVariant = 'normal';
+        let isAfraidHeadMode = false;
+        let isShyBedTransitionMode = false;
         let isOpeningPrologueActive = false;
         let isHappyTalkMode = false;
         let happyMouthOpen = false;
@@ -371,6 +390,27 @@ console.log('[BOOT] main.js module active');
             gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
         }
 
+        function sameChoiceSourceIndices(a, b) {
+            if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i += 1) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        }
+
+        function isAfraidTargetLineText(text) {
+            if (currentLang !== 'tw') return false;
+            return AFRAID_TARGET_LINES_TW.has((text || '').trim());
+        }
+
+        function shouldUseAfraidForChoice(sourceIndices) {
+            if (currentLang !== 'tw') return false;
+            const choiceTitle = l10n[currentLang]?.choiceTitle || '';
+            if (choiceTitle !== AFRAID_TARGET_CHOICE_TITLE_TW) return false;
+            return sameChoiceSourceIndices(sourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
+                || sameChoiceSourceIndices(sourceIndices, FOLLOWUP_CHOICE_SOURCE_INDICES);
+        }
+
         function setCharState(state) {
             charIdle.classList.remove('active');
             charBlink.classList.remove('active');
@@ -385,6 +425,10 @@ console.log('[BOOT] main.js module active');
                 return;
             }
             if (isHappy) {
+                if ((isShyBedTransitionMode || isMoneyIntermission) && state === 'blink') {
+                    charBlink.classList.add('active');
+                    return;
+                }
                 if (sceneSupportsSpecialHeads && charHappy) {
                     if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
                     else charHappy.classList.add('active');
@@ -439,6 +483,54 @@ console.log('[BOOT] main.js module active');
             setCharState(isTyping ? 'speak' : 'idle');
         }
 
+        function applyAfraidHeadMode(flag) {
+            const enable = Boolean(flag) && activeSceneId === SCENE_DEFAULT;
+            // Ignore disable calls when afraid mode is not active, so other
+            // temporary head modes (e.g. shy transition) are not overwritten.
+            if (!enable && !isAfraidHeadMode) return;
+            isAfraidHeadMode = enable;
+            if (activeSceneId !== SCENE_DEFAULT) return;
+            if (!charIdle || !charBlink || !charSpeak) return;
+            if (enable) {
+                charIdle.src = AFRAID_HEADS.idle;
+                charBlink.src = AFRAID_HEADS.blink;
+                charSpeak.src = AFRAID_HEADS.speak;
+            } else if (isOpeningPrologueActive) {
+                charIdle.src = OPENING_HEADS.idle;
+                charBlink.src = OPENING_HEADS.blink;
+                charSpeak.src = OPENING_HEADS.speak;
+            } else {
+                const cfg = SCENE_CONFIG[SCENE_DEFAULT];
+                charIdle.src = cfg.idle;
+                charBlink.src = cfg.blink;
+                charSpeak.src = cfg.speak;
+            }
+            setCharState(isTyping ? 'speak' : 'idle');
+        }
+
+        function applyShyBedTransitionHeadMode(flag) {
+            const enable = Boolean(flag) && activeSceneId === SCENE_DEFAULT;
+            isShyBedTransitionMode = enable;
+            if (!charHappy || !charHappyTalk || !charBlink) return;
+            const cfg = SCENE_CONFIG[activeSceneId] || SCENE_CONFIG[SCENE_DEFAULT];
+            if (enable) {
+                charHappy.src = SHY_BED_TRANSITION_HEADS.happy;
+                charHappyTalk.src = SHY_BED_TRANSITION_HEADS.speak;
+                charBlink.src = SHY_BED_TRANSITION_HEADS.blink;
+            } else {
+                charHappy.src = cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
+                charHappyTalk.src = cfg.happyTalk || cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
+                if (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode) {
+                    charBlink.src = AFRAID_HEADS.blink;
+                } else if (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive) {
+                    charBlink.src = OPENING_HEADS.blink;
+                } else {
+                    charBlink.src = cfg.blink || SCENE_CONFIG[SCENE_DEFAULT].blink;
+                }
+            }
+            if (isHappy) setCharState(isTyping ? 'speak' : 'idle');
+        }
+
         function getSceneGameTitle(uiBundle) {
             const ui = uiBundle || l10n[currentLang]?.ui;
             if (!ui) return '';
@@ -472,9 +564,19 @@ console.log('[BOOT] main.js module active');
                 if (charBlink) charBlink.src = OPENING_HEADS.blink;
                 if (charSpeak) charSpeak.src = OPENING_HEADS.speak;
             }
+            if (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode) {
+                if (charIdle) charIdle.src = AFRAID_HEADS.idle;
+                if (charBlink) charBlink.src = AFRAID_HEADS.blink;
+                if (charSpeak) charSpeak.src = AFRAID_HEADS.speak;
+            }
             if (charAngry) charAngry.src = cfg.angry;
             if (charHappy) charHappy.src = cfg.happy;
             if (charHappyTalk) charHappyTalk.src = cfg.happyTalk || cfg.happy;
+            if (activeSceneId === SCENE_DEFAULT && isShyBedTransitionMode) {
+                if (charHappy) charHappy.src = SHY_BED_TRANSITION_HEADS.happy;
+                if (charHappyTalk) charHappyTalk.src = SHY_BED_TRANSITION_HEADS.speak;
+                if (charBlink) charBlink.src = SHY_BED_TRANSITION_HEADS.blink;
+            }
             if (charTail) {
                 charTail.style.setProperty('--tail-origin', cfg.tailOrigin || SCENE_CONFIG[SCENE_DEFAULT].tailOrigin);
                 charTail.classList.remove('tail-burst');
@@ -489,9 +591,20 @@ console.log('[BOOT] main.js module active');
         function applyMoneyHeadState(showing) {
             if (!charHappy) return;
             const cfg = SCENE_CONFIG[activeSceneId] || SCENE_CONFIG[SCENE_DEFAULT];
-            const normalHappy = cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
+            const normalHappy = isShyBedTransitionMode
+                ? SHY_BED_TRANSITION_HEADS.happy
+                : (cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy);
+            const normalBlink = isShyBedTransitionMode
+                ? SHY_BED_TRANSITION_HEADS.blink
+                : (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode)
+                    ? AFRAID_HEADS.blink
+                    : (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive)
+                        ? OPENING_HEADS.blink
+                        : (cfg.blink || SCENE_CONFIG[SCENE_DEFAULT].blink);
             const moneyHappy = cfg.moneyHead || normalHappy;
+            const moneyBlink = cfg.moneyBlink || normalBlink;
             charHappy.src = showing ? moneyHappy : normalHappy;
+            if (charBlink) charBlink.src = showing ? moneyBlink : normalBlink;
             if (isHappy) setCharState('happy');
         }
 
@@ -516,7 +629,7 @@ console.log('[BOOT] main.js module active');
                 // Asset naming is intentionally inverted for this interaction.
                 charIdle.src = cfg.speakTears || cfg.idle;
                 charSpeak.src = cfg.idleTears || cfg.speak;
-                charBlink.src = cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
+                charBlink.src = cfg.blinkSpeakTears || cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
             } else {
                 charIdle.src = cfg.idle;
                 charSpeak.src = cfg.speak;
@@ -539,6 +652,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.remove('visible');
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
+            if (isAfraidHeadMode) applyAfraidHeadMode(false);
             syncMobileChoiceUi();
         }
 
@@ -589,6 +703,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.add('visible');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            applyAfraidHeadMode(shouldUseAfraidForChoice(sourceIndices));
             syncMobileChoiceUi();
             setChoiceButtons(sourceIndices);
 
@@ -634,6 +749,7 @@ console.log('[BOOT] main.js module active');
             choicePanel.classList.add('visible');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
+            applyAfraidHeadMode(false);
             syncMobileChoiceUi();
             renderRuntimeChoicePanel();
             warmupOOXXEngine();
@@ -730,6 +846,7 @@ console.log('[BOOT] main.js module active');
                 } else {
                     stopSpeakingAnimation();
                     setCharState('happy');
+                    if (isShyBedTransitionMode || isMoneyIntermission) scheduleNextBlink();
                 }
                 return;
             }
@@ -766,10 +883,10 @@ console.log('[BOOT] main.js module active');
             speakerPlate.textContent = t.speaker;
             dialogueText.textContent = '';
             charIndex = 0;
+            const lineText = t.lines[idx];
+            applyAfraidHeadMode(isAfraidTargetLineText(lineText));
             setTyping(true);
             clearInterval(typeTimer);
-
-            const lineText = t.lines[idx];
 
             typeTimer = setInterval(() => {
                 if (charIndex < lineText.length) {
@@ -850,6 +967,7 @@ console.log('[BOOT] main.js module active');
             speakerPlate.textContent = speakerName;
             dialogueText.textContent = '';
             charIndex = 0;
+            applyAfraidHeadMode(isAfraidTargetLineText(responseText));
             setTyping(true);
             clearInterval(typeTimer);
 
@@ -981,6 +1099,7 @@ console.log('[BOOT] main.js module active');
             isAngry = actionId === 'trigger_death';
             isHappy = actionId === 'show_to_be_continued' || actionId === 'start_bed_scene';
             isHappyTalkMode = actionId === 'start_bed_scene';
+            applyShyBedTransitionHeadMode(actionId === 'start_bed_scene');
             if (!isHappy) hideMoneyPopup();
             setCharState(isHappy ? 'happy' : (isAngry ? 'angry' : 'idle'));
             if (actionId === 'show_to_be_continued' || actionId === 'start_bed_scene') {
@@ -1078,6 +1197,7 @@ console.log('[BOOT] main.js module active');
                     fadeOutMs: BED_ENTRY_TRANSITION.fadeOutMs,
                     onBlack: async () => {
                         applyScene(SCENE_BED);
+                        isShyBedTransitionMode = false;
                     }
                 });
                 if (!result || result.cancelled) return;
@@ -1630,9 +1750,15 @@ console.log('[BOOT] main.js module active');
                 const t = l10n[lang];
                 speakerPlate.textContent = t.speaker;
                 dialogueText.textContent = t.lines[lineIndex];
+                applyAfraidHeadMode(isAfraidTargetLineText(t.lines[lineIndex]));
             } else if (inChoiceMode) {
-                if (isRuntimeChoiceMode) renderRuntimeChoicePanel();
-                else setChoiceButtons(currentChoiceSourceIndices);
+                if (isRuntimeChoiceMode) {
+                    renderRuntimeChoicePanel();
+                    applyAfraidHeadMode(false);
+                } else {
+                    setChoiceButtons(currentChoiceSourceIndices);
+                    applyAfraidHeadMode(shouldUseAfraidForChoice(currentChoiceSourceIndices));
+                }
             }
         }
 
@@ -1845,13 +1971,20 @@ console.log('[BOOT] main.js module active');
             'body.png',
             'tail.png',
             'no speak head.png',
+            'afraid head.png',
             'no speak normal head.png',
             'blink head.png',
+            'afraid blink head.png',
             'blink normal head.png',
             'speak head.png',
+            'afraid speak head.png',
+            'shy head.png',
+            'shy speak head.png',
+            'shy blink head.png',
             'angry head.png',
             'happy head.png',
             'money head.png',
+            'money blink head.png',
             'happy head talk.png',
             'money.png',
             'pet fox.jpg',
@@ -1869,6 +2002,7 @@ console.log('[BOOT] main.js module active');
             'bed/bed speak eyes close cry head.png',
             'bed/bed no speak tears head.png',
             'bed/bed speak tears head.png',
+            'bed/bed blink speak tears head.png',
             'ad630f06-22cd-45a6-842b-1e8e78c36a61.jpg',
             'fox-face_1f98a.png'
         ];
@@ -2003,6 +2137,8 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isAfraidHeadMode = false;
+            isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             pendingPostChoiceAction = null;
@@ -2072,6 +2208,8 @@ console.log('[BOOT] main.js module active');
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
+            isAfraidHeadMode = false;
+            isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
             pendingPostChoiceAction = null;
