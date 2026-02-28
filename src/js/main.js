@@ -2146,6 +2146,7 @@ console.log('[BOOT] main.js module active');
             function tick() {
                 smoothX = lerp(smoothX, targetX, SMOOTH);
                 smoothY = lerp(smoothY, targetY, SMOOTH);
+                const isFightScene = activeSceneId === SCENE_FIGHT;
                 const charFocusShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_CHARACTER_SHIFT_PX : 0;
                 const moneyPopupShiftX = mobileMoneyFocusActive ? MOBILE_MONEY_POPUP_SHIFT_PX : 0;
                 const charShiftX = smoothX + charFocusShiftX;
@@ -2164,13 +2165,22 @@ console.log('[BOOT] main.js module active');
                 // Shift the visible crop of every char image via object-position.
                 // This never moves the element boundary, so no black edges appear.
                 const rootStyle = getComputedStyle(document.documentElement);
-                const baseX = rootStyle.getPropertyValue('--char-focus-x').trim() || '50%';
-                const baseY = rootStyle.getPropertyValue('--char-focus-y').trim() || '22%';
-                const px = `calc(${baseX} + ${charShiftX.toFixed(2)}px)`;
-                const py = `calc(${baseY} + ${charShiftY.toFixed(2)}px)`;
+                const baseX = isFightScene
+                    ? `${(FIGHT_SCENE_OBJECT_POSITION.x * 100).toFixed(2)}%`
+                    : (rootStyle.getPropertyValue('--char-focus-x').trim() || '50%');
+                const baseY = isFightScene
+                    ? `${(FIGHT_SCENE_OBJECT_POSITION.y * 100).toFixed(2)}%`
+                    : (rootStyle.getPropertyValue('--char-focus-y').trim() || '22%');
+                const effectiveShiftX = isFightScene ? 0 : charShiftX;
+                const effectiveShiftY = isFightScene ? 0 : charShiftY;
+                const px = `calc(${baseX} + ${effectiveShiftX.toFixed(2)}px)`;
+                const py = `calc(${baseY} + ${effectiveShiftY.toFixed(2)}px)`;
                 document.querySelectorAll('.char-img').forEach(img => {
                     img.style.objectPosition = `${px} ${py}`;
                 });
+                if (isFightScene) {
+                    applyFightTailPivotFromSource();
+                }
                 if (moneyPopupEl) {
                     moneyPopupEl.style.objectPosition = `calc(${MONEY_FOCUS_X_PCT} + ${moneyPopupShiftX.toFixed(2)}px) ${MONEY_FOCUS_Y_PCT}`;
                 }
