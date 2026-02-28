@@ -457,11 +457,31 @@
             font-family: 'Noto Serif TC', serif;
         }
 
-        .choice-btn:hover {
-            background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
-            border-color: rgba(240, 170, 50, 0.80);
-            transform: translateX(8px);
-            box-shadow: 0 0 22px rgba(210, 120, 20, 0.50);
+        @media (hover: hover) and (pointer: fine) {
+            .choice-btn:hover {
+                background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
+                border-color: rgba(240, 170, 50, 0.80);
+                transform: translateX(8px);
+                box-shadow: 0 0 22px rgba(210, 120, 20, 0.50);
+            }
+        }
+
+        .choice-btn:focus {
+            outline: none;
+        }
+
+        .choice-btn:focus-visible {
+            outline: 2px solid rgba(240, 170, 50, 0.85);
+            outline-offset: 2px;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .choice-btn.is-pressed {
+                background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
+                border-color: rgba(240, 170, 50, 0.80);
+                transform: translateX(4px);
+                box-shadow: 0 0 18px rgba(210, 120, 20, 0.45);
+            }
         }
 
         .choice-num {

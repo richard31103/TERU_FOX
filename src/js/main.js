@@ -393,6 +393,13 @@ console.log('[BOOT] main.js module active');
             gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
         }
 
+        function clearChoicePressedState() {
+            if (!choicePanel) return;
+            choicePanel.querySelectorAll('.choice-btn.is-pressed').forEach(btn => {
+                btn.classList.remove('is-pressed');
+            });
+        }
+
         function sameChoiceSourceIndices(a, b) {
             if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
             for (let i = 0; i < a.length; i += 1) {
@@ -656,6 +663,7 @@ console.log('[BOOT] main.js module active');
             document.getElementById('chapter-badge').style.opacity = '1';
             document.getElementById('chapter-badge').style.pointerEvents = 'auto';
             if (isAfraidHeadMode) applyAfraidHeadMode(false);
+            clearChoicePressedState();
             syncMobileChoiceUi();
         }
 
@@ -675,6 +683,7 @@ console.log('[BOOT] main.js module active');
             currentChoiceSourceIndices = sourceIndices.slice();
             isRuntimeChoiceMode = false;
             runtimeChoiceState = null;
+            clearChoicePressedState();
 
             const labelEl = choicePanel.querySelector('.choice-label');
             if (labelEl) labelEl.textContent = t.choiceTitle;
@@ -707,6 +716,7 @@ console.log('[BOOT] main.js module active');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
             applyAfraidHeadMode(shouldUseAfraidForChoice(sourceIndices));
+            clearChoicePressedState();
             syncMobileChoiceUi();
             setChoiceButtons(sourceIndices);
 
@@ -753,6 +763,7 @@ console.log('[BOOT] main.js module active');
             document.getElementById('chapter-badge').style.opacity = '0';
             document.getElementById('chapter-badge').style.pointerEvents = 'none';
             applyAfraidHeadMode(false);
+            clearChoicePressedState();
             syncMobileChoiceUi();
             renderRuntimeChoicePanel();
             warmupOOXXEngine();
@@ -771,6 +782,19 @@ console.log('[BOOT] main.js module active');
             runtimeChoiceState = null;
             hideChoicePanel();
             option.onSelect();
+        }
+
+        if (choicePanel) {
+            choicePanel.addEventListener('pointerdown', (e) => {
+                const btn = e.target instanceof Element ? e.target.closest('.choice-btn') : null;
+                if (!btn) return;
+                clearChoicePressedState();
+                btn.classList.add('is-pressed');
+            });
+            const releasePressed = () => clearChoicePressedState();
+            choicePanel.addEventListener('pointerup', releasePressed);
+            choicePanel.addEventListener('pointercancel', releasePressed);
+            choicePanel.addEventListener('pointerleave', releasePressed);
         }
 
         function scheduleNextBlink() {
