@@ -2015,6 +2015,8 @@ console.log('[BOOT] main.js module active');
         );
 
         let loadedAssetsCount = 0;
+        let areImageAssetsReady = false;
+        let failedImageAssets = [];
 
         function updateLoaderProgress(totalCount = imageAssetsToLoad.length) {
             loadedAssetsCount++;
@@ -2022,13 +2024,16 @@ console.log('[BOOT] main.js module active');
             const pct = Math.min(100, Math.floor((loadedAssetsCount / safeTotal) * 100));
             document.getElementById('loading-bar-fill').style.width = pct + '%';
             document.getElementById('loading-text').textContent = `Loading Assets... ${pct}%`;
+        }
 
-            if (loadedAssetsCount >= safeTotal) {
-                setTimeout(() => {
-                    document.getElementById('loading-container').style.display = 'none';
-                    document.getElementById('start-btn').style.display = 'block';
-                }, 400);
-            }
+        function finalizeAssetLoadingReady() {
+            areImageAssetsReady = true;
+            setTimeout(() => {
+                document.getElementById('loading-container').style.display = 'none';
+                const startBtn = document.getElementById('start-btn');
+                startBtn.style.display = 'block';
+                startBtn.disabled = false;
+            }, 400);
         }
 
         function loadImageDecoded(src) {
@@ -2036,41 +2041,58 @@ console.log('[BOOT] main.js module active');
                 const img = new Image();
                 let settled = false;
 
-                const finish = () => {
+                const finish = (ok) => {
                     if (settled) return;
                     settled = true;
-                    resolve();
+                    resolve({ src, ok });
                 };
 
                 const finalize = () => {
                     if (typeof img.decode === 'function') {
-                        img.decode().catch(() => { }).finally(finish);
+                        img.decode().catch(() => { }).finally(() => finish(true));
                     } else {
-                        finish();
+                        finish(true);
                     }
                 };
 
                 img.onload = finalize;
-                img.onerror = finish;
+                img.onerror = () => finish(false);
                 img.src = src;
 
                 if (img.complete) {
                     if (img.naturalWidth > 0) finalize();
-                    else finish();
+                    else finish(false);
                 }
             });
         }
 
-        function startAssetLoader() {
+        async function startAssetLoader() {
+            areImageAssetsReady = false;
+            failedImageAssets = [];
             loadedAssetsCount = 0;
+            const startBtn = document.getElementById('start-btn');
+            startBtn.style.display = 'none';
+            startBtn.disabled = true;
             const totalCount = imageAssetsToLoad.length;
             if (totalCount === 0) {
                 updateLoaderProgress(1);
+                finalizeAssetLoadingReady();
                 return;
             }
-            imageAssetsToLoad.forEach(src => {
-                loadImageDecoded(src).finally(() => updateLoaderProgress(totalCount));
-            });
+            const results = await Promise.all(
+                imageAssetsToLoad.map(async src => {
+                    const result = await loadImageDecoded(src);
+                    updateLoaderProgress(totalCount);
+                    return result;
+                })
+            );
+            failedImageAssets = results.filter(r => !r.ok).map(r => r.src);
+            if (failedImageAssets.length > 0) {
+                document.getElementById('loading-text').textContent = `Failed to load ${failedImageAssets.length} image(s). Please refresh.`;
+                console.error('[ASSET] Failed image preloads:', failedImageAssets);
+                return;
+            }
+            finalizeAssetLoadingReady();
         }
 
         // Map and history
@@ -2123,6 +2145,17 @@ console.log('[BOOT] main.js module active');
 
         // Game flow control
         function startGame() {
+            if (!areImageAssetsReady) {
+                const loadingText = document.getElementById('loading-text');
+                if (failedImageAssets.length > 0) {
+                    loadingText.textContent = `Failed to load ${failedImageAssets.length} image(s). Please refresh.`;
+                } else {
+                    loadingText.textContent = 'Loading Assets... Please wait.';
+                }
+                document.getElementById('loading-container').style.display = 'flex';
+                document.getElementById('start-btn').style.display = 'none';
+                return;
+            }
             ensureAudio();
             startBGM();
             document.getElementById('title-screen').classList.add('hidden');
