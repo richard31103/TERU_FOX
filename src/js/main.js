@@ -262,8 +262,12 @@ console.log('[BOOT] main.js module active');
         const speakerPlate = document.getElementById('speaker-plate');
         const dialogueArea = document.getElementById('dialogue-area');
         const choicePanel = document.getElementById('choice-panel');
+        const characterContainerEl = document.getElementById('character-container');
+        const fightDamageNumberEl = document.getElementById('fight-damage-number');
+        const fightRedFlashEl = document.getElementById('fight-red-flash');
         const SCENE_DEFAULT = 'default';
         const SCENE_BED = 'bed';
+        const SCENE_FIGHT = 'fight';
         const SCENE_CONFIG = {
             [SCENE_DEFAULT]: {
                 bg: 'BG.jpg',
@@ -299,10 +303,66 @@ console.log('[BOOT] main.js module active');
                 happyTalk: 'bed/bed no speak head.png',
                 tailOrigin: '42.6980% 62.0781%',
                 hasSpecialHeads: false
+            },
+            [SCENE_FIGHT]: {
+                bg: 'BG.jpg',
+                body: 'Fight/Fight fox notail.png',
+                tail: 'Fight/fight tail.png',
+                idle: 'Fight/Fight fox notail.png',
+                blink: 'Fight/Fight fox eyes close notail.png',
+                speak: 'Fight/Fight fox notail.png',
+                angry: 'Fight/Fight fox damage notail.png',
+                happy: 'Fight/Fight fox notail.png',
+                happyTalk: 'Fight/Fight fox notail.png',
+                tailOrigin: '67.8501% 61.5215%',
+                hasSpecialHeads: true
             }
         };
         const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
         const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
+        const FIGHT_CHOICE_LABELS = {
+            tw: '戰鬥!',
+            en: 'Fight!',
+            jp: '戦う！'
+        };
+        const FIGHT_TEXT = {
+            tw: {
+                intro: '什麼？你想跟我打架！',
+                choiceTitle: '戰鬥選項',
+                attackOption: '攻擊',
+                jokeOption: '我...開玩笑的啦',
+                afterHitLine1: '好痛...你竟然來真的！',
+                afterHitLine2: '我要咬死你！'
+            },
+            en: {
+                intro: 'What? You want to fight me?!',
+                choiceTitle: 'Battle Options',
+                attackOption: 'Attack',
+                jokeOption: 'I... was just kidding',
+                afterHitLine1: 'Ow... You actually meant it!',
+                afterHitLine2: 'I am going to bite you to death!'
+            },
+            jp: {
+                intro: 'えっ？ ボクとケンカする気！？',
+                choiceTitle: '戦闘オプション',
+                attackOption: '攻撃',
+                jokeOption: 'じょ、冗談だよ',
+                afterHitLine1: '痛っ... 本気でやったの！？',
+                afterHitLine2: 'かみ殺してやる！'
+            }
+        };
+        const FIGHT_TAIL_PIVOT_SOURCE = {
+            x: 1389.57,
+            y: 1259.96
+        };
+        const FIGHT_SCENE_OBJECT_POSITION = {
+            x: 0.5,
+            y: 0.58
+        };
+        const FIGHT_SOURCE_FALLBACK_SIZE = {
+            width: 2048,
+            height: 2048
+        };
         const PET_FOX_DISPLAY_MS = 3000;
         const BED_ENTRY_TRANSITION = { fadeInMs: 700, holdMs: 200, fadeOutMs: 700 };
         const BED_TAIL_BURST_RESET_MS = 260;
@@ -378,6 +438,7 @@ console.log('[BOOT] main.js module active');
         let happyMouthOpen = false;
         let isRuntimeChoiceMode = false;
         let runtimeChoiceState = null;
+        let isFightSequenceActive = false;
         const bedFlow = {
             active: false,
             phase: 'none',
@@ -472,8 +533,49 @@ console.log('[BOOT] main.js module active');
             return (storyEngine && storyEngine.getTextByKey(key, currentLang)) || fallback;
         }
 
+        function getFightTextBundle() {
+            return FIGHT_TEXT[currentLang] || FIGHT_TEXT.tw;
+        }
+
+        function getFightChoiceLabel() {
+            return FIGHT_CHOICE_LABELS[currentLang] || FIGHT_CHOICE_LABELS.tw;
+        }
+
         function getOpeningTextBundle() {
             return OPENING_TEXT[currentLang] || OPENING_TEXT.tw;
+        }
+
+        function clearFightVisualFx() {
+            if (fightDamageNumberEl) {
+                fightDamageNumberEl.classList.remove('show');
+            }
+            if (fightRedFlashEl) {
+                fightRedFlashEl.classList.remove('flash');
+            }
+            if (characterContainerEl) {
+                characterContainerEl.classList.remove('fight-hit-shake');
+            }
+        }
+
+        function applyFightTailPivotFromSource() {
+            if (!charTail || activeSceneId !== SCENE_FIGHT) return;
+            const boxWidth = charTail.clientWidth;
+            const boxHeight = charTail.clientHeight;
+            if (!boxWidth || !boxHeight) return;
+
+            const sourceWidth = charIdle?.naturalWidth || FIGHT_SOURCE_FALLBACK_SIZE.width;
+            const sourceHeight = charIdle?.naturalHeight || FIGHT_SOURCE_FALLBACK_SIZE.height;
+            if (!sourceWidth || !sourceHeight) return;
+
+            const scale = Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
+            const renderWidth = sourceWidth * scale;
+            const renderHeight = sourceHeight * scale;
+            const offsetX = (boxWidth - renderWidth) * FIGHT_SCENE_OBJECT_POSITION.x;
+            const offsetY = (boxHeight - renderHeight) * FIGHT_SCENE_OBJECT_POSITION.y;
+
+            const originX = offsetX + FIGHT_TAIL_PIVOT_SOURCE.x * scale;
+            const originY = offsetY + FIGHT_TAIL_PIVOT_SOURCE.y * scale;
+            charTail.style.setProperty('--tail-origin', `${originX.toFixed(2)}px ${originY.toFixed(2)}px`);
         }
 
         function applyOpeningHeadMode(flag) {
@@ -593,6 +695,10 @@ console.log('[BOOT] main.js module active');
             }
             if (gameContainerEl) {
                 gameContainerEl.classList.toggle('scene-bed', activeSceneId === SCENE_BED);
+                gameContainerEl.classList.toggle('scene-fight', activeSceneId === SCENE_FIGHT);
+            }
+            if (activeSceneId === SCENE_FIGHT) {
+                requestAnimationFrame(() => applyFightTailPivotFromSource());
             }
             setCharState('idle');
             applySceneTopTitle();
@@ -692,7 +798,14 @@ console.log('[BOOT] main.js module active');
                 const sourceIndex = sourceIndices[slotIndex];
                 const numEl = btn.querySelector('.choice-num');
                 const textEl = btn.querySelector('.choice-text');
-                const text = typeof sourceIndex === 'number' ? t.choices[sourceIndex] : '';
+                let text = typeof sourceIndex === 'number' ? t.choices[sourceIndex] : '';
+                if (
+                    typeof sourceIndex === 'number'
+                    && sourceIndex === 1
+                    && sameChoiceSourceIndices(sourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
+                ) {
+                    text = getFightChoiceLabel();
+                }
 
                 if (typeof sourceIndex !== 'number' || !text) {
                     btn.style.display = 'none';
@@ -729,7 +842,12 @@ console.log('[BOOT] main.js module active');
             if (!runtimeChoiceState) return;
             const t = l10n[currentLang];
             const labelEl = choicePanel.querySelector('.choice-label');
-            const title = getStoryText(runtimeChoiceState.titleKey, t?.choiceTitle || '');
+            const title = runtimeChoiceState.titleKey
+                ? getStoryText(
+                    runtimeChoiceState.titleKey,
+                    runtimeChoiceState.fallbackTitle || t?.choiceTitle || ''
+                )
+                : (runtimeChoiceState.fallbackTitle || t?.choiceTitle || '');
             if (labelEl) labelEl.textContent = title;
 
             choiceButtonEls.forEach((btn, slotIndex) => {
@@ -748,9 +866,10 @@ console.log('[BOOT] main.js module active');
             });
         }
 
-        function showRuntimeChoicePanel({ titleKey, options }) {
+        function showRuntimeChoicePanel({ titleKey, options, fallbackTitle = '' }) {
             runtimeChoiceState = {
                 titleKey,
+                fallbackTitle,
                 options: options.slice()
             };
             isRuntimeChoiceMode = true;
@@ -782,6 +901,107 @@ console.log('[BOOT] main.js module active');
             runtimeChoiceState = null;
             hideChoicePanel();
             option.onSelect();
+        }
+
+        function playFightHitFx() {
+            if (characterContainerEl) {
+                characterContainerEl.classList.remove('fight-hit-shake');
+                void characterContainerEl.offsetWidth;
+                characterContainerEl.classList.add('fight-hit-shake');
+                setTimeout(() => {
+                    characterContainerEl.classList.remove('fight-hit-shake');
+                }, 320);
+            }
+
+            if (fightDamageNumberEl) {
+                fightDamageNumberEl.classList.remove('show');
+                void fightDamageNumberEl.offsetWidth;
+                fightDamageNumberEl.classList.add('show');
+                setTimeout(() => {
+                    fightDamageNumberEl.classList.remove('show');
+                }, 700);
+            }
+
+            isAngry = true;
+            setCharState('angry');
+            setTimeout(() => {
+                isAngry = false;
+                setCharState(isTyping ? 'speak' : 'idle');
+            }, 320);
+        }
+
+        function playFightRedFlashPulse() {
+            return new Promise(resolve => {
+                if (!fightRedFlashEl) {
+                    setTimeout(resolve, 220);
+                    return;
+                }
+                fightRedFlashEl.classList.remove('flash');
+                void fightRedFlashEl.offsetWidth;
+                fightRedFlashEl.classList.add('flash');
+                setTimeout(() => {
+                    fightRedFlashEl.classList.remove('flash');
+                    resolve();
+                }, 220);
+            });
+        }
+
+        async function playFightRedFlashTwice() {
+            await playFightRedFlashPulse();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await playFightRedFlashPulse();
+        }
+
+        function showFightOptions() {
+            const fight = getFightTextBundle();
+            showRuntimeChoicePanel({
+                titleKey: '',
+                fallbackTitle: fight.choiceTitle,
+                options: [
+                    { textKey: '', fallbackText: fight.attackOption, onSelect: onFightAttack },
+                    { textKey: '', fallbackText: fight.jokeOption, onSelect: onFightJoke }
+                ]
+            });
+        }
+
+        function startFightEncounter() {
+            isFightSequenceActive = true;
+            isDeathSequence = false;
+            setTyping(false);
+            pendingClickAdvance = null;
+            pendingPostChoiceAction = null;
+            applyAfraidHeadMode(false);
+            resetMoneyIntermission();
+            hideChoicePanel();
+            applyScene(SCENE_FIGHT);
+            const fight = getFightTextBundle();
+            runScriptedLine(fight.intro, l10n[currentLang]?.speaker || '', showFightOptions);
+        }
+
+        function onFightAttack() {
+            const fight = getFightTextBundle();
+            setTyping(false);
+            isDeathSequence = true;
+            playFightHitFx();
+            runScriptedLines(
+                [fight.afterHitLine1, fight.afterHitLine2],
+                l10n[currentLang]?.speaker || '',
+                () => {
+                    playFightRedFlashTwice().then(() => {
+                        dispatchAction('trigger_death', { delayMs: 0 });
+                    });
+                },
+                { requireClickBetweenLines: true }
+            );
+        }
+
+        function onFightJoke() {
+            isFightSequenceActive = false;
+            isDeathSequence = false;
+            setTyping(false);
+            clearFightVisualFx();
+            applyScene(SCENE_DEFAULT);
+            showChoicePanel(FOLLOWUP_CHOICE_SOURCE_INDICES);
         }
 
         if (choicePanel) {
@@ -1106,6 +1326,15 @@ console.log('[BOOT] main.js module active');
             hideChoicePanel();
 
             const t = l10n[currentLang];
+            if (
+                idx === 1
+                && !isFightSequenceActive
+                && sameChoiceSourceIndices(currentChoiceSourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
+            ) {
+                dialogueHistory.push({ speaker: '', text: getFightChoiceLabel(), isChoice: true });
+                startFightEncounter();
+                return;
+            }
             const fallbackActionId = idx === 3
                 ? 'start_ooxx'
                 : (idx === 2 ? 'start_bed_scene' : (idx === 1 ? 'show_pet_fox' : 'trigger_death'));
@@ -1123,6 +1352,7 @@ console.log('[BOOT] main.js module active');
                 return;
             }
 
+            isFightSequenceActive = false;
             isAngry = actionId === 'trigger_death';
             isHappy = actionId === 'show_to_be_continued' || actionId === 'start_bed_scene';
             isHappyTalkMode = actionId === 'start_bed_scene';
@@ -1563,6 +1793,8 @@ console.log('[BOOT] main.js module active');
 
         function triggerDeath() {
             resetBedFlow();
+            isFightSequenceActive = false;
+            clearFightVisualFx();
             const deathScreen = document.getElementById('death-screen');
             if (appState && appState.getState() !== GAME_STATES.DEATH) {
                 try { appState.transition(GAME_STATES.DEATH, { source: 'trigger_death' }); } catch (e) { }
@@ -1653,6 +1885,7 @@ console.log('[BOOT] main.js module active');
 
         function showToBeContinued() {
             isDeathSequence = true;
+            isFightSequenceActive = false;
             setTyping(false);
             resetMoneyIntermission();
             const tbcText = l10n[currentLang]?.ui?.toBeContinued || 'To Be Continued...';
@@ -1665,11 +1898,13 @@ console.log('[BOOT] main.js module active');
 
         function showFollowupChoices() {
             isDeathSequence = false;
+            isFightSequenceActive = false;
             showChoicePanel(FOLLOWUP_CHOICE_SOURCE_INDICES);
         }
 
         function showPetFox() {
             isDeathSequence = false;
+            isFightSequenceActive = false;
             setTyping(false);
             resetMoneyIntermission();
             if (petFoxTimer) {
@@ -1724,7 +1959,7 @@ console.log('[BOOT] main.js module active');
                 return;
             }
 
-            if (!isDeathSequence && !isTyping) {
+            if (!isDeathSequence && !isTyping && !isOpeningPrologueActive) {
                 nextLine();
             }
         });
@@ -1999,6 +2234,10 @@ console.log('[BOOT] main.js module active');
             'body.png',
             'tail.png',
             'no speak head.png',
+            'Fight/Fight fox notail.png',
+            'Fight/Fight fox eyes close notail.png',
+            'Fight/Fight fox damage notail.png',
+            'Fight/fight tail.png',
             'afraid head.png',
             'no speak normal head.png',
             'blink head.png',
@@ -2202,11 +2441,13 @@ console.log('[BOOT] main.js module active');
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
+            isFightSequenceActive = false;
             pendingPostChoiceAction = null;
             pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
             resetBedFlow();
             dialogueHistory.length = 0;
+            clearFightVisualFx();
 
             // Reset UI elements that may be dirty
             dialogueArea.classList.remove('choices-mode');
@@ -2273,6 +2514,7 @@ console.log('[BOOT] main.js module active');
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
+            isFightSequenceActive = false;
             pendingPostChoiceAction = null;
             pendingClickAdvance = null;
             currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
@@ -2280,6 +2522,7 @@ console.log('[BOOT] main.js module active');
             hideChoicePanel();
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
+            clearFightVisualFx();
             resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
             if (petFoxTimer) {
@@ -2318,6 +2561,12 @@ console.log('[BOOT] main.js module active');
             toggleAudioGlobal,
             toggleFullscreen,
             updateSlider
+        });
+
+        window.addEventListener('resize', () => {
+            if (activeSceneId === SCENE_FIGHT) {
+                applyFightTailPivotFromSource();
+            }
         });
 
         // Start

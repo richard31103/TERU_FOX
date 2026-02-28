@@ -58,7 +58,7 @@
       "toBeContinued": "待續..."
     },
     "text": {
-      "line_1": "你該不會是獸控吧？",
+      "line_1": "你該不會是奇怪的獸控吧？",
       "line_2": "才剛見面就說要跟我回家...還一直盯著我的尾巴...",
       "line_3": "先說好，不准碰我的尾巴！",
       "line_4": "要是敢亂摸，我會咬人喔！",
@@ -66,8 +66,8 @@
       "choice_title": "你想做什麼？",
       "choice_1": "撲上去摸尾巴",
       "choice_2": "揉肚子",
-      "choice_3": "拿出 500 $",
-      "choice_4": "和狐泥 OOXX",
+      "choice_3": "拿出500$",
+      "choice_4": "和狐泥OOXX",
       "resp_1": "不可以！(咬咬咬)",
       "resp_2": "等...等一下",
       "resp_3": "什...什麼...那這個服務只有...今天才有喔...",
@@ -76,7 +76,7 @@
       "bed_line_1": "說...說好只能摸尾巴的喔",
       "bed_choice_tail": "摸尾巴",
       "bed_choice_thigh": "摸大腿",
-      "bed_choice_ooxx": "和狐狸 OOXX",
+      "bed_choice_ooxx": "和狐狸OOXX吧",
       "bed_line_2": "嗚...我尾巴很敏感的...",
       "bed_choice_continue": "繼續摸",
       "bed_choice_stop": "不摸了",

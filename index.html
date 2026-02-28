@@ -178,6 +178,26 @@
             z-index: 5;
         }
 
+        #game-container.scene-fight #char-body {
+            display: none;
+        }
+
+        #game-container.scene-fight #char-tail,
+        #game-container.scene-fight #char-head-idle,
+        #game-container.scene-fight #char-head-blink,
+        #game-container.scene-fight #char-head-speak,
+        #game-container.scene-fight #char-head-angry,
+        #game-container.scene-fight #char-head-happy,
+        #game-container.scene-fight #char-head-happy-talk {
+            object-fit: contain;
+            object-position: 50% 58%;
+            transform: translateY(5%);
+        }
+
+        #game-container.scene-fight #char-tail {
+            animation: fightTailSway 0.95s ease-in-out infinite alternate;
+        }
+
         .char-img {
             width: 100%;
             height: 100%;
@@ -235,6 +255,102 @@
             opacity: 1;
         }
 
+        #character-container.fight-hit-shake {
+            animation: fightHitShake 0.28s linear 1;
+        }
+
+        @keyframes fightHitShake {
+            0% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-16px);
+            }
+
+            40% {
+                transform: translateX(14px);
+            }
+
+            60% {
+                transform: translateX(-10px);
+            }
+
+            80% {
+                transform: translateX(8px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        #fight-damage-number {
+            position: absolute;
+            left: 50%;
+            top: 22%;
+            transform: translate(-50%, 0) scale(0.9);
+            color: #ffd2d2;
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            font-size: clamp(42px, 5.8vw, 84px);
+            letter-spacing: 2px;
+            text-shadow: 0 0 22px rgba(255, 36, 36, 0.95), 0 0 8px rgba(0, 0, 0, 0.95);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 44;
+        }
+
+        #fight-damage-number.show {
+            animation: fightDamagePop 0.68s ease-out 1;
+        }
+
+        @keyframes fightDamagePop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, 18px) scale(0.75);
+            }
+
+            18% {
+                opacity: 1;
+            }
+
+            64% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50px) scale(1.06);
+            }
+        }
+
+        #fight-red-flash {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 20, 20, 0.44);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 96;
+        }
+
+        #fight-red-flash.flash {
+            animation: fightRedFlashPulse 0.22s ease-out 1;
+        }
+
+        @keyframes fightRedFlashPulse {
+            0% {
+                opacity: 0;
+            }
+
+            35% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
         @keyframes tailSway {
             from {
                 transform: rotate(-2.5deg);
@@ -242,6 +358,16 @@
 
             to {
                 transform: rotate(2.5deg);
+            }
+        }
+
+        @keyframes fightTailSway {
+            from {
+                transform: rotate(-7deg);
+            }
+
+            to {
+                transform: rotate(7deg);
             }
         }
 
@@ -1503,6 +1629,8 @@
             <img src="happy head talk.png" id="char-head-happy-talk" class="char-img" alt="Head Happy Talk" />
         </div>
         <img src="money.png" id="money-popup" alt="Money Popup" />
+        <div id="fight-damage-number" aria-hidden="true">-20</div>
+        <div id="fight-red-flash" aria-hidden="true"></div>
 
         <!-- Top bar -->
         <div id="top-bar">
