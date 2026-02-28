@@ -247,7 +247,8 @@ console.log('[BOOT] main.js module active');
         const toBeContinuedEl = document.getElementById('to-be-continued-screen');
         const petFoxScreenEl = document.getElementById('pet-fox-screen');
         const gameContainerEl = document.getElementById('game-container');
-        const MOBILE_MONEY_FOCUS_SHIFT_PX = -46;
+        // Keep character framing stable on mobile during money popup.
+        const MOBILE_MONEY_FOCUS_SHIFT_PX = 0;
         const MONEY_SOURCE_WIDTH = 2752;
         const MONEY_SOURCE_HEIGHT = 1536;
         const MONEY_FOCUS_X = 432;
