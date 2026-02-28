@@ -71,7 +71,6 @@
       "resp_1": "ダメ!! (ガブガブッ)",
       "resp_2": "えっ..何？",
       "resp_3": "ダメ！変態!!!",
-      "resp_4": "助けてぇぇぇ",
       "bed_line_1": "い...言ったでしょ、尻尾だけって...",
       "bed_choice_tail": "尻尾を触る",
       "bed_choice_thigh": "太ももを触る",
@@ -80,7 +79,8 @@
       "bed_choice_continue": "触り続ける",
       "bed_choice_stop": "もう触らない",
       "bed_line_continue": "うぅぅ....",
-      "bed_line_continue_cry": "もう耐えられない..."
+      "bed_line_continue_cry": "もう耐えられない...",
+      "resp_2_after_pet": "?????????...? ?????????"
     }
   },
   "nodes": [
