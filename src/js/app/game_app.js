@@ -933,8 +933,21 @@ debugLog('[BOOT] game_app module active');
         function syncHeadphoneLayer() {
             if (!charHeadphone || !charBody) return;
             const bodySrc = charBody.getAttribute('src') || '';
-            const show = bodySrc.includes('body-main.png');
-            charHeadphone.classList.toggle('active', show);
+            if (bodySrc.includes('body-main.png')) {
+                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/default/headphone.png') {
+                    charHeadphone.src = 'assets/images/scenes/default/headphone.png';
+                }
+                charHeadphone.classList.add('active');
+                return;
+            }
+            if (bodySrc.includes('bed-body.png')) {
+                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/bed/bed-headphone.png') {
+                    charHeadphone.src = 'assets/images/scenes/bed/bed-headphone.png';
+                }
+                charHeadphone.classList.add('active');
+                return;
+            }
+            charHeadphone.classList.remove('active');
         }
 
         function getSceneGameTitle(uiBundle) {

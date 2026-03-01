@@ -108,6 +108,7 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/default/bg-main.jpg',
     'assets/images/scenes/bed/bed-bg.jpg',
     'assets/images/scenes/bed/bed-body.png',
+    'assets/images/scenes/bed/bed-headphone.png',
     'assets/images/scenes/bed/bed-tail.png',
     'assets/images/scenes/bed/bed-head-no-speak.png',
     'assets/images/scenes/bed/bed-head-blink.png',
