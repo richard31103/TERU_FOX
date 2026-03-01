@@ -305,6 +305,7 @@ debugLog('[BOOT] game_app module active');
         const charAngry = ctxRefs.charAngry;
         const charHappy = ctxRefs.charHappy;
         const charHappyTalk = ctxRefs.charHappyTalk;
+        const charHeadphone = document.getElementById('char-headphone');
         const moneyPopupEl = ctxRefs.moneyPopup;
         const toBeContinuedEl = ctxRefs.toBeContinuedScreen;
         const petFoxScreenEl = ctxRefs.petFoxScreen;
@@ -929,6 +930,13 @@ debugLog('[BOOT] game_app module active');
             if (isHappy) setCharState(isTyping ? 'speak' : 'idle');
         }
 
+        function syncHeadphoneLayer() {
+            if (!charHeadphone || !charBody) return;
+            const bodySrc = charBody.getAttribute('src') || '';
+            const show = bodySrc.includes('body-main.png');
+            charHeadphone.classList.toggle('active', show);
+        }
+
         function getSceneGameTitle(uiBundle) {
             const ui = uiBundle || l10n[currentLang]?.ui;
             if (!ui) return '';
@@ -990,6 +998,7 @@ debugLog('[BOOT] game_app module active');
             if (activeSceneId === SCENE_FIGHT) {
                 requestAnimationFrame(() => applyFightTailPivotFromSource());
             }
+            syncHeadphoneLayer();
             setCharState('idle');
             applySceneTopTitle();
         }

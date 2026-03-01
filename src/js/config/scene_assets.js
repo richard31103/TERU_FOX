@@ -93,6 +93,7 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/default/head-touch-angry.png',
     'assets/images/scenes/default/head-touch-angry-blink.png',
     'assets/images/scenes/default/head-touch-angry-touch.png',
+    'assets/images/scenes/default/headphone.png',
     'assets/images/scenes/default/head-money.png',
     'assets/images/scenes/default/head-money-blink.png',
     'assets/images/scenes/default/head-afraid.png',
