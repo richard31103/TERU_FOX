@@ -947,6 +947,13 @@ debugLog('[BOOT] game_app module active');
                 charHeadphone.classList.add('active');
                 return;
             }
+            if (bodySrc.includes('fight-fox-notail.png')) {
+                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/fight/fight-headphone.png') {
+                    charHeadphone.src = 'assets/images/scenes/fight/fight-headphone.png';
+                }
+                charHeadphone.classList.add('active');
+                return;
+            }
             charHeadphone.classList.remove('active');
         }
 
