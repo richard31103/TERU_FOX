@@ -1348,7 +1348,7 @@ debugLog('[BOOT] game_app module active');
             clearFightVisualFx();
             const line = currentLang === 'tw'
                 ? '那你到底想要幹麻?'
-                : (currentLang === 'jp' ? 'それで、結局何がしたいの？' : 'So what do you actually want?');
+                : (currentLang === 'jp' ? 'で、結局何したいの？' : 'So what do you actually want to do?');
 
             if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_exit_joke' }); } catch (e) { }
@@ -2023,9 +2023,9 @@ debugLog('[BOOT] game_app module active');
             const cls = isDraw ? 'draw' : 'lose';
             const subText = isDraw ? '' : (
                 currentLang === 'jp'
-                    ? '勝ったら特別なCGが見られたかも...'
+                    ? '勝ったら特別なCGが見られたのに...'
                     : currentLang === 'en'
-                        ? 'Win and you would get a special CG...'
+                        ? 'You would get a special CG only if you won...'
                         : '贏了才有色圖可以看'
             );
             const bindResultClick = (resultEl) => {

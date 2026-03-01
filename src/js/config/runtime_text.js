@@ -21,16 +21,16 @@ export const FIGHT_TEXT = {
         choiceTitle: 'Battle Options',
         attackOption: 'Attack',
         jokeOption: 'I... was just kidding',
-        afterHitLine1: 'Ow... You actually meant it!',
-        afterHitLine2: 'I am going to bite you to death!'
+        afterHitLine1: 'Ow... you were actually serious?!',
+        afterHitLine2: 'I will bite you to death!'
     },
     jp: {
-        intro: 'えっ？ ボクとケンカする気！？',
+        intro: 'えっ？ ボクとケンカするの！？',
         choiceTitle: '戦闘オプション',
         attackOption: '攻撃',
-        jokeOption: 'じょ、冗談だよ',
-        afterHitLine1: '痛っ... 本気でやったの！？',
-        afterHitLine2: 'かみ殺してやる！'
+        jokeOption: 'わ、冗談だって',
+        afterHitLine1: '痛っ... 本気で来たの！？',
+        afterHitLine2: '噛み殺してやる！'
     }
 };
 
@@ -47,25 +47,25 @@ export const OPENING_TEXT = {
         ]
     },
     en: {
-        greeting: 'Hi~ I am Teru, nice to meet you!',
-        choiceIntro: 'Hi, can you introduce yourself?',
+        greeting: 'Hey~ I am TERU, nice to meet you!',
+        choiceIntro: 'Hey, can you introduce yourself?',
         choiceGoHome: 'Can I go home with you?',
         introLines: [
-            'I am Teru, a red fox.',
-            'You can also call me "TERU" or "Huni".',
-            'I am good at making music, and I am also a DJ!',
-            'If you are interested in me, tap the fox-head button on the right for more info!'
+            'I am TERU.',
+            'You can also call me "TERU".',
+            'I am a music producer, and I am also a DJ!',
+            'If you are interested, tap the fox button on the right to learn more!'
         ]
     },
     jp: {
-        greeting: 'こんにちは〜 テルだよ。会えてうれしい!',
-        choiceIntro: 'こんにちは、自己紹介してくれる?',
-        choiceGoHome: '君の家に行ってもいい?',
+        greeting: 'やあ〜 ボクはテール。会えてうれしい！',
+        choiceIntro: 'やあ、自己紹介してくれる？',
+        choiceGoHome: 'キミの家に行ってもいい？',
         introLines: [
-            'ボクはテル、アカギツネだよ。',
-            '「TERU」か「狐泥」って呼んでね。',
-            '得意なのは音楽制作で、DJもやってるよ!',
-            '興味があったら、右の「狐の頭」ボタンで詳しく見てね!'
+            'ボクはテール。',
+            '「テール」って呼んでね。',
+            '音楽制作をしていて、DJもやってるよ！',
+            '興味があったら、右のキツネボタンを押して詳しく見てね！'
         ]
     }
 };
@@ -105,8 +105,8 @@ export const BED_TAIL_BURST_RESET_MS = 260;
 
 export const BED_STOP_LINE_BY_LANG = {
     tw: '你還想幹嘛?',
-    en: 'What else do you want?',
-    jp: 'まだ何するつもり？'
+    en: 'What else do you want to do?',
+    jp: 'で、まだ何したいの？'
 };
 
 export const HEAD_TOUCH_THRESHOLDS = {
@@ -128,7 +128,7 @@ export const HEAD_TOUCH_TEXT = {
     },
     jp: {
         mild: 'ちょっと、何してるの？',
-        angry: 'ほんとにうるさい！これ以上やったら噛むよ！',
+        angry: 'ほんとしつこい！これ以上やったら噛むよ！',
         fatal: '噛み殺された。'
     }
 };
