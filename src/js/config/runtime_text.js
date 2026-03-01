@@ -34,6 +34,33 @@ export const FIGHT_TEXT = {
     }
 };
 
+export const FIGHT_TEXT_AFTER_OOXX = {
+    tw: {
+        intro: '怎麼說打就打，你當我是寶可夢嗎?',
+        choiceTitle: '戰鬥選項',
+        attackOption: '瘋狂亂抓',
+        jokeOption: '放棄戰鬥',
+        afterHitLine1: '厄阿阿阿',
+        afterHitLine2: '你死定了...'
+    },
+    en: {
+        intro: 'Why are we fighting all of a sudden? Do you think I am a Pokemon?',
+        choiceTitle: 'Battle Options',
+        attackOption: 'Fury Swipes',
+        jokeOption: 'Give Up',
+        afterHitLine1: 'Aghhh!',
+        afterHitLine2: 'You are dead...'
+    },
+    jp: {
+        intro: 'いきなりバトルって、ボクをポケモンだと思ってるの？',
+        choiceTitle: '戦闘オプション',
+        attackOption: 'みだれひっかき',
+        jokeOption: '戦闘をやめる',
+        afterHitLine1: 'うああああ',
+        afterHitLine2: 'お前、もう終わりだ...'
+    }
+};
+
 export const OPENING_TEXT = {
     tw: {
         greeting: '你好呀~ 我是提爾，很高興認識你!',

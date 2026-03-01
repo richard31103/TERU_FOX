@@ -18,6 +18,7 @@ import {
     FIGHT_SOURCE_FALLBACK_SIZE,
     FIGHT_TAIL_PIVOT_SOURCE,
     FIGHT_TEXT,
+    FIGHT_TEXT_AFTER_OOXX,
     FOLLOWUP_CHOICE_SOURCE_INDICES,
     HEAD_TOUCH_ASSETS,
     HEAD_TOUCH_TEXT,
@@ -356,6 +357,8 @@ debugLog('[BOOT] game_app module active');
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
         let hasUsedMainOOXXChoice = false;
+        const FIGHT_POST_OOXX_DAMAGE_ASSET = 'assets/images/scenes/fight/fight-fox-damage-notail-break.png';
+        const FIGHT_POST_OOXX_POST_HIT_ASSET = 'assets/images/scenes/fight/fight-fox-naked.png';
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -461,7 +464,27 @@ debugLog('[BOOT] game_app module active');
             return (storyEngine && storyEngine.getTextByKey(key, currentLang)) || fallback;
         }
 
+        function isPostOOXXFightVariantEnabled() {
+            return hasUsedMainOOXXChoice;
+        }
+
+        function applyPostOOXXFightAssets(postHit = false) {
+            if (activeSceneId !== SCENE_FIGHT || !isPostOOXXFightVariantEnabled()) return;
+            if (charAngry) charAngry.src = FIGHT_POST_OOXX_DAMAGE_ASSET;
+            if (!postHit) return;
+            if (charBody) charBody.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charIdle) charIdle.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charBlink) charBlink.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charSpeak) charSpeak.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charHappy) charHappy.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charHappyTalk) charHappyTalk.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            syncHeadphoneLayer();
+        }
+
         function getFightTextBundle() {
+            if (isPostOOXXFightVariantEnabled()) {
+                return FIGHT_TEXT_AFTER_OOXX[currentLang] || FIGHT_TEXT_AFTER_OOXX.tw;
+            }
             return FIGHT_TEXT[currentLang] || FIGHT_TEXT.tw;
         }
 
@@ -947,7 +970,7 @@ debugLog('[BOOT] game_app module active');
                 charHeadphone.classList.add('active');
                 return;
             }
-            if (bodySrc.includes('fight-fox-notail.png')) {
+            if (bodySrc.includes('assets/images/scenes/fight/')) {
                 if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/fight/fight-headphone.png') {
                     charHeadphone.src = 'assets/images/scenes/fight/fight-headphone.png';
                 }
@@ -1247,6 +1270,7 @@ debugLog('[BOOT] game_app module active');
             setCharState('angry');
             setTimeout(() => {
                 isAngry = false;
+                applyPostOOXXFightAssets(true);
                 setCharState(isTyping ? 'speak' : 'idle');
             }, 320);
         }
@@ -1316,6 +1340,7 @@ debugLog('[BOOT] game_app module active');
                 console.error('Fight entry transition error:', err);
                 applyScene(SCENE_FIGHT);
             }
+            applyPostOOXXFightAssets(false);
 
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'fight_entry' }); } catch (e) { }

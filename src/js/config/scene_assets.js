@@ -124,6 +124,8 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/fight/fight-headphone.png',
     'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
     'assets/images/scenes/fight/fight-fox-damage-notail.png',
+    'assets/images/scenes/fight/fight-fox-damage-notail-break.png',
+    'assets/images/scenes/fight/fight-fox-naked.png',
     'assets/images/scenes/fight/fight-tail.png',
     'assets/images/ui/map-main.jpg',
     'assets/images/ui/fox-face.png'
