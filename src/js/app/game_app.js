@@ -1059,7 +1059,6 @@ debugLog('[BOOT] game_app module active');
             if (activeSceneId === SCENE_FIGHT) {
                 requestAnimationFrame(() => applyFightTailPivotFromSource());
             }
-            syncBedMoneyPopupTailLayer();
             syncHeadphoneLayer();
             setCharState('idle');
             applySceneTopTitle();
@@ -2431,19 +2430,10 @@ debugLog('[BOOT] game_app module active');
             if (moneyPopupEl.getAttribute('src') !== src) {
                 moneyPopupEl.setAttribute('src', src);
             }
-            syncBedMoneyPopupTailLayer();
         }
 
         function restoreDefaultMoneyPopupAsset() {
             setMoneyPopupAsset(DEFAULT_MONEY_POPUP_ASSET);
-        }
-
-        function syncBedMoneyPopupTailLayer() {
-            if (!gameContainerEl || !moneyPopupEl) return;
-            const isVisible = moneyPopupEl.classList.contains('visible');
-            const isBedPopupAsset = moneyPopupEl.getAttribute('src') === BED_MONEY_POPUP_ASSET;
-            const shouldShowTailAbovePopup = isVisible && activeSceneId === SCENE_BED && isBedPopupAsset;
-            gameContainerEl.classList.toggle('bed-money-popup-tail', shouldShowTailAbovePopup);
         }
 
         function showMoneyPopup() {
@@ -2452,14 +2442,12 @@ debugLog('[BOOT] game_app module active');
             // Force restart fade-in for repeated route entries.
             void moneyPopupEl.offsetWidth;
             moneyPopupEl.classList.add('visible');
-            syncBedMoneyPopupTailLayer();
             applyMoneyHeadState(true);
         }
 
         function hideMoneyPopup() {
             if (!moneyPopupEl) return;
             moneyPopupEl.classList.remove('visible');
-            syncBedMoneyPopupTailLayer();
             applyMoneyHeadState(false);
         }
 
