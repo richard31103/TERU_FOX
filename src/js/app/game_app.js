@@ -59,7 +59,6 @@ debugLog('[BOOT] game_app module active');
             '#controls-bar',
             '#settings-overlay',
             '#history-overlay',
-            '#map-overlay',
             '#ooxx-result',
             '#ooxx-screen',
             '#money-popup',
@@ -664,7 +663,6 @@ debugLog('[BOOT] game_app module active');
                 if (state !== GAME_STATES.DIALOGUE && state !== GAME_STATES.CHOICE) return false;
             }
             if (overlay && overlay.classList.contains('open')) return false;
-            if (mapOverlay && !mapOverlay.classList.contains('hidden')) return false;
             if (histOverlay && !histOverlay.classList.contains('hidden')) return false;
             const deathScreen = document.getElementById('death-screen');
             if (deathScreen && !deathScreen.classList.contains('hidden')) return false;
@@ -1963,7 +1961,9 @@ debugLog('[BOOT] game_app module active');
                     getBedExtraMoneyLine(),
                     l10n[currentLang]?.speaker || '',
                     () => {
-                        startBedNSceneBranch();
+                        pendingClickAdvance = () => {
+                            startBedNSceneBranch();
+                        };
                     }
                 );
             });
@@ -2661,7 +2661,6 @@ debugLog('[BOOT] game_app module active');
 
             document.getElementById('lang-ui-docTitle').textContent = ui.docTitle;
             document.querySelector('.lang-ui-gameTitle').textContent = getSceneGameTitle(ui);
-            document.getElementById('lang-btn-gear').textContent = ui.gearBtn;
             document.getElementById('lang-ui-chapTitle').textContent = ui.chapTitle;
             speakerPlate.textContent = t.speaker;
 
@@ -2673,7 +2672,8 @@ debugLog('[BOOT] game_app module active');
             document.getElementById('lang-ui-social').textContent = ui.social;
             document.getElementById('lang-ui-audio').textContent = audioMuted ? ui.audioOff : ui.audioOn;
             document.getElementById('lang-ui-history').textContent = ui.history;
-            document.getElementById('lang-ui-map').textContent = ui.map;
+            const qaSettingsLabel = document.getElementById('lang-ui-qa-settings');
+            if (qaSettingsLabel) qaSettingsLabel.textContent = ui.gearBtn;
 
             document.getElementById('lang-btn-prev').textContent = ui.prev;
             const histBtn = document.getElementById('lang-btn-hist');
@@ -2754,7 +2754,6 @@ debugLog('[BOOT] game_app module active');
                 'open-social': () => openSocial(),
                 'toggle-audio': () => toggleAudioGlobal(),
                 'open-history': () => openHistory(),
-                'open-map': () => openMap(),
                 'prev-line': () => prevLine(),
                 'start-game': () => startGame(),
                 'set-language': ({ actionEl }) => setLanguage(actionEl.dataset.lang),
@@ -2763,8 +2762,6 @@ debugLog('[BOOT] game_app module active');
                 'set-fullscreen': ({ actionEl }) => setFullscreenEnabled(actionEl.dataset.fullscreen === 'on'),
                 'update-slider': ({ actionEl }) => updateSlider(actionEl),
                 'overlay-settings-dismiss': ({ event }) => handleSettingsClick(event),
-                'overlay-map-dismiss': () => closeMap(),
-                'close-map': ({ event }) => closeMap(event),
                 'overlay-history-dismiss': ({ event }) => handleHistoryClick(event),
                 'close-history': () => closeHistory(),
                 'pick-choice': ({ actionEl }) => {
@@ -2824,7 +2821,7 @@ debugLog('[BOOT] game_app module active');
             }
         }
 
-        // Map and history
+        // Social and history
 
         function openSocial() {
             if (confirm(l10n[currentLang].ui.socialPrompt)) {
@@ -2832,11 +2829,7 @@ debugLog('[BOOT] game_app module active');
             }
         }
 
-        const mapOverlay = document.getElementById('map-overlay');
         const histOverlay = document.getElementById('history-overlay');
-
-        function openMap() { mapOverlay.classList.remove('hidden'); }
-        function closeMap(e) { if (e) e.stopPropagation(); mapOverlay.classList.add('hidden'); }
 
         const dialogueHistory = []; // Stores {speaker, text, isChoice}
 
