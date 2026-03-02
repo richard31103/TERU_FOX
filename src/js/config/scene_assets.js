@@ -69,7 +69,7 @@ export const SCENE_ASSETS = {
     [SCENE_BED_N]: {
         bg: 'assets/images/scenes/bed_N/bed_N-bg.png',
         body: 'assets/images/scenes/bed_N/bed_N-body-naked.png',
-        tail: 'assets/images/scenes/bed/bed-tail.png',
+        tail: 'assets/images/scenes/bed_N/bed_N-tail.png',
         idle: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
         blink: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
         speak: 'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
@@ -141,6 +141,7 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/bed/bed-head-blink-speak-tears.png',
     'assets/images/scenes/bed_N/bed_N-bg.png',
     'assets/images/scenes/bed_N/bed_N-body-naked.png',
+    'assets/images/scenes/bed_N/bed_N-tail.png',
     'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
     'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
     'assets/images/scenes/fight/fight-fox-notail.png',
