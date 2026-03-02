@@ -1010,6 +1010,47 @@
             transition: width 0.3s ease;
         }
 
+        #global-loading-indicator {
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 14px);
+            right: calc(env(safe-area-inset-right, 0px) + 14px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(10, 6, 2, 0.72);
+            border: 1px solid rgba(220, 150, 40, 0.45);
+            color: #f0d8a0;
+            font-size: 13px;
+            letter-spacing: 1px;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            z-index: 220;
+        }
+
+        #global-loading-indicator.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #global-loading-spinner {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 2px solid rgba(240, 216, 160, 0.28);
+            border-top-color: rgba(255, 204, 100, 0.95);
+            animation: globalLoadingSpin 0.78s linear infinite;
+        }
+
+        @keyframes globalLoadingSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* ???? HISTORY OVERLAY ???? */
         #history-overlay {
             background: rgba(15, 8, 5, 0.95);
@@ -1354,6 +1395,13 @@
 
             #choice-panel.visible {
                 transform: translateY(0);
+            }
+
+            #global-loading-indicator {
+                top: calc(env(safe-area-inset-top, 0px) + 10px);
+                right: calc(env(safe-area-inset-right, 0px) + 10px);
+                padding: 7px 10px;
+                font-size: 12px;
             }
 
             #dialogue-box {
@@ -1843,6 +1891,10 @@
             </div>
             <button id="close-history" data-action="close-history">???</button>
         </div>
+    </div>
+    <div id="global-loading-indicator" aria-live="polite" aria-atomic="true">
+        <span id="global-loading-spinner" aria-hidden="true"></span>
+        <span id="global-loading-label">正在讀取</span>
     </div>
     <script type="module" src="./src/js/main.js"></script>
 </body>

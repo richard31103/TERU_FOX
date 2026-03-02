@@ -1,4 +1,4 @@
-﻿export function createAssetPreloader({ assets, loadingFillEl, loadingTextEl, loadingContainerEl, startBtnEl }) {
+﻿export function createAssetPreloader({ assets, loadingFillEl, loadingTextEl, loadingContainerEl, startBtnEl, assetStore = null }) {
     let loadedAssetsCount = 0;
     let ready = false;
     let failedAssets = [];
@@ -70,15 +70,22 @@
             return { ok: true, failedAssets };
         }
 
-        const results = await Promise.all(
-            imageAssets.map(async (src) => {
-                const result = await loadImageDecoded(src);
+        if (assetStore && typeof assetStore.ensureMany === 'function') {
+            const result = await assetStore.ensureMany(imageAssets, () => {
                 updateLoaderProgress(totalCount);
-                return result;
-            })
-        );
+            });
+            failedAssets = result.failedAssets || [];
+        } else {
+            const results = await Promise.all(
+                imageAssets.map(async (src) => {
+                    const result = await loadImageDecoded(src);
+                    updateLoaderProgress(totalCount);
+                    return result;
+                })
+            );
+            failedAssets = results.filter((r) => !r.ok).map((r) => r.src);
+        }
 
-        failedAssets = results.filter((r) => !r.ok).map((r) => r.src);
         if (failedAssets.length > 0) {
             if (loadingTextEl) loadingTextEl.textContent = `Failed to load ${failedAssets.length} image(s). Please refresh.`;
             return { ok: false, failedAssets };

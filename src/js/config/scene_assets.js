@@ -94,17 +94,22 @@ export const SCENE_ASSETS = {
     }
 };
 
-export const PRELOAD_IMAGE_ASSETS = [
+function uniqueAssets(assets) {
+    return Array.from(new Set(assets));
+}
+
+const DEFAULT_SCENE_IMAGE_ASSETS = uniqueAssets([
+    'assets/images/scenes/default/bg-main.jpg',
     'assets/images/scenes/default/body-main.png',
     'assets/images/scenes/default/tail-main.png',
     'assets/images/scenes/default/head-no-speak.png',
-    'assets/images/scenes/default/head-no-speak-normal.png',
     'assets/images/scenes/default/head-blink.png',
-    'assets/images/scenes/default/head-blink-normal.png',
     'assets/images/scenes/default/head-speak.png',
     'assets/images/scenes/default/head-angry.png',
     'assets/images/scenes/default/head-happy.png',
     'assets/images/scenes/default/head-happy-talk.png',
+    'assets/images/scenes/default/head-no-speak-normal.png',
+    'assets/images/scenes/default/head-blink-normal.png',
     'assets/images/scenes/default/head-touch.png',
     'assets/images/scenes/default/head-touch-angry.png',
     'assets/images/scenes/default/head-touch-angry-blink.png',
@@ -120,18 +125,18 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/default/head-shy-blink.png',
     'assets/images/scenes/default/money-popup.png',
     'assets/images/scenes/default/pet-fox-desktop.jpg',
-    'assets/images/scenes/default/pet-fox-mobile.jpg',
-    'assets/images/scenes/default/bg-main.jpg',
+    'assets/images/scenes/default/pet-fox-mobile.jpg'
+]);
+
+const BED_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/bed/bed-bg.jpg',
     'assets/images/scenes/bed/bed-body.png',
-    'assets/images/scenes/bed/bed-headphone.png',
     'assets/images/scenes/bed/bed-tail.png',
     'assets/images/scenes/bed/bed-head-no-speak.png',
     'assets/images/scenes/bed/bed-head-blink.png',
     'assets/images/scenes/bed/bed-head-speak.png',
     'assets/images/scenes/bed/bed-head-shock.png',
     'assets/images/scenes/bed/bed-head-blink-shock.png',
-    'assets/images/scenes/bed/bed-money-popup.png',
     'assets/images/scenes/bed/bed-head-no-speak-eyes-close.png',
     'assets/images/scenes/bed/bed-head-speak-eyes-close.png',
     'assets/images/scenes/bed/bed-head-no-speak-eyes-close-cry.png',
@@ -139,17 +144,44 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/bed/bed-head-no-speak-tears.png',
     'assets/images/scenes/bed/bed-head-speak-tears.png',
     'assets/images/scenes/bed/bed-head-blink-speak-tears.png',
+    'assets/images/scenes/bed/bed-headphone.png',
+    'assets/images/scenes/bed/bed-money-popup.png'
+]);
+
+const BED_N_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/bed_N/bed_N-bg.png',
     'assets/images/scenes/bed_N/bed_N-body-naked.png',
     'assets/images/scenes/bed_N/bed_N-tail.png',
     'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
+    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png'
+]);
+
+const FIGHT_SCENE_IMAGE_ASSETS = uniqueAssets([
+    'assets/images/scenes/default/bg-main.jpg',
     'assets/images/scenes/fight/fight-fox-notail.png',
-    'assets/images/scenes/fight/fight-headphone.png',
     'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
     'assets/images/scenes/fight/fight-fox-damage-notail.png',
     'assets/images/scenes/fight/fight-fox-damage-notail-break.png',
     'assets/images/scenes/fight/fight-fox-naked.png',
     'assets/images/scenes/fight/fight-tail.png',
+    'assets/images/scenes/fight/fight-headphone.png'
+]);
+
+export const SCENE_IMAGE_ASSET_GROUPS = {
+    [SCENE_DEFAULT]: DEFAULT_SCENE_IMAGE_ASSETS,
+    [SCENE_BED]: BED_SCENE_IMAGE_ASSETS,
+    [SCENE_BED_N]: BED_N_SCENE_IMAGE_ASSETS,
+    [SCENE_FIGHT]: FIGHT_SCENE_IMAGE_ASSETS
+};
+
+export const BOOT_IMAGE_ASSETS = uniqueAssets([
+    ...DEFAULT_SCENE_IMAGE_ASSETS,
     'assets/images/ui/fox-face.png'
-];
+]);
+
+export const PRELOAD_IMAGE_ASSETS = uniqueAssets([
+    ...BOOT_IMAGE_ASSETS,
+    ...BED_SCENE_IMAGE_ASSETS,
+    ...BED_N_SCENE_IMAGE_ASSETS,
+    ...FIGHT_SCENE_IMAGE_ASSETS
+]);

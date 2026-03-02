@@ -4,7 +4,16 @@ import { createTransitionEngine } from '../core/transition_engine.js';
 import { createStoryEngine, loadChapterStorySet } from '../story/story_engine.js';
 import { checkOOXX, getBestOOXX, OOXX_AI, OOXX_HU, renderOOXXBoard } from '../minigames/ooxx.js';
 import { createAppContext } from './app_context.js';
-import { SCENE_ASSETS as SCENE_CONFIG, SCENE_BED, SCENE_BED_N, SCENE_DEFAULT, SCENE_FIGHT, PRELOAD_IMAGE_ASSETS } from '../config/scene_assets.js';
+import {
+    BOOT_IMAGE_ASSETS,
+    PRELOAD_IMAGE_ASSETS,
+    SCENE_ASSETS as SCENE_CONFIG,
+    SCENE_BED,
+    SCENE_BED_N,
+    SCENE_DEFAULT,
+    SCENE_FIGHT,
+    SCENE_IMAGE_ASSET_GROUPS
+} from '../config/scene_assets.js';
 import {
     AFRAID_HEADS,
     AFRAID_TARGET_CHOICE_TITLE_TW,
@@ -33,6 +42,7 @@ import {
     SHY_BED_TRANSITION_HEADS
 } from '../config/runtime_text.js';
 import { createAssetPreloader } from '../systems/asset_preloader.js';
+import { createImageAssetStore } from '../systems/image_asset_store.js';
 import { createGyroParallaxSystem } from '../systems/gyro_parallax.js';
 import { createChoiceController } from '../features/choice_controller.js';
 import { createDialogueController } from '../features/dialogue_controller.js';
@@ -73,9 +83,74 @@ debugLog('[BOOT] game_app module active');
 
         const appContext = createAppContext(document);
         const { refs: ctxRefs, dialogueUI, audio: audioService, audioCtx } = appContext;
+        const assetStore = createImageAssetStore();
+        const globalLoadingIndicatorEl = document.getElementById('global-loading-indicator');
+        const globalLoadingLabelEl = document.getElementById('global-loading-label');
         let audioMuted = false;
         const PUNCH_SFX_MIN_INTERVAL_MS = 100;
         let lastPunchSfxAt = 0;
+
+        function setGlobalLoadingVisible(visible) {
+            if (!globalLoadingIndicatorEl) return;
+            globalLoadingIndicatorEl.classList.toggle('visible', Boolean(visible));
+            if (globalLoadingLabelEl) globalLoadingLabelEl.textContent = '正在讀取';
+        }
+
+        assetStore.subscribePending((pendingCount) => {
+            setGlobalLoadingVisible(pendingCount > 0);
+        });
+
+        function setCachedSrc(imgEl, assetKey) {
+            if (!imgEl || !assetKey) return false;
+            const resolvedSrc = assetStore.resolve(assetKey);
+            if (!resolvedSrc) return false;
+            if (imgEl.dataset.assetKey === assetKey && imgEl.getAttribute('src') === resolvedSrc) {
+                return true;
+            }
+            imgEl.dataset.assetKey = assetKey;
+            if (imgEl.getAttribute('src') !== resolvedSrc) {
+                imgEl.setAttribute('src', resolvedSrc);
+            }
+            return true;
+        }
+
+        function setCachedBg(el, assetKey) {
+            if (!el || !assetKey) return false;
+            const resolvedSrc = assetStore.resolve(assetKey);
+            if (!resolvedSrc) return false;
+            if (el.dataset.bgAssetKey === assetKey) return true;
+            el.dataset.bgAssetKey = assetKey;
+            el.style.backgroundImage = `url("${resolvedSrc}")`;
+            return true;
+        }
+
+        function getSceneLoadFailedMessage(failedCount) {
+            const countText = Number.isFinite(failedCount) ? String(failedCount) : 'some';
+            if (currentLang === 'en') return `Failed to load ${countText} scene image(s). Retry now?`;
+            if (currentLang === 'jp') return `シーン画像 ${countText} 枚の読み込みに失敗しました。再試行しますか？`;
+            return `場景圖片載入失敗（${countText} 張），要立即重試嗎？`;
+        }
+
+        async function ensureSceneAssets(sceneId, { interactive = true } = {}) {
+            const normalizedSceneId = sceneId in SCENE_IMAGE_ASSET_GROUPS ? sceneId : SCENE_DEFAULT;
+            const sceneAssets = SCENE_IMAGE_ASSET_GROUPS[normalizedSceneId] || [];
+            if (!sceneAssets.length) return { ok: true, failedAssets: [] };
+
+            while (true) {
+                const result = await assetStore.ensureMany(sceneAssets);
+                if (result.ok) return result;
+                if (!interactive) return result;
+                const shouldRetry = window.confirm(getSceneLoadFailedMessage(result.failedAssets?.length || 0));
+                if (!shouldRetry) return result;
+            }
+        }
+
+        async function preloadSceneAndApply(sceneId, { interactive = true } = {}) {
+            const preloadResult = await ensureSceneAssets(sceneId, { interactive });
+            if (!preloadResult.ok) return false;
+            applyScene(sceneId);
+            return true;
+        }
 
         function toggleAudioGlobal() {
             audioMuted = audioService.setMuted(!audioMuted);
@@ -475,14 +550,14 @@ debugLog('[BOOT] game_app module active');
 
         function applyPostOOXXFightAssets(postHit = false) {
             if (activeSceneId !== SCENE_FIGHT || !isPostOOXXFightVariantEnabled()) return;
-            if (charAngry) charAngry.src = FIGHT_POST_OOXX_DAMAGE_ASSET;
+            if (charAngry) setCachedSrc(charAngry, FIGHT_POST_OOXX_DAMAGE_ASSET);
             if (!postHit) return;
-            if (charBody) charBody.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
-            if (charIdle) charIdle.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
-            if (charBlink) charBlink.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
-            if (charSpeak) charSpeak.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
-            if (charHappy) charHappy.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
-            if (charHappyTalk) charHappyTalk.src = FIGHT_POST_OOXX_POST_HIT_ASSET;
+            if (charBody) setCachedSrc(charBody, FIGHT_POST_OOXX_POST_HIT_ASSET);
+            if (charIdle) setCachedSrc(charIdle, FIGHT_POST_OOXX_POST_HIT_ASSET);
+            if (charBlink) setCachedSrc(charBlink, FIGHT_POST_OOXX_POST_HIT_ASSET);
+            if (charSpeak) setCachedSrc(charSpeak, FIGHT_POST_OOXX_POST_HIT_ASSET);
+            if (charHappy) setCachedSrc(charHappy, FIGHT_POST_OOXX_POST_HIT_ASSET);
+            if (charHappyTalk) setCachedSrc(charHappyTalk, FIGHT_POST_OOXX_POST_HIT_ASSET);
             syncHeadphoneLayer();
         }
 
@@ -522,30 +597,30 @@ debugLog('[BOOT] game_app module active');
             if (activeSceneId !== SCENE_DEFAULT) return;
             if (!charIdle || !charBlink || !charSpeak) return;
             if (isAfraidHeadMode) {
-                charIdle.src = AFRAID_HEADS.idle;
-                charBlink.src = AFRAID_HEADS.blink;
-                charSpeak.src = AFRAID_HEADS.speak;
+                setCachedSrc(charIdle, AFRAID_HEADS.idle);
+                setCachedSrc(charBlink, AFRAID_HEADS.blink);
+                setCachedSrc(charSpeak, AFRAID_HEADS.speak);
                 return;
             }
             if (isOpeningPrologueActive) {
-                charIdle.src = OPENING_HEADS.idle;
-                charBlink.src = OPENING_HEADS.blink;
-                charSpeak.src = OPENING_HEADS.speak;
+                setCachedSrc(charIdle, OPENING_HEADS.idle);
+                setCachedSrc(charBlink, OPENING_HEADS.blink);
+                setCachedSrc(charSpeak, OPENING_HEADS.speak);
                 return;
             }
             const cfg = SCENE_CONFIG[SCENE_DEFAULT];
-            charIdle.src = cfg.idle;
-            charBlink.src = cfg.blink;
-            charSpeak.src = cfg.speak;
+            setCachedSrc(charIdle, cfg.idle);
+            setCachedSrc(charBlink, cfg.blink);
+            setCachedSrc(charSpeak, cfg.speak);
         }
 
         function applyHeadTouchMildNeutralHeads() {
             if (activeSceneId !== SCENE_DEFAULT) return;
             if (!charIdle || !charBlink || !charSpeak) return;
             const cfg = SCENE_CONFIG[SCENE_DEFAULT];
-            charIdle.src = cfg.idle;
-            charBlink.src = cfg.blink;
-            charSpeak.src = cfg.speak;
+            setCachedSrc(charIdle, cfg.idle);
+            setCachedSrc(charBlink, cfg.blink);
+            setCachedSrc(charSpeak, cfg.speak);
             setCharState('idle');
         }
 
@@ -578,11 +653,11 @@ debugLog('[BOOT] game_app module active');
             headTouchAngryBlinkTimer = setTimeout(() => {
                 headTouchAngryBlinkTimer = null;
                 if (!isHeadTouchAngryFaceActive() || !headTouchFaceEl) return;
-                headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angryBlink || HEAD_TOUCH_ASSETS.angry;
+                setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.angryBlink || HEAD_TOUCH_ASSETS.angry);
                 headTouchAngryBlinkHoldTimer = setTimeout(() => {
                     headTouchAngryBlinkHoldTimer = null;
                     if (!isHeadTouchAngryFaceActive() || !headTouchFaceEl) return;
-                    headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
+                    setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.angry);
                     scheduleHeadTouchAngryBlink();
                 }, HEAD_TOUCH_ANGRY_BLINK_HOLD_MS);
             }, delayMs);
@@ -590,7 +665,7 @@ debugLog('[BOOT] game_app module active');
 
         function startHeadTouchAngryBlinkLoop() {
             if (!headTouchFaceEl) return;
-            headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
+            setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.angry);
             headTouchFaceEl.classList.add('active');
             scheduleHeadTouchAngryBlink();
         }
@@ -621,9 +696,9 @@ debugLog('[BOOT] game_app module active');
         function showHeadTouchFace(mode = 'normal', { sticky = false } = {}) {
             if (!headTouchFaceEl) return;
             hideHeadTouchFace();
-            if (mode === 'angry') headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angry;
-            else if (mode === 'angry-touch') headTouchFaceEl.src = HEAD_TOUCH_ASSETS.angryTouch || HEAD_TOUCH_ASSETS.normal;
-            else headTouchFaceEl.src = HEAD_TOUCH_ASSETS.normal;
+            if (mode === 'angry') setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.angry);
+            else if (mode === 'angry-touch') setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.angryTouch || HEAD_TOUCH_ASSETS.normal);
+            else setCachedSrc(headTouchFaceEl, HEAD_TOUCH_ASSETS.normal);
             headTouchFaceEl.classList.add('active');
             if (!sticky) {
                 headTouchRestoreTimer = setTimeout(() => {
@@ -910,14 +985,14 @@ debugLog('[BOOT] game_app module active');
             if (activeSceneId !== SCENE_DEFAULT) return;
             if (!charIdle || !charBlink || !charSpeak) return;
             if (isOpeningPrologueActive) {
-                charIdle.src = OPENING_HEADS.idle;
-                charBlink.src = OPENING_HEADS.blink;
-                charSpeak.src = OPENING_HEADS.speak;
+                setCachedSrc(charIdle, OPENING_HEADS.idle);
+                setCachedSrc(charBlink, OPENING_HEADS.blink);
+                setCachedSrc(charSpeak, OPENING_HEADS.speak);
             } else {
                 const cfg = SCENE_CONFIG[SCENE_DEFAULT];
-                charIdle.src = cfg.idle;
-                charBlink.src = cfg.blink;
-                charSpeak.src = cfg.speak;
+                setCachedSrc(charIdle, cfg.idle);
+                setCachedSrc(charBlink, cfg.blink);
+                setCachedSrc(charSpeak, cfg.speak);
             }
             setCharState(isTyping ? 'speak' : 'idle');
         }
@@ -931,18 +1006,18 @@ debugLog('[BOOT] game_app module active');
             if (activeSceneId !== SCENE_DEFAULT) return;
             if (!charIdle || !charBlink || !charSpeak) return;
             if (enable) {
-                charIdle.src = AFRAID_HEADS.idle;
-                charBlink.src = AFRAID_HEADS.blink;
-                charSpeak.src = AFRAID_HEADS.speak;
+                setCachedSrc(charIdle, AFRAID_HEADS.idle);
+                setCachedSrc(charBlink, AFRAID_HEADS.blink);
+                setCachedSrc(charSpeak, AFRAID_HEADS.speak);
             } else if (isOpeningPrologueActive) {
-                charIdle.src = OPENING_HEADS.idle;
-                charBlink.src = OPENING_HEADS.blink;
-                charSpeak.src = OPENING_HEADS.speak;
+                setCachedSrc(charIdle, OPENING_HEADS.idle);
+                setCachedSrc(charBlink, OPENING_HEADS.blink);
+                setCachedSrc(charSpeak, OPENING_HEADS.speak);
             } else {
                 const cfg = SCENE_CONFIG[SCENE_DEFAULT];
-                charIdle.src = cfg.idle;
-                charBlink.src = cfg.blink;
-                charSpeak.src = cfg.speak;
+                setCachedSrc(charIdle, cfg.idle);
+                setCachedSrc(charBlink, cfg.blink);
+                setCachedSrc(charSpeak, cfg.speak);
             }
             setCharState(isTyping ? 'speak' : 'idle');
         }
@@ -953,44 +1028,37 @@ debugLog('[BOOT] game_app module active');
             if (!charHappy || !charHappyTalk || !charBlink) return;
             const cfg = SCENE_CONFIG[activeSceneId] || SCENE_CONFIG[SCENE_DEFAULT];
             if (enable) {
-                charHappy.src = SHY_BED_TRANSITION_HEADS.happy;
-                charHappyTalk.src = SHY_BED_TRANSITION_HEADS.speak;
-                charBlink.src = SHY_BED_TRANSITION_HEADS.blink;
+                setCachedSrc(charHappy, SHY_BED_TRANSITION_HEADS.happy);
+                setCachedSrc(charHappyTalk, SHY_BED_TRANSITION_HEADS.speak);
+                setCachedSrc(charBlink, SHY_BED_TRANSITION_HEADS.blink);
             } else {
-                charHappy.src = cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
-                charHappyTalk.src = cfg.happyTalk || cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy;
+                setCachedSrc(charHappy, cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy);
+                setCachedSrc(charHappyTalk, cfg.happyTalk || cfg.happy || SCENE_CONFIG[SCENE_DEFAULT].happy);
                 if (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode) {
-                    charBlink.src = AFRAID_HEADS.blink;
+                    setCachedSrc(charBlink, AFRAID_HEADS.blink);
                 } else if (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive) {
-                    charBlink.src = OPENING_HEADS.blink;
+                    setCachedSrc(charBlink, OPENING_HEADS.blink);
                 } else {
-                    charBlink.src = cfg.blink || SCENE_CONFIG[SCENE_DEFAULT].blink;
+                    setCachedSrc(charBlink, cfg.blink || SCENE_CONFIG[SCENE_DEFAULT].blink);
                 }
             }
             if (isHappy) setCharState(isTyping ? 'speak' : 'idle');
         }
 
         function syncHeadphoneLayer() {
-            if (!charHeadphone || !charBody) return;
-            const bodySrc = charBody.getAttribute('src') || '';
-            if (bodySrc.includes('body-main.png')) {
-                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/default/headphone.png') {
-                    charHeadphone.src = 'assets/images/scenes/default/headphone.png';
-                }
+            if (!charHeadphone) return;
+            if (activeSceneId === SCENE_DEFAULT) {
+                setCachedSrc(charHeadphone, 'assets/images/scenes/default/headphone.png');
                 charHeadphone.classList.add('active');
                 return;
             }
-            if (bodySrc.includes('bed-body.png')) {
-                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/bed/bed-headphone.png') {
-                    charHeadphone.src = 'assets/images/scenes/bed/bed-headphone.png';
-                }
+            if (activeSceneId === SCENE_BED) {
+                setCachedSrc(charHeadphone, 'assets/images/scenes/bed/bed-headphone.png');
                 charHeadphone.classList.add('active');
                 return;
             }
-            if (bodySrc.includes('assets/images/scenes/fight/')) {
-                if (charHeadphone.getAttribute('src') !== 'assets/images/scenes/fight/fight-headphone.png') {
-                    charHeadphone.src = 'assets/images/scenes/fight/fight-headphone.png';
-                }
+            if (activeSceneId === SCENE_FIGHT) {
+                setCachedSrc(charHeadphone, 'assets/images/scenes/fight/fight-headphone.png');
                 charHeadphone.classList.add('active');
                 return;
             }
@@ -1022,30 +1090,30 @@ debugLog('[BOOT] game_app module active');
             bedHeadVariant = 'normal';
             isHappyTalkMode = false;
             happyMouthOpen = false;
-            if (bgEl) bgEl.style.backgroundImage = `url('${cfg.bg}')`;
-            if (bgSplashEl) bgSplashEl.style.backgroundImage = `url('${cfg.bg}')`;
-            if (charTail) charTail.src = cfg.tail;
-            if (charBody) charBody.src = cfg.body;
-            if (charIdle) charIdle.src = cfg.idle;
-            if (charBlink) charBlink.src = cfg.blink;
-            if (charSpeak) charSpeak.src = cfg.speak;
+            if (bgEl) setCachedBg(bgEl, cfg.bg);
+            if (bgSplashEl) setCachedBg(bgSplashEl, cfg.bg);
+            if (charTail) setCachedSrc(charTail, cfg.tail);
+            if (charBody) setCachedSrc(charBody, cfg.body);
+            if (charIdle) setCachedSrc(charIdle, cfg.idle);
+            if (charBlink) setCachedSrc(charBlink, cfg.blink);
+            if (charSpeak) setCachedSrc(charSpeak, cfg.speak);
             if (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive) {
-                if (charIdle) charIdle.src = OPENING_HEADS.idle;
-                if (charBlink) charBlink.src = OPENING_HEADS.blink;
-                if (charSpeak) charSpeak.src = OPENING_HEADS.speak;
+                if (charIdle) setCachedSrc(charIdle, OPENING_HEADS.idle);
+                if (charBlink) setCachedSrc(charBlink, OPENING_HEADS.blink);
+                if (charSpeak) setCachedSrc(charSpeak, OPENING_HEADS.speak);
             }
             if (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode) {
-                if (charIdle) charIdle.src = AFRAID_HEADS.idle;
-                if (charBlink) charBlink.src = AFRAID_HEADS.blink;
-                if (charSpeak) charSpeak.src = AFRAID_HEADS.speak;
+                if (charIdle) setCachedSrc(charIdle, AFRAID_HEADS.idle);
+                if (charBlink) setCachedSrc(charBlink, AFRAID_HEADS.blink);
+                if (charSpeak) setCachedSrc(charSpeak, AFRAID_HEADS.speak);
             }
-            if (charAngry) charAngry.src = cfg.angry;
-            if (charHappy) charHappy.src = cfg.happy;
-            if (charHappyTalk) charHappyTalk.src = cfg.happyTalk || cfg.happy;
+            if (charAngry) setCachedSrc(charAngry, cfg.angry);
+            if (charHappy) setCachedSrc(charHappy, cfg.happy);
+            if (charHappyTalk) setCachedSrc(charHappyTalk, cfg.happyTalk || cfg.happy);
             if (activeSceneId === SCENE_DEFAULT && isShyBedTransitionMode) {
-                if (charHappy) charHappy.src = SHY_BED_TRANSITION_HEADS.happy;
-                if (charHappyTalk) charHappyTalk.src = SHY_BED_TRANSITION_HEADS.speak;
-                if (charBlink) charBlink.src = SHY_BED_TRANSITION_HEADS.blink;
+                if (charHappy) setCachedSrc(charHappy, SHY_BED_TRANSITION_HEADS.happy);
+                if (charHappyTalk) setCachedSrc(charHappyTalk, SHY_BED_TRANSITION_HEADS.speak);
+                if (charBlink) setCachedSrc(charBlink, SHY_BED_TRANSITION_HEADS.blink);
             }
             if (charTail) {
                 charTail.style.setProperty('--tail-origin', cfg.tailOrigin || SCENE_CONFIG[SCENE_DEFAULT].tailOrigin);
@@ -1080,8 +1148,8 @@ debugLog('[BOOT] game_app module active');
             const moneyBlink = cfg.moneyBlink || normalBlink;
 
             if (sceneSupportsSpecialHeads && charHappy) {
-                charHappy.src = showing ? moneyHappy : normalHappy;
-                if (charBlink) charBlink.src = showing ? moneyBlink : normalBlink;
+                setCachedSrc(charHappy, showing ? moneyHappy : normalHappy);
+                if (charBlink) setCachedSrc(charBlink, showing ? moneyBlink : normalBlink);
                 if (isHappy) setCharState('happy');
                 return;
             }
@@ -1092,15 +1160,15 @@ debugLog('[BOOT] game_app module active');
             }
 
             if (showing) {
-                charIdle.src = moneyHappy;
-                charSpeak.src = moneyHappy;
-                charBlink.src = moneyBlink;
+                setCachedSrc(charIdle, moneyHappy);
+                setCachedSrc(charSpeak, moneyHappy);
+                setCachedSrc(charBlink, moneyBlink);
             } else if (activeSceneId === SCENE_BED) {
                 applyBedHeadVariant(bedHeadVariant);
             } else {
-                charIdle.src = cfg.idle || SCENE_CONFIG[SCENE_DEFAULT].idle;
-                charSpeak.src = cfg.speak || SCENE_CONFIG[SCENE_DEFAULT].speak;
-                charBlink.src = normalBlink;
+                setCachedSrc(charIdle, cfg.idle || SCENE_CONFIG[SCENE_DEFAULT].idle);
+                setCachedSrc(charSpeak, cfg.speak || SCENE_CONFIG[SCENE_DEFAULT].speak);
+                setCachedSrc(charBlink, normalBlink);
             }
 
             if (isHappy) setCharState('happy');
@@ -1116,22 +1184,22 @@ debugLog('[BOOT] game_app module active');
             ) ? variant : 'normal';
             if (!charIdle || !charBlink || !charSpeak) return;
             if (bedHeadVariant === 'eyes_closed') {
-                charIdle.src = cfg.idleClosed || cfg.idle;
-                charSpeak.src = cfg.speakClosed || cfg.speak;
-                charBlink.src = cfg.idleClosed || cfg.blink;
+                setCachedSrc(charIdle, cfg.idleClosed || cfg.idle);
+                setCachedSrc(charSpeak, cfg.speakClosed || cfg.speak);
+                setCachedSrc(charBlink, cfg.idleClosed || cfg.blink);
             } else if (bedHeadVariant === 'eyes_closed_cry') {
-                charIdle.src = cfg.idleClosedCry || cfg.idleClosed || cfg.idle;
-                charSpeak.src = cfg.speakClosedCry || cfg.speakClosed || cfg.speak;
-                charBlink.src = cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
+                setCachedSrc(charIdle, cfg.idleClosedCry || cfg.idleClosed || cfg.idle);
+                setCachedSrc(charSpeak, cfg.speakClosedCry || cfg.speakClosed || cfg.speak);
+                setCachedSrc(charBlink, cfg.idleClosedCry || cfg.idleClosed || cfg.blink);
             } else if (bedHeadVariant === 'tears') {
                 // Asset naming is intentionally inverted for this interaction.
-                charIdle.src = cfg.speakTears || cfg.idle;
-                charSpeak.src = cfg.idleTears || cfg.speak;
-                charBlink.src = cfg.blinkSpeakTears || cfg.idleClosedCry || cfg.idleClosed || cfg.blink;
+                setCachedSrc(charIdle, cfg.speakTears || cfg.idle);
+                setCachedSrc(charSpeak, cfg.idleTears || cfg.speak);
+                setCachedSrc(charBlink, cfg.blinkSpeakTears || cfg.idleClosedCry || cfg.idleClosed || cfg.blink);
             } else {
-                charIdle.src = cfg.idle;
-                charSpeak.src = cfg.speak;
-                charBlink.src = cfg.blink;
+                setCachedSrc(charIdle, cfg.idle);
+                setCachedSrc(charSpeak, cfg.speak);
+                setCachedSrc(charBlink, cfg.blink);
             }
             setCharState(isTyping ? 'speak' : 'idle');
         }
@@ -1365,6 +1433,7 @@ debugLog('[BOOT] game_app module active');
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_entry' }); } catch (e) { }
             }
 
+            let switchedToFight = false;
             try {
                 const result = await ooxxTransitionEngine.runCurtainTransition({
                     id: 'fight-entry',
@@ -1372,15 +1441,26 @@ debugLog('[BOOT] game_app module active');
                     holdMs: FIGHT_ENTRY_TRANSITION.holdMs,
                     fadeOutMs: FIGHT_ENTRY_TRANSITION.fadeOutMs,
                     onBlack: async () => {
-                        applyScene(SCENE_FIGHT);
+                        switchedToFight = await preloadSceneAndApply(SCENE_FIGHT);
                     }
                 });
-                if (!result || result.cancelled) {
-                    applyScene(SCENE_FIGHT);
+                if ((!result || result.cancelled) && !switchedToFight) {
+                    switchedToFight = await preloadSceneAndApply(SCENE_FIGHT);
                 }
             } catch (err) {
                 console.error('Fight entry transition error:', err);
-                applyScene(SCENE_FIGHT);
+                if (!switchedToFight) {
+                    switchedToFight = await preloadSceneAndApply(SCENE_FIGHT);
+                }
+            }
+
+            if (!switchedToFight) {
+                isFightSequenceActive = false;
+                if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                    try { appState.transition(GAME_STATES.DIALOGUE, { source: 'fight_entry_failed' }); } catch (e) { }
+                }
+                showChoicePanel(DEFAULT_CHOICE_SOURCE_INDICES);
+                return;
             }
             applyPostOOXXFightAssets(false);
 
@@ -1421,6 +1501,7 @@ debugLog('[BOOT] game_app module active');
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_exit_joke' }); } catch (e) { }
             }
 
+            let switchedToDefault = false;
             try {
                 const result = await ooxxTransitionEngine.runCurtainTransition({
                     id: 'fight-exit-joke',
@@ -1428,15 +1509,26 @@ debugLog('[BOOT] game_app module active');
                     holdMs: FIGHT_ENTRY_TRANSITION.holdMs,
                     fadeOutMs: FIGHT_ENTRY_TRANSITION.fadeOutMs,
                     onBlack: async () => {
-                        applyScene(SCENE_DEFAULT);
+                        switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
                     }
                 });
-                if (!result || result.cancelled) {
-                    applyScene(SCENE_DEFAULT);
+                if ((!result || result.cancelled) && !switchedToDefault) {
+                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
                 }
             } catch (err) {
                 console.error('Fight exit transition error:', err);
-                applyScene(SCENE_DEFAULT);
+                if (!switchedToDefault) {
+                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                }
+            }
+
+            if (!switchedToDefault) {
+                isFightSequenceActive = true;
+                if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                    try { appState.transition(GAME_STATES.DIALOGUE, { source: 'fight_exit_failed' }); } catch (e) { }
+                }
+                showFightOptions();
+                return;
             }
 
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
@@ -1923,6 +2015,7 @@ debugLog('[BOOT] game_app module active');
             if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'bed_n_entry' }); } catch (e) { }
             }
+            let switchedToBedN = false;
             try {
                 const result = await ooxxTransitionEngine.runCurtainTransition({
                     id: 'bed-n-entry',
@@ -1930,15 +2023,26 @@ debugLog('[BOOT] game_app module active');
                     holdMs: BED_N_TRANSITION.holdMs,
                     fadeOutMs: BED_N_TRANSITION.fadeOutMs,
                     onBlack: async () => {
-                        applyScene(SCENE_BED_N);
+                        switchedToBedN = await preloadSceneAndApply(SCENE_BED_N);
                     }
                 });
-                if (!result || result.cancelled) {
-                    applyScene(SCENE_BED_N);
+                if ((!result || result.cancelled) && !switchedToBedN) {
+                    switchedToBedN = await preloadSceneAndApply(SCENE_BED_N);
                 }
             } catch (err) {
                 console.error('Bed_N scene transition error:', err);
-                applyScene(SCENE_BED_N);
+                if (!switchedToBedN) {
+                    switchedToBedN = await preloadSceneAndApply(SCENE_BED_N);
+                }
+            }
+            if (!switchedToBedN) {
+                bedFlow.active = true;
+                bedFlow.phase = 'phase2';
+                if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                    try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_n_entry_failed' }); } catch (e) { }
+                }
+                showBedPhase2();
+                return;
             }
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_n_entry' }); } catch (e) { }
@@ -1988,6 +2092,7 @@ debugLog('[BOOT] game_app module active');
             isHappyTalkMode = false;
             hideChoicePanel();
             if (bgmEl) bgmEl.pause();
+            let switchedToBed = false;
             try {
                 const result = await ooxxTransitionEngine.runCurtainTransition({
                     id: 'bed-entry',
@@ -1995,13 +2100,28 @@ debugLog('[BOOT] game_app module active');
                     holdMs: BED_ENTRY_TRANSITION.holdMs,
                     fadeOutMs: BED_ENTRY_TRANSITION.fadeOutMs,
                     onBlack: async () => {
-                        applyScene(SCENE_BED);
-                        isShyBedTransitionMode = false;
+                        switchedToBed = await preloadSceneAndApply(SCENE_BED);
+                        if (switchedToBed) isShyBedTransitionMode = false;
                     }
                 });
-                if (!result || result.cancelled) return;
+                if ((!result || result.cancelled) && !switchedToBed) {
+                    switchedToBed = await preloadSceneAndApply(SCENE_BED);
+                    if (switchedToBed) isShyBedTransitionMode = false;
+                }
             } catch (err) {
                 console.error('Bed scene transition error:', err);
+                if (!switchedToBed) {
+                    switchedToBed = await preloadSceneAndApply(SCENE_BED);
+                    if (switchedToBed) isShyBedTransitionMode = false;
+                }
+            }
+
+            if (!switchedToBed) {
+                if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                    try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_scene_failed' }); } catch (e) { }
+                }
+                startBGM();
+                showChoicePanel(DEFAULT_CHOICE_SOURCE_INDICES);
                 return;
             }
 
@@ -2427,9 +2547,7 @@ debugLog('[BOOT] game_app module active');
 
         function setMoneyPopupAsset(src) {
             if (!moneyPopupEl || !src) return;
-            if (moneyPopupEl.getAttribute('src') !== src) {
-                moneyPopupEl.setAttribute('src', src);
-            }
+            setCachedSrc(moneyPopupEl, src);
         }
 
         function restoreDefaultMoneyPopupAsset() {
@@ -2802,15 +2920,17 @@ debugLog('[BOOT] game_app module active');
         gyroSystem.start();
 
         const assetPreloader = createAssetPreloader({
-            assets: PRELOAD_IMAGE_ASSETS,
+            assets: BOOT_IMAGE_ASSETS,
             loadingFillEl: document.getElementById('loading-bar-fill'),
             loadingTextEl: document.getElementById('loading-text'),
             loadingContainerEl: document.getElementById('loading-container'),
-            startBtnEl: document.getElementById('start-btn')
+            startBtnEl: document.getElementById('start-btn'),
+            assetStore
         });
 
         let areImageAssetsReady = false;
         let failedImageAssets = [];
+        let hasScheduledBackgroundImageWarmup = false;
 
         async function startAssetLoader() {
             const result = await assetPreloader.start();
@@ -2818,6 +2938,23 @@ debugLog('[BOOT] game_app module active');
             failedImageAssets = result.failedAssets;
             if (!result.ok) {
                 console.error('[ASSET] Failed image preloads:', failedImageAssets);
+            }
+        }
+
+        function warmupRemainingImageAssets() {
+            if (hasScheduledBackgroundImageWarmup) return;
+            hasScheduledBackgroundImageWarmup = true;
+            const remaining = PRELOAD_IMAGE_ASSETS.filter((asset) => !BOOT_IMAGE_ASSETS.includes(asset));
+            if (remaining.length === 0) return;
+            const runWarmup = () => {
+                assetStore.ensureMany(remaining).catch((err) => {
+                    console.warn('[ASSET] Background warmup failed:', err);
+                });
+            };
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(runWarmup, { timeout: 1800 });
+            } else {
+                setTimeout(runWarmup, 600);
             }
         }
 
@@ -2881,6 +3018,7 @@ debugLog('[BOOT] game_app module active');
             ensureAudio();
             startBGM();
             document.getElementById('title-screen').classList.add('hidden');
+            warmupRemainingImageAssets();
             if (storyEngine) {
                 storyEngine.setLanguage(currentLang);
                 refreshStoryProjection();
