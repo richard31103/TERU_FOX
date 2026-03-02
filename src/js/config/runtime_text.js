@@ -136,6 +136,62 @@ export const BED_STOP_LINE_BY_LANG = {
     jp: 'で、まだ何したいの？'
 };
 
+export const BED_EXTRA_MONEY_OPTION_TEXT = {
+    tw: '再拿出500$',
+    en: 'Pull Out Another $500',
+    jp: 'さらに500$を出す'
+};
+
+export const BED_EXTRA_MONEY_LINE = {
+    tw: '我想買DJ器材...',
+    en: 'I want to buy DJ gear...',
+    jp: 'DJ機材を買いたいんだ...'
+};
+
+export const BED_N_DIALOGUE_LINES = {
+    tw: [
+        '謝謝乾爹...',
+        '提爾會努力練習DJ的...',
+        '好冷喔...',
+        '冷氣可以關小一點嗎?',
+        '全裸好害羞...(雖然我本來就不穿褲子)',
+        '可以不要繼續盯著我了嗎...',
+        '你是怎麼知道要點"摸尾巴"那麼多次的?',
+        '太有耐心了吧...',
+        '喵喵...',
+        '形象都要沒了...',
+        '既然形象都沒了...那我們來...'
+    ],
+    en: [
+        'Thanks, sugar daddy...',
+        'TERU will work hard on DJ practice...',
+        'It is so cold...',
+        'Could you turn the AC down a bit?',
+        'Being totally naked is so embarrassing... (Though I do not wear pants anyway.)',
+        'Could you stop staring at me like that...?',
+        'How did you even know to tap "Touch Tail" that many times?',
+        'You are way too patient...',
+        'Meow meow...',
+        'My image is basically gone...',
+        'Since my image is already gone... then let us...'
+    ],
+    jp: [
+        'パパ、ありがとう...',
+        'テール、DJの練習を頑張るね...',
+        '寒いよ...',
+        'エアコン、もう少し弱くしてくれる？',
+        '全裸って恥ずかしい...(まあ、もともとズボンは履いてないけど)',
+        'そんなに見つめ続けないでくれる...？',
+        'どうして「しっぽを触る」をあんなに押すって分かったの？',
+        '忍耐力ありすぎでしょ...',
+        'にゃーにゃー...',
+        'イメージがなくなっちゃう...',
+        'もうイメージもないし... じゃあ...'
+    ]
+};
+
+export const BED_N_TRANSITION = { fadeInMs: 600, holdMs: 3000, fadeOutMs: 600 };
+
 export const HEAD_TOUCH_THRESHOLDS = {
     first: 3,
     second: 3,

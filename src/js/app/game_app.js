@@ -4,12 +4,16 @@ import { createTransitionEngine } from '../core/transition_engine.js';
 import { createStoryEngine, loadChapterStorySet } from '../story/story_engine.js';
 import { checkOOXX, getBestOOXX, OOXX_AI, OOXX_HU, renderOOXXBoard } from '../minigames/ooxx.js';
 import { createAppContext } from './app_context.js';
-import { SCENE_ASSETS as SCENE_CONFIG, SCENE_BED, SCENE_DEFAULT, SCENE_FIGHT, PRELOAD_IMAGE_ASSETS } from '../config/scene_assets.js';
+import { SCENE_ASSETS as SCENE_CONFIG, SCENE_BED, SCENE_BED_N, SCENE_DEFAULT, SCENE_FIGHT, PRELOAD_IMAGE_ASSETS } from '../config/scene_assets.js';
 import {
     AFRAID_HEADS,
     AFRAID_TARGET_CHOICE_TITLE_TW,
     AFRAID_TARGET_LINES_TW,
     BED_ENTRY_TRANSITION,
+    BED_EXTRA_MONEY_LINE,
+    BED_EXTRA_MONEY_OPTION_TEXT,
+    BED_N_DIALOGUE_LINES,
+    BED_N_TRANSITION,
     BED_STOP_LINE_BY_LANG,
     BED_TAIL_BURST_RESET_MS,
     DEFAULT_CHOICE_SOURCE_INDICES,
@@ -311,6 +315,8 @@ debugLog('[BOOT] game_app module active');
         const toBeContinuedEl = ctxRefs.toBeContinuedScreen;
         const petFoxScreenEl = ctxRefs.petFoxScreen;
         const gameContainerEl = ctxRefs.gameContainer;
+        const DEFAULT_MONEY_POPUP_ASSET = 'assets/images/scenes/default/money-popup.png';
+        const BED_MONEY_POPUP_ASSET = 'assets/images/scenes/bed/bed-money-popup.png';
         // Decouple mobile money popup offset from character framing:
         // character stays stable while money popup can be repositioned.
         const MOBILE_MONEY_CHARACTER_SHIFT_PX = 0;
@@ -498,6 +504,19 @@ debugLog('[BOOT] game_app module active');
 
         function getHeadTouchTextBundle() {
             return HEAD_TOUCH_TEXT[currentLang] || HEAD_TOUCH_TEXT.tw;
+        }
+
+        function getBedExtraMoneyOptionText() {
+            return BED_EXTRA_MONEY_OPTION_TEXT[currentLang] || BED_EXTRA_MONEY_OPTION_TEXT.tw;
+        }
+
+        function getBedExtraMoneyLine() {
+            return BED_EXTRA_MONEY_LINE[currentLang] || BED_EXTRA_MONEY_LINE.tw;
+        }
+
+        function getBedNDialogueLines() {
+            const lines = BED_N_DIALOGUE_LINES[currentLang] || BED_N_DIALOGUE_LINES.tw;
+            return Array.isArray(lines) ? lines : [];
         }
 
         function applyDefaultSceneHeadByContext() {
@@ -983,7 +1002,7 @@ debugLog('[BOOT] game_app module active');
         function getSceneGameTitle(uiBundle) {
             const ui = uiBundle || l10n[currentLang]?.ui;
             if (!ui) return '';
-            if (activeSceneId === SCENE_BED) return ui.bedGameTitle || '提爾家';
+            if (activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N) return ui.bedGameTitle || '提爾家';
             return ui.gameTitle || '';
         }
 
@@ -1035,7 +1054,8 @@ debugLog('[BOOT] game_app module active');
                 charTail.classList.remove('tail-burst');
             }
             if (gameContainerEl) {
-                gameContainerEl.classList.toggle('scene-bed', activeSceneId === SCENE_BED);
+                gameContainerEl.classList.toggle('scene-bed', activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N);
+                gameContainerEl.classList.toggle('scene-bed-n', activeSceneId === SCENE_BED_N);
                 gameContainerEl.classList.toggle('scene-fight', activeSceneId === SCENE_FIGHT);
             }
             if (activeSceneId === SCENE_FIGHT) {
@@ -1047,7 +1067,6 @@ debugLog('[BOOT] game_app module active');
         }
 
         function applyMoneyHeadState(showing) {
-            if (!charHappy) return;
             const cfg = SCENE_CONFIG[activeSceneId] || SCENE_CONFIG[SCENE_DEFAULT];
             const normalHappy = isShyBedTransitionMode
                 ? SHY_BED_TRANSITION_HEADS.happy
@@ -1061,8 +1080,31 @@ debugLog('[BOOT] game_app module active');
                         : (cfg.blink || SCENE_CONFIG[SCENE_DEFAULT].blink);
             const moneyHappy = cfg.moneyHead || normalHappy;
             const moneyBlink = cfg.moneyBlink || normalBlink;
-            charHappy.src = showing ? moneyHappy : normalHappy;
-            if (charBlink) charBlink.src = showing ? moneyBlink : normalBlink;
+
+            if (sceneSupportsSpecialHeads && charHappy) {
+                charHappy.src = showing ? moneyHappy : normalHappy;
+                if (charBlink) charBlink.src = showing ? moneyBlink : normalBlink;
+                if (isHappy) setCharState('happy');
+                return;
+            }
+
+            if (!charIdle || !charBlink || !charSpeak) {
+                if (isHappy) setCharState('happy');
+                return;
+            }
+
+            if (showing) {
+                charIdle.src = moneyHappy;
+                charSpeak.src = moneyHappy;
+                charBlink.src = moneyBlink;
+            } else if (activeSceneId === SCENE_BED) {
+                applyBedHeadVariant(bedHeadVariant);
+            } else {
+                charIdle.src = cfg.idle || SCENE_CONFIG[SCENE_DEFAULT].idle;
+                charSpeak.src = cfg.speak || SCENE_CONFIG[SCENE_DEFAULT].speak;
+                charBlink.src = normalBlink;
+            }
+
             if (isHappy) setCharState('happy');
         }
 
@@ -1101,6 +1143,8 @@ debugLog('[BOOT] game_app module active');
             bedFlow.phase = 'none';
             bedFlow.tailOptionRemoved = false;
             bedFlow.continueTouchCount = 0;
+            bedFlow.postCryContinueCount = 0;
+            bedFlow.extraMoneyUnlocked = false;
             bedFlow.tearsAfterStop = false;
         }
 
@@ -1806,18 +1850,24 @@ debugLog('[BOOT] game_app module active');
             if (!bedFlow.active) return;
             bedFlow.phase = 'phase2';
             applyBedHeadVariant(bedFlow.continueTouchCount >= 5 ? 'eyes_closed_cry' : 'eyes_closed');
+            const options = [
+                { textKey: 'bed_choice_continue', onSelect: onBedContinueTouch },
+                { textKey: 'bed_choice_stop', onSelect: onBedStopTouch }
+            ];
+            if (bedFlow.extraMoneyUnlocked) {
+                options.push({ textKey: '', fallbackText: getBedExtraMoneyOptionText(), onSelect: onBedExtraMoney });
+            }
             showRuntimeChoicePanel({
                 titleKey: 'choice_title',
-                options: [
-                    { textKey: 'bed_choice_continue', onSelect: onBedContinueTouch },
-                    { textKey: 'bed_choice_stop', onSelect: onBedStopTouch }
-                ]
+                options
             });
         }
 
         function onBedTailTouched() {
             playTailWagBurst();
             bedFlow.continueTouchCount = 0;
+            bedFlow.postCryContinueCount = 0;
+            bedFlow.extraMoneyUnlocked = false;
             bedFlow.tearsAfterStop = false;
             applyBedHeadVariant('eyes_closed');
             const line = getStoryText('bed_line_2', '嗚...我尾巴很敏感的...你再摸我就要...');
@@ -1828,6 +1878,12 @@ debugLog('[BOOT] game_app module active');
             playTailWagBurst();
             bedFlow.continueTouchCount += 1;
             const isCryMode = bedFlow.continueTouchCount >= 5;
+            bedFlow.postCryContinueCount = isCryMode
+                ? Math.max(0, bedFlow.continueTouchCount - 5)
+                : 0;
+            if (bedFlow.postCryContinueCount >= 10) {
+                bedFlow.extraMoneyUnlocked = true;
+            }
             applyBedHeadVariant(isCryMode ? 'eyes_closed_cry' : 'eyes_closed');
             const line = isCryMode
                 ? getStoryText('bed_line_continue_cry', '我受不了拉...')
@@ -1839,11 +1895,78 @@ debugLog('[BOOT] game_app module active');
             const shouldUseTears = bedFlow.continueTouchCount >= 5;
             bedFlow.tailOptionRemoved = true;
             bedFlow.continueTouchCount = 0;
+            bedFlow.postCryContinueCount = 0;
+            bedFlow.extraMoneyUnlocked = false;
             bedFlow.tearsAfterStop = shouldUseTears;
             applyBedHeadVariant(shouldUseTears ? 'tears' : 'normal');
             const fallbackStopLine = BED_STOP_LINE_BY_LANG[currentLang] || BED_STOP_LINE_BY_LANG.tw;
             const line = getStoryText('bed_line_stop', fallbackStopLine);
             runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
+        }
+
+        function startBedNDialogueSequence() {
+            const lines = getBedNDialogueLines();
+            if (!lines.length) {
+                dispatchAction('show_to_be_continued', { delayMs: 0 });
+                return;
+            }
+            runScriptedLines(
+                lines,
+                l10n[currentLang]?.speaker || '',
+                () => dispatchAction('show_to_be_continued', { delayMs: 0 }),
+                { requireClickBetweenLines: true }
+            );
+        }
+
+        async function startBedNSceneBranch() {
+            setTyping(false);
+            bedFlow.active = false;
+            hideChoicePanel();
+            if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
+                try { appState.transition(GAME_STATES.TRANSITION, { source: 'bed_n_entry' }); } catch (e) { }
+            }
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'bed-n-entry',
+                    fadeInMs: BED_N_TRANSITION.fadeInMs,
+                    holdMs: BED_N_TRANSITION.holdMs,
+                    fadeOutMs: BED_N_TRANSITION.fadeOutMs,
+                    onBlack: async () => {
+                        applyScene(SCENE_BED_N);
+                    }
+                });
+                if (!result || result.cancelled) {
+                    applyScene(SCENE_BED_N);
+                }
+            } catch (err) {
+                console.error('Bed_N scene transition error:', err);
+                applyScene(SCENE_BED_N);
+            }
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_n_entry' }); } catch (e) { }
+            }
+            startBedNDialogueSequence();
+        }
+
+        function onBedExtraMoney() {
+            if (!bedFlow.active || bedFlow.phase !== 'phase2' || !bedFlow.extraMoneyUnlocked) return;
+            setTyping(false);
+            setMoneyPopupAsset(BED_MONEY_POPUP_ASSET);
+            isHappy = true;
+            isHappyTalkMode = false;
+            setCharState('happy');
+            beginMoneyIntermission(() => {
+                restoreDefaultMoneyPopupAsset();
+                isHappy = false;
+                setCharState(isTyping ? 'speak' : 'idle');
+                runScriptedLine(
+                    getBedExtraMoneyLine(),
+                    l10n[currentLang]?.speaker || '',
+                    () => {
+                        startBedNSceneBranch();
+                    }
+                );
+            });
         }
 
         function onBedTouchThigh() {
@@ -1886,6 +2009,8 @@ debugLog('[BOOT] game_app module active');
             bedFlow.phase = 'phase1';
             bedFlow.tailOptionRemoved = false;
             bedFlow.continueTouchCount = 0;
+            bedFlow.postCryContinueCount = 0;
+            bedFlow.extraMoneyUnlocked = false;
             bedFlow.tearsAfterStop = false;
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_scene' }); } catch (e) { }
@@ -2300,6 +2425,17 @@ debugLog('[BOOT] game_app module active');
             }, 1000);
         }
 
+        function setMoneyPopupAsset(src) {
+            if (!moneyPopupEl || !src) return;
+            if (moneyPopupEl.getAttribute('src') !== src) {
+                moneyPopupEl.setAttribute('src', src);
+            }
+        }
+
+        function restoreDefaultMoneyPopupAsset() {
+            setMoneyPopupAsset(DEFAULT_MONEY_POPUP_ASSET);
+        }
+
         function showMoneyPopup() {
             if (!moneyPopupEl) return;
             moneyPopupEl.classList.remove('visible');
@@ -2359,6 +2495,7 @@ debugLog('[BOOT] game_app module active');
             dialogueArea.classList.remove('money-hidden');
             setMobileMoneyFocus(false);
             hideMoneyPopup();
+            restoreDefaultMoneyPopupAsset();
         }
 
         function showToBeContinued() {

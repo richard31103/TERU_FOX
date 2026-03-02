@@ -1,5 +1,6 @@
 ﻿export const SCENE_DEFAULT = 'default';
 export const SCENE_BED = 'bed';
+export const SCENE_BED_N = 'bed_n';
 export const SCENE_FIGHT = 'fight';
 
 /** @typedef {{
@@ -50,6 +51,8 @@ export const SCENE_ASSETS = {
         idle: 'assets/images/scenes/bed/bed-head-no-speak.png',
         blink: 'assets/images/scenes/bed/bed-head-blink.png',
         speak: 'assets/images/scenes/bed/bed-head-speak.png',
+        moneyHead: 'assets/images/scenes/bed/bed-head-shock.png',
+        moneyBlink: 'assets/images/scenes/bed/bed-head-blink-shock.png',
         idleClosed: 'assets/images/scenes/bed/bed-head-no-speak-eyes-close.png',
         speakClosed: 'assets/images/scenes/bed/bed-head-speak-eyes-close.png',
         idleClosedCry: 'assets/images/scenes/bed/bed-head-no-speak-eyes-close-cry.png',
@@ -60,6 +63,19 @@ export const SCENE_ASSETS = {
         angry: 'assets/images/scenes/bed/bed-head-no-speak.png',
         happy: 'assets/images/scenes/bed/bed-head-no-speak.png',
         happyTalk: 'assets/images/scenes/bed/bed-head-no-speak.png',
+        tailOrigin: '42.6980% 62.0781%',
+        hasSpecialHeads: false
+    },
+    [SCENE_BED_N]: {
+        bg: 'assets/images/scenes/bed_N/bed_N-bg.png',
+        body: 'assets/images/scenes/bed_N/bed_N-body-naked.png',
+        tail: 'assets/images/scenes/bed/bed-tail.png',
+        idle: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+        blink: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+        speak: 'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
+        angry: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+        happy: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+        happyTalk: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
         tailOrigin: '42.6980% 62.0781%',
         hasSpecialHeads: false
     },
@@ -113,6 +129,9 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/bed/bed-head-no-speak.png',
     'assets/images/scenes/bed/bed-head-blink.png',
     'assets/images/scenes/bed/bed-head-speak.png',
+    'assets/images/scenes/bed/bed-head-shock.png',
+    'assets/images/scenes/bed/bed-head-blink-shock.png',
+    'assets/images/scenes/bed/bed-money-popup.png',
     'assets/images/scenes/bed/bed-head-no-speak-eyes-close.png',
     'assets/images/scenes/bed/bed-head-speak-eyes-close.png',
     'assets/images/scenes/bed/bed-head-no-speak-eyes-close-cry.png',
@@ -120,6 +139,10 @@ export const PRELOAD_IMAGE_ASSETS = [
     'assets/images/scenes/bed/bed-head-no-speak-tears.png',
     'assets/images/scenes/bed/bed-head-speak-tears.png',
     'assets/images/scenes/bed/bed-head-blink-speak-tears.png',
+    'assets/images/scenes/bed_N/bed_N-bg.png',
+    'assets/images/scenes/bed_N/bed_N-body-naked.png',
+    'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
     'assets/images/scenes/fight/fight-fox-notail.png',
     'assets/images/scenes/fight/fight-headphone.png',
     'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
