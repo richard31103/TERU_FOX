@@ -1858,17 +1858,35 @@
             height: 118px;
         }
 
+        #game-container.choice-focus-mode[data-device-tier="phone"][data-orientation="portrait"] #quick-actions {
+            top: auto;
+            right: 10px;
+            bottom: min(
+                    calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset) + var(--choice-mobile-max-h) + 10px),
+                    calc(100dvh - env(safe-area-inset-top, 0px) - 196px));
+        }
+
+        #game-container.choice-focus-mode[data-device-tier="tablet"][data-orientation="portrait"] #quick-actions {
+            top: auto;
+            bottom: min(
+                    calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset) + var(--choice-mobile-max-h) + 12px),
+                    calc(100dvh - env(safe-area-inset-top, 0px) - 312px));
+        }
+
         #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
         #game-container[data-device-tier="tablet"][data-orientation="portrait"] #choice-panel {
             top: auto;
             left: 10px;
             right: 10px;
             width: auto;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
             bottom: calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset));
             transform: translateY(16px);
-            max-height: min(var(--choice-mobile-max-h),
-                    calc(100dvh - var(--choice-safe-top) - env(safe-area-inset-bottom, 0px) - var(--choice-mobile-gap) - var(--choice-anchor-offset)));
+            max-height: none;
+            overflow-y: visible;
+            padding-right: 0;
         }
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel.visible,
@@ -1881,12 +1899,16 @@
             font-size: 16px;
             letter-spacing: 2px;
             padding: 6px 12px;
+            position: static;
+            margin-bottom: 0;
         }
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-btn,
         #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-btn {
             padding: 12px 16px;
             gap: 12px;
+            min-height: 52px;
+            align-items: flex-start;
         }
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-num,
@@ -1898,9 +1920,50 @@
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-text,
         #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-text {
-            font-size: 17px;
-            line-height: 1.45;
+            font-size: clamp(14px, 3.9vw, 17px);
+            line-height: 1.35;
             letter-spacing: 0.2px;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] #choice-panel {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-label,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-label {
+            grid-column: 1 / -1;
+            font-size: 14px;
+            letter-spacing: 1px;
+            padding: 5px 10px;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-btn,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-btn {
+            min-width: 0;
+            min-height: 66px;
+            padding: 10px 10px;
+            gap: 8px;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-num,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-num {
+            min-width: 24px;
+            height: 24px;
+            font-size: 12px;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-text,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-text {
+            font-size: clamp(12px, 2.9vw, 14px);
+            line-height: 1.22;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
         }
 
         @media (prefers-reduced-motion: reduce) {
