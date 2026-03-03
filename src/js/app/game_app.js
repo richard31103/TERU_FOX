@@ -1191,7 +1191,14 @@ debugLog('[BOOT] game_app module active');
         function getSceneGameTitle(uiBundle) {
             const ui = uiBundle || l10n[currentLang]?.ui;
             if (!ui) return '';
-            if (activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N) return ui.bedGameTitle || '提爾家';
+            if (activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N) {
+                const bedTitleFallbackByLang = {
+                    tw: '提爾家',
+                    en: "Teru's Home",
+                    jp: 'テルの家'
+                };
+                return ui.bedGameTitle || bedTitleFallbackByLang[currentLang] || bedTitleFallbackByLang.tw;
+            }
             return ui.gameTitle || '';
         }
 

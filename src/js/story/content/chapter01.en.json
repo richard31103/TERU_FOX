@@ -9,8 +9,9 @@
     "deathText": "You were bitten to death.",
     "speaker": "TERU",
     "ui": {
-      "docTitle": "Da'an Forest Park - Lawn",
-      "gameTitle": "Da'an Forest Park - Lawn",
+      "docTitle": "Park - Lawn",
+      "gameTitle": "Park - Lawn",
+      "bedGameTitle": "Teru's Home",
       "save": "Save",
       "load": "Load",
       "autoBtn": "Auto",

@@ -66,11 +66,7 @@ export function createChoiceController({ choicePanelEl, chapterBadgeEl }) {
             return Promise.resolve();
         }
         clearPressedState();
-        choiceButtons.forEach((btn, index) => {
-            btn.classList.remove('choice-entering', 'choice-entered');
-            btn.classList.toggle('choice-picked', index === slotIndex);
-            btn.classList.toggle('choice-dimmed', index !== slotIndex && btn.style.display !== 'none');
-        });
+        selectedBtn.classList.add('is-pressed');
         const delayMs = getChoiceConfirmDelayMs();
         if (delayMs <= 0) return Promise.resolve();
         return new Promise((resolve) => {

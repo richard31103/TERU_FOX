@@ -9,8 +9,9 @@
     "deathText": "你被咬死了",
     "speaker": "提爾狐",
     "ui": {
-      "docTitle": "大安森林公園 - 草地",
-      "gameTitle": "大安森林公園 ‧ 草地",
+      "docTitle": "公園 - 草地",
+      "gameTitle": "公園 ‧ 草地",
+      "bedGameTitle": "提爾家",
       "save": "儲存",
       "load": "讀取",
       "autoBtn": "自動",

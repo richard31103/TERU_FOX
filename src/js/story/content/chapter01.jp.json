@@ -9,8 +9,9 @@
     "deathText": "噛み殺された。",
     "speaker": "テール",
     "ui": {
-      "docTitle": "大安森林公園 - 芝生",
-      "gameTitle": "大安森林公園 ‧ 芝生",
+      "docTitle": "公園 - 芝生",
+      "gameTitle": "公園 ‧ 芝生",
+      "bedGameTitle": "テルの家",
       "save": "セーブ",
       "load": "ロード",
       "autoBtn": "オート",
