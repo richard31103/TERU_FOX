@@ -200,7 +200,7 @@ export const BED_N_DIALOGUE_LINES = {
         'You are way too patient...',
         'Meow meow...',
         'My image is basically gone...',
-        'Since my image is already gone... then let us...'
+        'I am going to sleep now, do not touch me!!'
     ],
     jp: [
         'パパ、ありがとう...',
@@ -213,8 +213,35 @@ export const BED_N_DIALOGUE_LINES = {
         '執着がすごいよ...',
         'にゃーにゃー...',
         'イメージが壊れちゃう...',
-        'もうイメージもないし... じゃあ...'
+        'もう寝るから、触るな！！'
     ]
+};
+
+export const BED_N_SLEEP_BRANCH_TEXT = {
+    tw: {
+        postSleepLine: '床是我的，你去睡沙發!',
+        choiceTitle: '你要怎麼做？',
+        optionUnderBlanket: '鑽進棉被裡',
+        optionSleepSofa: '乖乖去睡沙發',
+        goodNightLine: '晚安',
+        deathText: '你被咬死了'
+    },
+    en: {
+        postSleepLine: 'The bed is mine. Go sleep on the couch!',
+        choiceTitle: 'What will you do?',
+        optionUnderBlanket: 'Slip under the blanket',
+        optionSleepSofa: 'Go sleep on the couch',
+        goodNightLine: 'Good night.',
+        deathText: '你被咬死了'
+    },
+    jp: {
+        postSleepLine: 'ベッドはボクの。キミはソファで寝て！',
+        choiceTitle: 'どうする？',
+        optionUnderBlanket: '布団に潜り込む',
+        optionSleepSofa: 'おとなしくソファで寝る',
+        goodNightLine: 'おやすみ。',
+        deathText: '你被咬死了'
+    }
 };
 
 export const BED_N_TRANSITION = { fadeInMs: 600, holdMs: 3000, fadeOutMs: 600 };

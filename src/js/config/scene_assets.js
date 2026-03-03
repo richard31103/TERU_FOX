@@ -67,7 +67,7 @@ export const SCENE_ASSETS = {
         hasSpecialHeads: false
     },
     [SCENE_BED_N]: {
-        bg: 'assets/images/scenes/bed_N/bed_N-bg.png',
+        bg: 'assets/images/scenes/bed_N/bed_N-bg.jpg',
         body: 'assets/images/scenes/bed_N/bed_N-body-naked.png',
         tail: 'assets/images/scenes/bed_N/bed_N-tail.png',
         idle: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
@@ -149,11 +149,13 @@ const BED_SCENE_IMAGE_ASSETS = uniqueAssets([
 ]);
 
 const BED_N_SCENE_IMAGE_ASSETS = uniqueAssets([
-    'assets/images/scenes/bed_N/bed_N-bg.png',
+    'assets/images/scenes/bed_N/bed_N-bg.jpg',
     'assets/images/scenes/bed_N/bed_N-body-naked.png',
     'assets/images/scenes/bed_N/bed_N-tail.png',
     'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png'
+    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
+    'assets/images/scenes/bed_N/bed_N-sleep.jpg',
+    'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg'
 ]);
 
 const FIGHT_SCENE_IMAGE_ASSETS = uniqueAssets([

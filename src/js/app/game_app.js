@@ -23,6 +23,7 @@ import {
     BED_EXTRA_MONEY_OPTION_TEXT,
     BED_CRY_LOOP_LINES,
     BED_N_DIALOGUE_LINES,
+    BED_N_SLEEP_BRANCH_TEXT,
     BED_N_TRANSITION,
     BED_STOP_LINE_BY_LANG,
     BED_TAIL_BURST_RESET_MS,
@@ -83,6 +84,10 @@ debugLog('[BOOT] game_app module active');
 
         function textSpeedLevelToMs(level) {
             return Math.round(90 - Number(level) * 8);
+        }
+
+        function waitForMs(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
         const appContext = createAppContext(document);
@@ -442,10 +447,13 @@ debugLog('[BOOT] game_app module active');
         let isRuntimeChoiceMode = false;
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
+        let isBedNSleepBgOnlyMode = false;
         let hasUsedMainOOXXChoice = false;
         let viewportProfile = null;
         const FIGHT_POST_OOXX_DAMAGE_ASSET = 'assets/images/scenes/fight/fight-fox-damage-notail-break.png';
         const FIGHT_POST_OOXX_POST_HIT_ASSET = 'assets/images/scenes/fight/fight-fox-naked.png';
+        const BED_N_SLEEP_BG_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep.jpg';
+        const BED_N_SLEEP_NO_LIGHT_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg';
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -471,6 +479,12 @@ debugLog('[BOOT] game_app module active');
             gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
             gameContainerEl.classList.toggle('choice-focus-mode', inChoiceMode);
             syncDialogueFitForMobile();
+        }
+
+        function setBedNSleepBgOnlyMode(enabled) {
+            isBedNSleepBgOnlyMode = Boolean(enabled);
+            if (!gameContainerEl) return;
+            gameContainerEl.classList.toggle('scene-bed-n-sleep-only', isBedNSleepBgOnlyMode);
         }
 
         function syncDialogueFitForMobile() {
@@ -767,6 +781,85 @@ debugLog('[BOOT] game_app module active');
         function getBedNDialogueLines() {
             const lines = BED_N_DIALOGUE_LINES[currentLang] || BED_N_DIALOGUE_LINES.tw;
             return Array.isArray(lines) ? lines : [];
+        }
+
+        function getBedNSleepBranchTextBundle() {
+            return BED_N_SLEEP_BRANCH_TEXT[currentLang] || BED_N_SLEEP_BRANCH_TEXT.tw;
+        }
+
+        async function ensureBgAssetLoaded(assetKey) {
+            if (!assetKey) return false;
+            if (assetStore.resolve(assetKey)) return true;
+            const result = await assetStore.ensure(assetKey).catch(() => null);
+            return Boolean(result?.ok || assetStore.resolve(assetKey));
+        }
+
+        async function transitionToBedNSleepBg() {
+            let switchedToSleepBg = false;
+            const applySleepBg = async () => {
+                const loaded = await ensureBgAssetLoaded(BED_N_SLEEP_BG_ASSET);
+                if (loaded) {
+                    if (bgEl) setCachedBg(bgEl, BED_N_SLEEP_BG_ASSET);
+                    if (bgSplashEl) {
+                        setCachedBg(bgSplashEl, BED_N_SLEEP_BG_ASSET);
+                        bgSplashEl.classList.add('fade-out');
+                        bgSplashEl.style.transition = '';
+                        bgSplashEl.style.opacity = '';
+                    }
+                }
+                setBedNSleepBgOnlyMode(true);
+                switchedToSleepBg = true;
+            };
+
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'bed-n-sleep-entry',
+                    fadeInMs: BED_N_SLEEP_ENTRY_TRANSITION.fadeInMs,
+                    holdMs: BED_N_SLEEP_ENTRY_TRANSITION.holdMs,
+                    fadeOutMs: BED_N_SLEEP_ENTRY_TRANSITION.fadeOutMs,
+                    onBlack: applySleepBg
+                });
+                if ((!result || result.cancelled) && !switchedToSleepBg) {
+                    await applySleepBg();
+                }
+            } catch (err) {
+                console.error('Bed_N sleep transition error:', err);
+                if (!switchedToSleepBg) {
+                    await applySleepBg();
+                }
+            }
+
+            return switchedToSleepBg;
+        }
+
+        async function crossfadeBedNBackgroundTo(assetKey) {
+            if (!assetKey) return false;
+            const loaded = await ensureBgAssetLoaded(assetKey);
+            if (!loaded) return false;
+
+            if (!bgEl || !bgSplashEl) {
+                if (bgEl) setCachedBg(bgEl, assetKey);
+                if (bgSplashEl) setCachedBg(bgSplashEl, assetKey);
+                return true;
+            }
+
+            setCachedBg(bgSplashEl, assetKey);
+            bgSplashEl.classList.remove('fade-out');
+            bgSplashEl.style.transition = `opacity ${BED_N_SLEEP_BG_CROSSFADE_MS}ms ease`;
+            bgSplashEl.style.opacity = '0';
+            void bgSplashEl.offsetWidth;
+            bgSplashEl.style.opacity = '1';
+
+            await waitForMs(BED_N_SLEEP_BG_CROSSFADE_MS + 30);
+            setCachedBg(bgEl, assetKey);
+            bgSplashEl.style.transition = 'opacity 220ms ease';
+            bgSplashEl.style.opacity = '0';
+            await waitForMs(260);
+
+            bgSplashEl.classList.add('fade-out');
+            bgSplashEl.style.transition = '';
+            bgSplashEl.style.opacity = '';
+            return true;
         }
 
         function applyDefaultSceneHeadByContext() {
@@ -2238,6 +2331,46 @@ debugLog('[BOOT] game_app module active');
             runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
         }
 
+        function showBedNSleepBranchChoices() {
+            const textBundle = getBedNSleepBranchTextBundle();
+            showRuntimeChoicePanel({
+                titleKey: '',
+                fallbackTitle: textBundle.choiceTitle,
+                options: [
+                    {
+                        textKey: '',
+                        fallbackText: textBundle.optionUnderBlanket,
+                        onSelect: onBedNSleepUnderBlanket
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: textBundle.optionSleepSofa,
+                        onSelect: onBedNSleepSofa
+                    }
+                ]
+            });
+        }
+
+        function onBedNSleepUnderBlanket() {
+            const textBundle = getBedNSleepBranchTextBundle();
+            dispatchAction('trigger_death', { delayMs: 0, overrideDeathText: textBundle.deathText || '你被咬死了' });
+        }
+
+        function onBedNSleepSofa() {
+            const textBundle = getBedNSleepBranchTextBundle();
+            hideChoicePanel();
+            setTyping(false);
+            const speakerName = l10n[currentLang]?.speaker || '';
+            void (async () => {
+                await crossfadeBedNBackgroundTo(BED_N_SLEEP_NO_LIGHT_ASSET);
+                runScriptedLine(textBundle.goodNightLine || '晚安', speakerName, () => {
+                    pendingClickAdvance = () => {
+                        dispatchAction('show_to_be_continued', { delayMs: 0 });
+                    };
+                });
+            })();
+        }
+
         function startBedNDialogueSequence() {
             const lines = getBedNDialogueLines();
             if (!lines.length) {
@@ -2247,12 +2380,30 @@ debugLog('[BOOT] game_app module active');
             runScriptedLines(
                 lines,
                 l10n[currentLang]?.speaker || '',
-                () => dispatchAction('show_to_be_continued', { delayMs: 0 }),
+                () => {
+                    pendingClickAdvance = () => {
+                        const speakerName = l10n[currentLang]?.speaker || '';
+                        const textBundle = getBedNSleepBranchTextBundle();
+                        void (async () => {
+                            const switchedToSleepBg = await transitionToBedNSleepBg();
+                            if (!switchedToSleepBg) {
+                                dispatchAction('show_to_be_continued', { delayMs: 0 });
+                                return;
+                            }
+                            runScriptedLine(textBundle.postSleepLine || '床是我的，你去睡沙發!', speakerName, () => {
+                                pendingClickAdvance = () => {
+                                    showBedNSleepBranchChoices();
+                                };
+                            });
+                        })();
+                    };
+                },
                 { requireClickBetweenLines: true }
             );
         }
 
         async function startBedNSceneBranch() {
+            setBedNSleepBgOnlyMode(false);
             setTyping(false);
             bedFlow.active = false;
             hideChoicePanel();
@@ -2291,6 +2442,7 @@ debugLog('[BOOT] game_app module active');
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_n_entry' }); } catch (e) { }
             }
+            setBedNSleepBgOnlyMode(false);
             startBedNDialogueSequence();
         }
 
@@ -2327,6 +2479,7 @@ debugLog('[BOOT] game_app module active');
 
         async function startBedScene() {
             if (bedFlow.active) return;
+            setBedNSleepBgOnlyMode(false);
             setTyping(false);
             resetMoneyIntermission();
             hideMoneyPopup();
@@ -2463,6 +2616,8 @@ debugLog('[BOOT] game_app module active');
         const FIGHT_ENTRY_TRANSITION = { fadeInMs: 450, holdMs: 100, fadeOutMs: 400 };
         const OOXX_ENTRY_TRANSITION = { fadeInMs: 1200, holdMs: 1800, fadeOutMs: 1200 };
         const OOXX_RESULT_TRANSITION = { fadeInMs: 350, holdMs: 120, fadeOutMs: 350 };
+        const BED_N_SLEEP_ENTRY_TRANSITION = { fadeInMs: 420, holdMs: 120, fadeOutMs: 420 };
+        const BED_N_SLEEP_BG_CROSSFADE_MS = 700;
         const OOXX_RESULT_REVEAL_DELAY_MS = 120;
         const OOXX_RESULT_TEXT_SHOW_DELAY_MS = 20;
         const OOXX_RESULT_LOCK_RETRY_MS = 80;
@@ -3404,6 +3559,7 @@ debugLog('[BOOT] game_app module active');
             ooxxReturnChoiceSourceIndices = null;
             dialogueHistory.length = 0;
             clearFightVisualFx();
+            setBedNSleepBgOnlyMode(false);
 
             // Reset UI elements that may be dirty
             dialogueController.setChoiceMode(false);
@@ -3496,6 +3652,7 @@ debugLog('[BOOT] game_app module active');
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
             clearFightVisualFx();
+            setBedNSleepBgOnlyMode(false);
             resetMoneyIntermission();
             if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
             if (petFoxTimer) {
