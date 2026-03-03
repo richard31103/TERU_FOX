@@ -232,7 +232,7 @@ export const BED_N_SLEEP_BRANCH_TEXT = {
         optionUnderBlanket: 'Slip under the blanket',
         optionSleepSofa: 'Go sleep on the couch',
         goodNightLine: 'Good night.',
-        deathText: '你被咬死了'
+        deathText: 'You were bitten to death.'
     },
     jp: {
         postSleepLine: 'ベッドはボクの。キミはソファで寝て！',
@@ -240,7 +240,7 @@ export const BED_N_SLEEP_BRANCH_TEXT = {
         optionUnderBlanket: '布団に潜り込む',
         optionSleepSofa: 'おとなしくソファで寝る',
         goodNightLine: 'おやすみ。',
-        deathText: '你被咬死了'
+        deathText: '噛み殺された。'
     }
 };
 
