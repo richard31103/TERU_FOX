@@ -1485,7 +1485,18 @@ debugLog('[BOOT] game_app module active');
             isChoicePickPending = false;
             dialogueController.setChoiceMode(true);
             choiceController.show();
-            applyAfraidHeadMode(shouldUseAfraidForChoice(sourceIndices));
+            const shouldUseAfraid = shouldUseAfraidForChoice(sourceIndices);
+            // Prevent stale emotion flags from forcing angry/happy layers
+            // while entering the default "你想做什麼？" choice panel.
+            if (shouldUseAfraid) {
+                isAngry = false;
+                isHappy = false;
+                isHappyTalkMode = false;
+            }
+            applyAfraidHeadMode(shouldUseAfraid);
+            if (shouldUseAfraid) {
+                setCharState(isTyping ? 'speak' : 'idle');
+            }
             clearChoicePressedState();
             syncChoiceUiState();
             setChoiceButtons(sourceIndices);
