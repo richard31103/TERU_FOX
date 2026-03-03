@@ -136,6 +136,33 @@ export const BED_STOP_LINE_BY_LANG = {
     jp: 'で、まだ何したいの？'
 };
 
+export const BED_CRY_LOOP_LINES = {
+    tw: [
+        '我受不了拉...',
+        '嗚嗚嗚喔...',
+        '咿咿咿阿...',
+        '嗚欸欸欸...',
+        '姆喔喔喔...',
+        '嗚嗚嗚嗚...'
+    ],
+    en: [
+        "I can't take it anymore...",
+        'Uuuh... uuoh...',
+        'Iiih... aaah...',
+        'Uweh... eeh...',
+        'Mmm... ooh...',
+        'Uuuu...'
+    ],
+    jp: [
+        'もう無理...',
+        'うぅぅぅお...',
+        'いぃぃぃあ...',
+        'うぇぇぇぇ...',
+        'むおぉぉぉ...',
+        'うぅぅぅ...'
+    ]
+};
+
 export const BED_EXTRA_MONEY_OPTION_TEXT = {
     tw: '再拿出500$',
     en: 'Pull Out Another $500',

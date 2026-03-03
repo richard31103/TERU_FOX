@@ -1324,8 +1324,8 @@
         }
 
         .social-icon-mask.qq {
-            -webkit-mask-image: url('assets/images/ui/social/tencent-qq.svg');
-            mask-image: url('assets/images/ui/social/tencent-qq.svg');
+            -webkit-mask-image: url('assets/images/ui/social/qqnew.svg');
+            mask-image: url('assets/images/ui/social/qqnew.svg');
         }
 
         .social-meta {
@@ -1853,6 +1853,28 @@
             width: auto;
         }
 
+        #game-container[data-lang="jp"][data-device-tier="phone"][data-orientation="portrait"] #dialogue-area {
+            height: 172px;
+        }
+
+        #game-container[data-lang="jp"][data-device-tier="phone"][data-orientation="portrait"] #dialogue-area[data-dialogue-fit="normal"] #dialogue-text {
+            font-size: 16px;
+            line-height: 1.52;
+            letter-spacing: 0.2px;
+        }
+
+        #game-container[data-lang="jp"][data-device-tier="phone"][data-orientation="portrait"] #dialogue-area[data-dialogue-fit="tight"] #dialogue-text {
+            font-size: 15px;
+            line-height: 1.44;
+            letter-spacing: 0.1px;
+        }
+
+        #game-container[data-lang="jp"][data-device-tier="phone"][data-orientation="portrait"] #dialogue-area[data-dialogue-fit="tighter"] #dialogue-text {
+            font-size: 14px;
+            line-height: 1.38;
+            letter-spacing: 0;
+        }
+
         #game-container.choice-focus-mode[data-device-tier="phone"][data-orientation="portrait"] #dialogue-area,
         #game-container.choice-focus-mode[data-device-tier="tablet"][data-orientation="portrait"] #dialogue-area {
             height: 118px;
@@ -1878,6 +1900,12 @@
             bottom: min(
                     calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset) + var(--choice-mobile-max-h) + 12px),
                     calc(100dvh - env(safe-area-inset-top, 0px) - 312px));
+        }
+
+        #game-container.choice-focus-mode[data-device-tier="phone"][data-orientation="portrait"]:has(#choice-panel.visible[data-choice-count="4"]) #quick-actions {
+            bottom: min(
+                    calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset) + 208px),
+                    calc(100dvh - env(safe-area-inset-top, 0px) - 206px));
         }
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
@@ -1915,7 +1943,7 @@
             padding: 12px 16px;
             gap: 12px;
             min-height: 52px;
-            align-items: flex-start;
+            align-items: center;
         }
 
         #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-num,
@@ -1934,15 +1962,48 @@
             word-break: break-word;
         }
 
-        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
-        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] #choice-panel {
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel[data-choice-count="4"] {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
         }
 
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel[data-choice-count="4"] .choice-label {
+            grid-column: 1 / -1;
+            font-size: 14px;
+            letter-spacing: 1px;
+            padding: 5px 10px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel[data-choice-count="4"] .choice-btn {
+            min-width: 0;
+            min-height: 66px;
+            padding: 10px 10px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel[data-choice-count="4"] .choice-num {
+            min-width: 24px;
+            height: 24px;
+            font-size: 12px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel[data-choice-count="4"] .choice-text {
+            font-size: clamp(12px, 3.05vw, 14px);
+            line-height: 1.24;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
+        #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] #choice-panel {
+            gap: 7px;
+        }
+
         #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-label,
         #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-label {
-            grid-column: 1 / -1;
             font-size: 14px;
             letter-spacing: 1px;
             padding: 5px 10px;
@@ -1951,22 +2012,23 @@
         #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-btn,
         #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-btn {
             min-width: 0;
-            min-height: 66px;
-            padding: 10px 10px;
-            gap: 8px;
+            min-height: 60px;
+            padding: 9px 9px;
+            gap: 7px;
+            align-items: center;
         }
 
         #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-num,
         #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-num {
-            min-width: 24px;
-            height: 24px;
-            font-size: 12px;
+            min-width: 22px;
+            height: 22px;
+            font-size: 11px;
         }
 
         #game-container[data-occlusion-fail="1"][data-device-tier="phone"][data-orientation="portrait"] .choice-text,
         #game-container[data-occlusion-fail="1"][data-device-tier="tablet"][data-orientation="portrait"] .choice-text {
-            font-size: clamp(12px, 2.9vw, 14px);
-            line-height: 1.22;
+            font-size: clamp(11px, 2.8vw, 13px);
+            line-height: 1.18;
             overflow: hidden;
             display: -webkit-box;
             -webkit-line-clamp: 3;

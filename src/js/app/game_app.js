@@ -21,6 +21,7 @@ import {
     BED_ENTRY_TRANSITION,
     BED_EXTRA_MONEY_LINE,
     BED_EXTRA_MONEY_OPTION_TEXT,
+    BED_CRY_LOOP_LINES,
     BED_N_DIALOGUE_LINES,
     BED_N_TRANSITION,
     BED_STOP_LINE_BY_LANG,
@@ -106,7 +107,23 @@ debugLog('[BOOT] game_app module active');
         function setCachedSrc(imgEl, assetKey) {
             if (!imgEl || !assetKey) return false;
             const resolvedSrc = assetStore.resolve(assetKey);
-            if (!resolvedSrc) return false;
+            if (!resolvedSrc) {
+                imgEl.dataset.assetKey = assetKey;
+                debugLog('[HEAD_ASSET_PENDING]', assetKey, 'reason=cache_miss');
+                assetStore.ensure(assetKey).then((result) => {
+                    if (!result?.ok) return;
+                    const recoveredSrc = assetStore.resolve(assetKey) || result.objectUrl;
+                    if (!recoveredSrc) return;
+                    if (imgEl.dataset.assetKey !== assetKey) return;
+                    if (imgEl.getAttribute('src') !== recoveredSrc) {
+                        imgEl.setAttribute('src', recoveredSrc);
+                    }
+                    debugLog('[HEAD_ASSET_RECOVERED]', assetKey);
+                }).catch((err) => {
+                    debugLog('[HEAD_ASSET_PENDING]', assetKey, `reason=ensure_failed:${err?.message || err}`);
+                });
+                return false;
+            }
             if (imgEl.dataset.assetKey === assetKey && imgEl.getAttribute('src') === resolvedSrc) {
                 return true;
             }
@@ -469,6 +486,47 @@ debugLog('[BOOT] game_app module active');
             if (!gameContainerEl) return;
             gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
             gameContainerEl.classList.toggle('choice-focus-mode', inChoiceMode);
+            syncDialogueFitForMobile();
+        }
+
+        function syncDialogueFitForMobile() {
+            if (!dialogueArea || !dialogueText || !gameContainerEl) return;
+
+            const isPhonePortrait = gameContainerEl.dataset.deviceTier === 'phone'
+                && gameContainerEl.dataset.orientation === 'portrait';
+            const shouldAdapt = isPhonePortrait && currentLang === 'jp';
+            if (!shouldAdapt) {
+                dialogueArea.dataset.dialogueFit = 'normal';
+                return;
+            }
+
+            const areaStyle = window.getComputedStyle(dialogueArea);
+            if (areaStyle.display === 'none' || areaStyle.visibility === 'hidden') {
+                dialogueArea.dataset.dialogueFit = 'normal';
+                return;
+            }
+
+            const textRect = dialogueText.getBoundingClientRect();
+            if (!textRect || textRect.width <= 0 || textRect.height <= 0) {
+                dialogueArea.dataset.dialogueFit = 'normal';
+                return;
+            }
+
+            const fitLevels = ['normal', 'tight', 'tighter'];
+            for (let i = 0; i < fitLevels.length; i += 1) {
+                const fit = fitLevels[i];
+                dialogueArea.dataset.dialogueFit = fit;
+                const isOverflow = dialogueText.scrollHeight > (dialogueText.clientHeight + 1);
+                if (!isOverflow) break;
+            }
+        }
+
+        function updateChoicePanelMeta() {
+            if (!choicePanel) return;
+            const visibleCount = choiceButtonEls.reduce((count, btn) => (
+                btn && btn.style.display !== 'none' ? count + 1 : count
+            ), 0);
+            choicePanel.dataset.choiceCount = String(visibleCount);
         }
 
         function isCoarsePointerInput() {
@@ -617,51 +675,131 @@ debugLog('[BOOT] game_app module active');
                 || sameChoiceSourceIndices(sourceIndices, FOLLOWUP_CHOICE_SOURCE_INDICES);
         }
 
+        function getHeadLayers() {
+            return [charIdle, charBlink, charSpeak, charAngry, charHappy, charHappyTalk].filter(Boolean);
+        }
+
+        function clearHeadActiveState() {
+            getHeadLayers().forEach((el) => el.classList.remove('active'));
+        }
+
+        function isRenderableImage(el) {
+            return Boolean(el && el.complete && el.naturalWidth > 0);
+        }
+
+        function getFirstRenderableActiveHeadLayer() {
+            return getHeadLayers().find((el) => el.classList.contains('active') && isRenderableImage(el)) || null;
+        }
+
+        function ensureHeadAssetRequested(el, reason = '') {
+            if (!el) return;
+            const assetKey = el.dataset?.assetKey;
+            if (!assetKey) return;
+            const ok = setCachedSrc(el, assetKey);
+            if (!ok) {
+                debugLog('[HEAD_ASSET_PENDING]', assetKey, `reason=${reason || 'state_guard'}`);
+            }
+        }
+
+        function activateHeadLayerSafe(targetEl, fallbackEl, reason = '') {
+            if (isRenderableImage(targetEl)) {
+                targetEl.classList.add('active');
+                return targetEl;
+            }
+            ensureHeadAssetRequested(targetEl, `${reason}:target`);
+            if (isRenderableImage(fallbackEl)) {
+                fallbackEl.classList.add('active');
+                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'target_not_renderable', 'fallback=active');
+                return fallbackEl;
+            }
+            ensureHeadAssetRequested(fallbackEl, `${reason}:fallback`);
+            debugLog('[HEAD_ASSET_PENDING]', targetEl?.dataset?.assetKey || 'unknown', `reason=${reason || 'target_not_renderable'}`);
+            return null;
+        }
+
+        function ensureAnyHeadVisible(previousRenderableHeadLayer, reason = '') {
+            const layers = getHeadLayers();
+            const hasRenderableActive = layers.some((el) => el.classList.contains('active') && isRenderableImage(el));
+            if (hasRenderableActive) return;
+
+            if (previousRenderableHeadLayer && isRenderableImage(previousRenderableHeadLayer)) {
+                clearHeadActiveState();
+                previousRenderableHeadLayer.classList.add('active');
+                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'restore_previous');
+                return;
+            }
+
+            const firstRenderable = layers.find((el) => isRenderableImage(el));
+            if (firstRenderable) {
+                clearHeadActiveState();
+                firstRenderable.classList.add('active');
+                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'use_first_renderable');
+                return;
+            }
+
+            ensureHeadAssetRequested(charIdle, `${reason}:force_idle`);
+            ensureHeadAssetRequested(charBlink, `${reason}:force_blink`);
+            debugLog('[HEAD_ASSET_PENDING]', 'none_renderable', `reason=${reason || 'final_guard'}`);
+        }
+
         function setCharState(state) {
-            charIdle.classList.remove('active');
-            charBlink.classList.remove('active');
-            charSpeak.classList.remove('active');
-            if (charAngry) charAngry.classList.remove('active');
-            if (charHappy) charHappy.classList.remove('active');
-            if (charHappyTalk) charHappyTalk.classList.remove('active');
+            const previousRenderableHeadLayer = getFirstRenderableActiveHeadLayer();
+            clearHeadActiveState();
+
+            const specialHappyLayer = isHappyTalkMode && happyMouthOpen && charHappyTalk ? charHappyTalk : charHappy;
 
             if (isAngry) {
-                if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
-                else charIdle.classList.add('active');
+                const angryLayer = sceneSupportsSpecialHeads && charAngry ? charAngry : charIdle;
+                activateHeadLayerSafe(angryLayer, charIdle, `angry_mode:${state}`);
+                ensureAnyHeadVisible(previousRenderableHeadLayer, `angry_mode:${state}`);
                 return;
             }
             if (isHappy) {
                 if ((isShyBedTransitionMode || isMoneyIntermission) && state === 'blink') {
-                    charBlink.classList.add('active');
+                    activateHeadLayerSafe(charBlink, specialHappyLayer || charIdle, 'happy_mode:blink');
+                    ensureAnyHeadVisible(previousRenderableHeadLayer, 'happy_mode:blink');
                     return;
                 }
-                if (sceneSupportsSpecialHeads && charHappy) {
-                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
-                    else charHappy.classList.add('active');
+                if (sceneSupportsSpecialHeads && specialHappyLayer) {
+                    activateHeadLayerSafe(specialHappyLayer, charIdle, `happy_mode:${state}`);
+                } else {
+                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, `happy_mode:${state}`);
                 }
-                else charIdle.classList.add('active');
+                ensureAnyHeadVisible(previousRenderableHeadLayer, `happy_mode:${state}`);
                 return;
             }
 
-            if (state === 'idle') charIdle.classList.add('active');
-            else if (state === 'blink') charBlink.classList.add('active');
-            else if (state === 'speak') charSpeak.classList.add('active');
-            else if (state === 'angry') {
-                if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
-                else charIdle.classList.add('active');
-            }
-            else if (state === 'happy') {
-                if (sceneSupportsSpecialHeads && charHappy) {
-                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
-                    else charHappy.classList.add('active');
+            if (state === 'idle') {
+                activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:idle');
+            } else if (state === 'blink') {
+                activateHeadLayerSafe(charBlink, charIdle || previousRenderableHeadLayer, 'state:blink');
+            } else if (state === 'speak') {
+                activateHeadLayerSafe(charSpeak, charIdle || previousRenderableHeadLayer, 'state:speak');
+            } else if (state === 'angry') {
+                if (sceneSupportsSpecialHeads && charAngry) {
+                    activateHeadLayerSafe(charAngry, charIdle || previousRenderableHeadLayer, 'state:angry');
+                } else {
+                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:angry_fallback');
                 }
-                else charIdle.classList.add('active');
+            } else if (state === 'happy') {
+                if (sceneSupportsSpecialHeads && specialHappyLayer) {
+                    activateHeadLayerSafe(specialHappyLayer, charIdle || previousRenderableHeadLayer, 'state:happy');
+                } else {
+                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:happy_fallback');
+                }
+            } else if (state === 'happyTalk') {
+                if (sceneSupportsSpecialHeads && charHappyTalk) {
+                    activateHeadLayerSafe(charHappyTalk, charHappy || charIdle, 'state:happyTalk');
+                } else if (sceneSupportsSpecialHeads && charHappy) {
+                    activateHeadLayerSafe(charHappy, charIdle || previousRenderableHeadLayer, 'state:happyTalk_to_happy');
+                } else {
+                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:happyTalk_fallback');
+                }
+            } else {
+                activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, `state:unknown:${state}`);
             }
-            else if (state === 'happyTalk') {
-                if (sceneSupportsSpecialHeads && charHappyTalk) charHappyTalk.classList.add('active');
-                else if (sceneSupportsSpecialHeads && charHappy) charHappy.classList.add('active');
-                else charIdle.classList.add('active');
-            }
+
+            ensureAnyHeadVisible(previousRenderableHeadLayer, `state:${state}`);
         }
 
         function getStoryText(key, fallback = '') {
@@ -1350,6 +1488,7 @@ debugLog('[BOOT] game_app module active');
             isChoicePickPending = false;
             dialogueController.setChoiceMode(false);
             choiceController.hide();
+            if (choicePanel) choicePanel.dataset.choiceCount = '0';
             if (isAfraidHeadMode) applyAfraidHeadMode(false);
             clearChoicePressedState();
             syncChoiceUiState();
@@ -1421,6 +1560,7 @@ debugLog('[BOOT] game_app module active');
                 if (numEl) numEl.textContent = String(slotIndex + 1);
                 if (textEl) textEl.textContent = text;
             });
+            updateChoicePanelMeta();
         }
 
         function showChoicePanel(sourceIndices = DEFAULT_CHOICE_SOURCE_INDICES) {
@@ -1474,6 +1614,7 @@ debugLog('[BOOT] game_app module active');
                 if (numEl) numEl.textContent = String(slotIndex + 1);
                 if (textEl) textEl.textContent = getStoryText(option.textKey, option.fallbackText || '');
             });
+            updateChoicePanelMeta();
         }
 
         function showRuntimeChoicePanel({ titleKey, options, fallbackTitle = '' }) {
@@ -1844,10 +1985,12 @@ debugLog('[BOOT] game_app module active');
             typeTimer = setInterval(() => {
                 if (charIndex < lineText.length) {
                     dialogueText.textContent += lineText[charIndex++];
+                    syncDialogueFitForMobile();
                     playTap();
                 } else {
                     clearInterval(typeTimer);
                     setTyping(false);
+                    syncDialogueFitForMobile();
                     // Add to history once complete typing
                     if (!dialogueHistory.some(r => r.text === lineText && (!r.isChoice))) {
                         dialogueHistory.push({ speaker: t.speaker, text: lineText, isChoice: false });
@@ -1870,6 +2013,7 @@ debugLog('[BOOT] game_app module active');
                     dialogueText.textContent = lineText;
                     rememberCurrentLineText(lineText);
                 }
+                syncDialogueFitForMobile();
                 return;
             }
             if (lineIndex < script.length - 1) {
@@ -1933,10 +2077,12 @@ debugLog('[BOOT] game_app module active');
             typeTimer = setInterval(() => {
                 if (charIndex < responseText.length) {
                     dialogueText.textContent += responseText[charIndex++];
+                    syncDialogueFitForMobile();
                     playTap();
                 } else {
                     clearInterval(typeTimer);
                     setTyping(false);
+                    syncDialogueFitForMobile();
                     if (responseText) {
                         dialogueHistory.push({ speaker: speakerName, text: responseText, isChoice: false });
                     }
@@ -2144,8 +2290,12 @@ debugLog('[BOOT] game_app module active');
                 bedFlow.extraMoneyUnlocked = true;
             }
             applyBedHeadVariant(isCryMode ? 'eyes_closed_cry' : 'eyes_closed');
+            const cryLoopLines = BED_CRY_LOOP_LINES[currentLang] || BED_CRY_LOOP_LINES.tw;
+            const cryLoopLine = cryLoopLines.length
+                ? cryLoopLines[bedFlow.postCryContinueCount % cryLoopLines.length]
+                : getStoryText('bed_line_continue_cry', '我受不了拉...');
             const line = isCryMode
-                ? getStoryText('bed_line_continue_cry', '我受不了拉...')
+                ? cryLoopLine
                 : getStoryText('bed_line_continue', '嗚嗚....');
             runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
         }
@@ -2940,12 +3090,14 @@ debugLog('[BOOT] game_app module active');
                 }
                 scheduleChoiceOcclusionValidation();
             }
+            syncDialogueFitForMobile();
         }
 
         function updateUIText() {
             const t = l10n[currentLang];
             if (!t || !t.ui) return;
             const ui = t.ui;
+            if (gameContainerEl) gameContainerEl.dataset.lang = currentLang;
 
             document.getElementById('lang-ui-docTitle').textContent = ui.docTitle;
             document.querySelector('.lang-ui-gameTitle').textContent = getSceneGameTitle(ui);
@@ -3007,6 +3159,7 @@ debugLog('[BOOT] game_app module active');
             if (titleLangTw) titleLangTw.textContent = ui.tw;
             if (titleLangJp) titleLangJp.textContent = ui.jp;
             if (titleLangEn) titleLangEn.textContent = ui.en;
+            syncDialogueFitForMobile();
         }
 
         function setToggle(group, val) {
@@ -3277,7 +3430,7 @@ debugLog('[BOOT] game_app module active');
         // Legacy toast-only history function removed; history panel is used instead.
 
         // Game flow control
-        function startGame() {
+        async function startGame() {
             if (!areImageAssetsReady) {
                 const loadingText = document.getElementById('loading-text');
                 if (failedImageAssets.length > 0) {
@@ -3350,6 +3503,18 @@ debugLog('[BOOT] game_app module active');
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
             applyOpeningHeadMode(true);
+            const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
+            if (!defaultScenePreload.ok) {
+                console.error('[ASSET] Failed default scene preload on start_game:', defaultScenePreload.failedAssets);
+                const loadingText = document.getElementById('loading-text');
+                if (loadingText) {
+                    const failedCount = defaultScenePreload.failedAssets?.length || 0;
+                    loadingText.textContent = `Failed to load ${failedCount} image(s). Please refresh.`;
+                }
+                const loadingContainer = document.getElementById('loading-container');
+                if (loadingContainer) loadingContainer.style.display = 'flex';
+                return;
+            }
             applyScene(SCENE_DEFAULT);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
 
@@ -3381,7 +3546,7 @@ debugLog('[BOOT] game_app module active');
             }, OVERLAY_FADE_MS + 40);
         }
 
-        function returnToTitle(sourceOverlayEl, cleanupFn) {
+        async function returnToTitle(sourceOverlayEl, cleanupFn) {
             // Stop logic / reset
             clearInterval(typeTimer);
             isDeathSequence = false;
@@ -3413,6 +3578,11 @@ debugLog('[BOOT] game_app module active');
                 petFoxTimer = null;
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
+            if (!defaultScenePreload.ok) {
+                debugLog('[HEAD_ASSET_PENDING]', 'default_scene_preload_failed', JSON.stringify(defaultScenePreload.failedAssets || []));
+                console.warn('[ASSET] Default scene preload failed during return_to_title:', defaultScenePreload.failedAssets);
+            }
             applyScene(SCENE_DEFAULT);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
             cancelOOXXTransitions('returnToTitle reset');
@@ -3432,6 +3602,7 @@ debugLog('[BOOT] game_app module active');
                 applyFightTailPivotFromSource();
             }
             if (inChoiceMode) scheduleChoiceOcclusionValidation();
+            syncDialogueFitForMobile();
         }
 
         window.addEventListener('resize', handleViewportChange);
