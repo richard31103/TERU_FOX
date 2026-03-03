@@ -49,6 +49,8 @@ import { createDialogueController } from '../features/dialogue_controller.js';
 import { createBedFlowState } from '../features/bed_flow.js';
 import { createFightFlowFx } from '../features/fight_flow.js';
 import { bindOverlayController } from '../features/overlay_controller.js';
+import { applyViewportProfile, computeViewportProfile } from '../ui/viewport_profile.js';
+import { triggerSoftVibration } from '../ui/ui_feedback.js';
 
 const DEBUG = false;
 const debugLog = (...args) => {
@@ -322,6 +324,7 @@ debugLog('[BOOT] game_app module active');
 
             bindUiActions();
             wireSfx();
+            updateViewportProfile();
             createParticles();
             startAssetLoader();
             updateUIText();
@@ -360,6 +363,7 @@ debugLog('[BOOT] game_app module active');
         let textSpeedMs = textSpeedLevelToMs(DEFAULT_TEXT_SPEED_LEVEL);
         let currentDialogueLineText = '';
         let inChoiceMode = false;
+        let isChoicePickPending = false;
 
         // Character Animation State
         let isSpeaking = false;
@@ -437,6 +441,7 @@ debugLog('[BOOT] game_app module active');
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
         let hasUsedMainOOXXChoice = false;
+        let viewportProfile = null;
         const FIGHT_POST_OOXX_DAMAGE_ASSET = 'assets/images/scenes/fight/fight-fox-damage-notail-break.png';
         const FIGHT_POST_OOXX_POST_HIT_ASSET = 'assets/images/scenes/fight/fight-fox-naked.png';
         let headTouchStage = 0;
@@ -459,9 +464,127 @@ debugLog('[BOOT] game_app module active');
         const choiceButtonEls = choiceController.choiceButtons;
         // const totalDots = script.length; (Removed)
 
-        function syncMobileChoiceUi() {
+        function syncChoiceUiState() {
             if (!gameContainerEl) return;
             gameContainerEl.classList.toggle('mobile-choice-open', inChoiceMode);
+            gameContainerEl.classList.toggle('choice-focus-mode', inChoiceMode);
+        }
+
+        function isCoarsePointerInput() {
+            return Boolean(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+        }
+
+        function updateViewportProfile() {
+            if (!gameContainerEl) return;
+            viewportProfile = computeViewportProfile({
+                width: window.innerWidth,
+                height: window.innerHeight,
+                isCoarsePointer: isCoarsePointerInput()
+            });
+            applyViewportProfile(gameContainerEl, viewportProfile);
+        }
+
+        function getRectIntersectionArea(a, b) {
+            if (!a || !b) return 0;
+            const w = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            const h = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            return w * h;
+        }
+
+        function getFallbackHeadSafeRect() {
+            if (!gameContainerEl) return null;
+            const rect = gameContainerEl.getBoundingClientRect();
+            if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+            return {
+                left: rect.left,
+                right: rect.right,
+                top: rect.top,
+                bottom: rect.top + rect.height * 0.42,
+                width: rect.width,
+                height: rect.height * 0.42
+            };
+        }
+
+        function getHeadSafeRect() {
+            if (!headTouchZoneEl) return getFallbackHeadSafeRect();
+            const zoneStyle = window.getComputedStyle(headTouchZoneEl);
+            const zoneHidden = zoneStyle.display === 'none' || zoneStyle.visibility === 'hidden';
+            const zoneRect = headTouchZoneEl.getBoundingClientRect();
+            if (
+                zoneHidden
+                || !zoneRect
+                || zoneRect.width <= 0
+                || zoneRect.height <= 0
+            ) {
+                return getFallbackHeadSafeRect();
+            }
+            return zoneRect;
+        }
+
+        function getSpeakerPlateRect() {
+            if (!speakerPlate) return null;
+            const plateStyle = window.getComputedStyle(speakerPlate);
+            const hidden = plateStyle.display === 'none' || plateStyle.visibility === 'hidden';
+            const rect = speakerPlate.getBoundingClientRect();
+            if (hidden || !rect || rect.width <= 0 || rect.height <= 0) return null;
+            return rect;
+        }
+
+        function validateChoiceOcclusion() {
+            if (!gameContainerEl || !choicePanel || !inChoiceMode || !choicePanel.classList.contains('visible')) {
+                gameContainerEl?.removeAttribute('data-occlusion-fail');
+                gameContainerEl?.removeAttribute('data-ui-overlap-nameplate');
+                return true;
+            }
+            const panelRect = choicePanel.getBoundingClientRect();
+            const safeRect = getHeadSafeRect();
+            const speakerRect = getSpeakerPlateRect();
+            if (
+                !panelRect
+                || panelRect.width <= 0
+                || panelRect.height <= 0
+            ) {
+                gameContainerEl.removeAttribute('data-occlusion-fail');
+                gameContainerEl.removeAttribute('data-ui-overlap-nameplate');
+                return true;
+            }
+            const intersectionArea = safeRect ? getRectIntersectionArea(panelRect, safeRect) : 0;
+            const isHeadFail = intersectionArea > 0;
+            const nameplateOverlapArea = speakerRect ? getRectIntersectionArea(panelRect, speakerRect) : 0;
+            const isNameplateFail = nameplateOverlapArea > 0;
+            if (isHeadFail) {
+                gameContainerEl.dataset.occlusionFail = '1';
+                console.warn('[UI] Choice panel overlaps character head safe zone.', {
+                    intersectionArea,
+                    panelRect,
+                    safeRect
+                });
+            } else {
+                gameContainerEl.removeAttribute('data-occlusion-fail');
+            }
+            if (isNameplateFail) {
+                gameContainerEl.dataset.uiOverlapNameplate = '1';
+                console.warn('[UI] Choice panel overlaps speaker plate.', {
+                    nameplateOverlapArea,
+                    panelRect,
+                    speakerRect
+                });
+            } else {
+                gameContainerEl.removeAttribute('data-ui-overlap-nameplate');
+            }
+            return !isHeadFail && !isNameplateFail;
+        }
+
+        function scheduleChoiceOcclusionValidation() {
+            if (!inChoiceMode) {
+                validateChoiceOcclusion();
+                return;
+            }
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    validateChoiceOcclusion();
+                });
+            });
         }
 
         function clearChoicePressedState() {
@@ -1216,11 +1339,13 @@ debugLog('[BOOT] game_app module active');
 
         function hideChoicePanel() {
             inChoiceMode = false;
+            isChoicePickPending = false;
             dialogueController.setChoiceMode(false);
             choiceController.hide();
             if (isAfraidHeadMode) applyAfraidHeadMode(false);
             clearChoicePressedState();
-            syncMobileChoiceUi();
+            syncChoiceUiState();
+            validateChoiceOcclusion();
         }
 
         function playTailWagBurst() {
@@ -1263,6 +1388,8 @@ debugLog('[BOOT] game_app module active');
                 const sourceIndex = sourceIndices[slotIndex];
                 const numEl = btn.querySelector('.choice-num');
                 const textEl = btn.querySelector('.choice-text');
+                btn.classList.remove('choice-entering', 'choice-entered', 'choice-picked', 'choice-dimmed');
+                btn.style.removeProperty('--choice-stagger-delay');
                 let text = typeof sourceIndex === 'number' ? t.choices[sourceIndex] : '';
                 if (
                     typeof sourceIndex === 'number'
@@ -1293,12 +1420,15 @@ debugLog('[BOOT] game_app module active');
                 try { appState.transition(GAME_STATES.CHOICE, { source: 'show_choice_panel' }); } catch (e) { }
             }
             inChoiceMode = true;
+            isChoicePickPending = false;
             dialogueController.setChoiceMode(true);
             choiceController.show();
             applyAfraidHeadMode(shouldUseAfraidForChoice(sourceIndices));
             clearChoicePressedState();
-            syncMobileChoiceUi();
+            syncChoiceUiState();
             setChoiceButtons(sourceIndices);
+            choiceController.animateChoiceIn();
+            scheduleChoiceOcclusionValidation();
 
             // Preload OOXX UI/AI while user is still on choice screen.
             warmupOOXXEngine();
@@ -1321,6 +1451,8 @@ debugLog('[BOOT] game_app module active');
                 const option = runtimeChoiceState.options[slotIndex];
                 const numEl = btn.querySelector('.choice-num');
                 const textEl = btn.querySelector('.choice-text');
+                btn.classList.remove('choice-entering', 'choice-entered', 'choice-picked', 'choice-dimmed');
+                btn.style.removeProperty('--choice-stagger-delay');
                 if (!option) {
                     btn.style.display = 'none';
                     if (btn.dataset) delete btn.dataset.clickSfx;
@@ -1347,12 +1479,15 @@ debugLog('[BOOT] game_app module active');
                 try { appState.transition(GAME_STATES.CHOICE, { source: 'runtime_choice' }); } catch (e) { }
             }
             inChoiceMode = true;
+            isChoicePickPending = false;
             dialogueController.setChoiceMode(true);
             choiceController.show();
             applyAfraidHeadMode(false);
             clearChoicePressedState();
-            syncMobileChoiceUi();
+            syncChoiceUiState();
             renderRuntimeChoicePanel();
+            choiceController.animateChoiceIn();
+            scheduleChoiceOcclusionValidation();
             warmupOOXXEngine();
             prepareOOXXScreen();
         }
@@ -1369,6 +1504,29 @@ debugLog('[BOOT] game_app module active');
             runtimeChoiceState = null;
             hideChoicePanel();
             option.onSelect();
+        }
+
+        function handleChoiceSelection(slotIndex) {
+            if (isChoicePickPending) return;
+            isChoicePickPending = true;
+            triggerSoftVibration(12);
+            choiceController
+                .animateChoicePick(slotIndex)
+                .catch(() => { })
+                .then(() => {
+                    if (!inChoiceMode || !choicePanel.classList.contains('visible')) return;
+                    if (isRuntimeChoiceMode) {
+                        handleRuntimeChoice(slotIndex);
+                        return;
+                    }
+                    const sourceIndex = currentChoiceSourceIndices[slotIndex];
+                    if (typeof sourceIndex === 'number') {
+                        pickChoice(sourceIndex);
+                    }
+                })
+                .finally(() => {
+                    isChoicePickPending = false;
+                });
         }
 
         function playFightHitFx() {
@@ -1544,6 +1702,7 @@ debugLog('[BOOT] game_app module active');
 
         if (choicePanel) {
             choicePanel.addEventListener('pointerdown', (e) => {
+                if (isChoicePickPending) return;
                 const btn = e.target instanceof Element ? e.target.closest('.choice-btn') : null;
                 if (!btn) return;
                 clearChoicePressedState();
@@ -1657,9 +1816,11 @@ debugLog('[BOOT] game_app module active');
             }
 
             inChoiceMode = false;
+            isChoicePickPending = false;
             dialogueController.setChoiceMode(false);
             choiceController.hide();
-            syncMobileChoiceUi();
+            syncChoiceUiState();
+            validateChoiceOcclusion();
             if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'render_line' }); } catch (e) { }
             }
@@ -2769,6 +2930,7 @@ debugLog('[BOOT] game_app module active');
                     setChoiceButtons(currentChoiceSourceIndices);
                     applyAfraidHeadMode(shouldUseAfraidForChoice(currentChoiceSourceIndices));
                 }
+                scheduleChoiceOcclusionValidation();
             }
         }
 
@@ -2885,16 +3047,10 @@ debugLog('[BOOT] game_app module active');
                 'pick-choice': ({ actionEl }) => {
                     if (isOpeningDialogueLocked) return;
                     if (!inChoiceMode || !choicePanel.classList.contains('visible')) return;
+                    if (isChoicePickPending) return;
                     const slotIndex = Number.parseInt(actionEl.dataset.choiceIndex || '-1', 10);
                     if (Number.isNaN(slotIndex) || slotIndex < 0) return;
-                    if (isRuntimeChoiceMode) {
-                        handleRuntimeChoice(slotIndex);
-                        return;
-                    }
-                    const sourceIndex = currentChoiceSourceIndices[slotIndex];
-                    if (typeof sourceIndex === 'number') {
-                        pickChoice(sourceIndex);
-                    }
+                    handleChoiceSelection(slotIndex);
                 }
             });
         }
@@ -3033,6 +3189,7 @@ debugLog('[BOOT] game_app module active');
             hasUsedMainOOXXChoice = false;
             isTyping = false;
             inChoiceMode = false;
+            isChoicePickPending = false;
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
@@ -3056,7 +3213,8 @@ debugLog('[BOOT] game_app module active');
             dialogueController.setChoiceMode(false);
             choiceController.hide();
             dialogueController.renderText('');
-            syncMobileChoiceUi();
+            syncChoiceUiState();
+            validateChoiceOcclusion();
 
             // Clear any inline styles that could interfere with hiding/showing
             document.getElementById('title-screen').style.opacity = '';
@@ -3150,15 +3308,21 @@ debugLog('[BOOT] game_app module active');
             transitionToTitleWithCover(sourceOverlayEl, cleanupFn);
         }
 
-        window.addEventListener('resize', () => {
+        function handleViewportChange() {
+            updateViewportProfile();
             if (activeSceneId === SCENE_FIGHT) {
                 applyFightTailPivotFromSource();
             }
-        });
+            if (inChoiceMode) scheduleChoiceOcclusionValidation();
+        }
+
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('orientationchange', handleViewportChange);
 
         // Start
         scheduleNextBlink();
         // Do not renderLine(0) immediately, wait for Start
         // renderLine(0);
+
 
 

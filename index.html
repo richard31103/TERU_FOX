@@ -21,6 +21,22 @@
         :root {
             --char-focus-x: 50%;
             --char-focus-y: 22%;
+            --ui-warm-100: #ffe9be;
+            --ui-warm-200: #f5d898;
+            --ui-warm-300: #e9b25a;
+            --ui-warm-400: #d48728;
+            --ui-warm-500: #a85214;
+            --ui-glass-top: rgba(40, 15, 2, 0.82);
+            --ui-glass-bottom: rgba(15, 6, 0, 0.82);
+            --ui-border-strong: rgba(240, 170, 50, 0.80);
+            --ui-border-soft: rgba(200, 120, 30, 0.38);
+            --ui-shadow-soft: 0 0 18px rgba(210, 120, 20, 0.45);
+            --ui-shadow-strong: 0 0 22px rgba(210, 120, 20, 0.50);
+            --ui-radius-lg: 16px;
+            --choice-safe-top: 46dvh;
+            --choice-mobile-max-h: 38dvh;
+            --choice-mobile-gap: 12px;
+            --choice-anchor-offset: 124px;
         }
 
         @media (max-height: 820px) {
@@ -455,6 +471,7 @@
             padding: 0 28px;
             background: linear-gradient(to bottom, rgba(0, 0, 0, 0.80) 0%, transparent 100%);
             z-index: 10;
+            transition: opacity 0.24s ease, transform 0.24s ease;
         }
 
         #game-title {
@@ -507,7 +524,7 @@
             padding: 14px 26px;
             z-index: 10;
             backdrop-filter: blur(8px);
-            transition: opacity 0.3s ease;
+            transition: opacity 0.24s ease, transform 0.24s ease;
         }
 
         #game-container.scene-bed #chapter-badge {
@@ -537,6 +554,7 @@
             flex-direction: column;
             gap: 10px;
             z-index: 10;
+            transition: opacity 0.24s ease, transform 0.24s ease;
         }
 
         .qa-btn {
@@ -544,8 +562,8 @@
             height: 68px;
             border-radius: 50%;
             background: rgba(20, 8, 0, 0.65);
-            border: 2px solid rgba(220, 140, 40, 0.32);
-            color: #f0cc80;
+            border: 2px solid var(--ui-border-soft);
+            color: var(--ui-warm-200);
             font-size: 28px;
             line-height: 1;
             display: flex;
@@ -553,15 +571,15 @@
             justify-content: center;
             cursor: pointer;
             backdrop-filter: blur(6px);
-            transition: all 0.2s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
             position: relative;
         }
 
         .qa-btn:hover {
             background: rgba(180, 80, 10, 0.60);
-            border-color: #e09030;
+            border-color: var(--ui-border-strong);
             transform: scale(1.12);
-            box-shadow: 0 0 18px rgba(220, 130, 20, 0.6);
+            box-shadow: var(--ui-shadow-soft);
         }
 
         .qa-btn .tooltip {
@@ -591,58 +609,92 @@
             left: 48px;
             top: 50%;
             transform: translateY(-50%) translateX(-160px);
-            width: 520px;
+            width: min(520px, calc(100vw - 96px));
             z-index: 30;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 14px;
             opacity: 0;
             pointer-events: none;
+            max-height: min(72dvh, calc(100dvh - 140px));
+            overflow-y: auto;
+            padding-right: 6px;
             transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
         }
 
         #choice-panel.visible {
             transform: translateY(-50%) translateX(0);
             opacity: 1;
-            pointer-events: none;
+            pointer-events: auto;
+        }
+
+        #choice-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #choice-panel::-webkit-scrollbar-thumb {
+            background: rgba(224, 132, 36, 0.56);
+            border-radius: 999px;
         }
 
         .choice-label {
             font-size: 22px;
-            color: #d4a050;
+            color: var(--ui-warm-300);
             letter-spacing: 5px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
             font-family: 'Cinzel', serif;
             text-shadow: 0 0 14px rgba(220, 140, 30, 0.85);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: linear-gradient(180deg, rgba(15, 6, 0, 0.94), rgba(15, 6, 0, 0.74));
+            border: 1px solid rgba(220, 140, 40, 0.38);
+            border-radius: 10px;
+            padding: 8px 14px;
+            backdrop-filter: blur(5px);
         }
 
         .choice-btn {
             display: flex;
             align-items: center;
             gap: 18px;
-            background: linear-gradient(135deg, rgba(40, 15, 2, 0.82), rgba(15, 6, 0, 0.82));
-            border: 2px solid rgba(200, 120, 30, 0.38);
-            border-radius: 16px;
+            background: linear-gradient(135deg, var(--ui-glass-top), var(--ui-glass-bottom));
+            border: 2px solid var(--ui-border-soft);
+            border-radius: var(--ui-radius-lg);
             padding: 20px 24px;
             cursor: pointer;
             backdrop-filter: blur(10px);
-            transition: all 0.22s;
+            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease, opacity 0.2s ease;
             text-align: left;
             width: 100%;
             font-family: 'Noto Serif TC', serif;
             pointer-events: none;
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
         }
 
         #choice-panel.visible .choice-btn {
             pointer-events: auto;
         }
 
+        #choice-panel.visible .choice-btn.choice-entering {
+            opacity: 0;
+            transform: translateX(-18px) scale(0.98);
+        }
+
+        #choice-panel.visible .choice-btn.choice-entered {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition-delay: var(--choice-stagger-delay, 0ms);
+        }
+
         @media (hover: hover) and (pointer: fine) {
             .choice-btn:hover {
                 background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
-                border-color: rgba(240, 170, 50, 0.80);
+                border-color: var(--ui-border-strong);
                 transform: translateX(8px);
-                box-shadow: 0 0 22px rgba(210, 120, 20, 0.50);
+                box-shadow: var(--ui-shadow-strong);
             }
         }
 
@@ -658,18 +710,32 @@
         @media (hover: none) and (pointer: coarse) {
             .choice-btn.is-pressed {
                 background: linear-gradient(135deg, rgba(160, 60, 10, 0.70), rgba(100, 40, 5, 0.70));
-                border-color: rgba(240, 170, 50, 0.80);
+                border-color: var(--ui-border-strong);
                 transform: translateX(4px);
-                box-shadow: 0 0 18px rgba(210, 120, 20, 0.45);
+                box-shadow: var(--ui-shadow-soft);
             }
+        }
+
+        .choice-btn.choice-picked {
+            border-color: var(--ui-border-strong);
+            background: linear-gradient(135deg, rgba(185, 78, 12, 0.78), rgba(112, 44, 4, 0.78));
+            box-shadow: 0 0 24px rgba(226, 146, 42, 0.66);
+            transform: translateX(7px) scale(1.01);
+            pointer-events: none;
+        }
+
+        .choice-btn.choice-dimmed {
+            opacity: 0.28;
+            transform: scale(0.985);
+            pointer-events: none;
         }
 
         .choice-num {
             min-width: 38px;
             height: 38px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #b05010, #7a2e00);
-            color: #ffe8b0;
+            background: linear-gradient(135deg, var(--ui-warm-500), #7a2e00);
+            color: var(--ui-warm-100);
             font-size: 16px;
             font-weight: 700;
             display: flex;
@@ -681,10 +747,13 @@
 
         .choice-text {
             font-size: 20px;
-            color: #f5e8c8;
+            color: var(--ui-warm-100);
             line-height: 1.55;
             text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 0.8);
             letter-spacing: 0.5px;
+            flex: 1;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         /* ???? DIALOGUE AREA ???? */
@@ -695,12 +764,24 @@
             right: 0;
             height: 160px;
             z-index: 20;
-            transition: opacity 0.15s ease-out;
+            transition: opacity 0.2s ease-out, height 0.24s ease, transform 0.24s ease;
         }
 
         #dialogue-area.money-hidden {
             opacity: 0;
             pointer-events: none;
+        }
+
+        #game-container.choice-focus-mode #dialogue-area {
+            height: 128px;
+        }
+
+        #game-container.choice-focus-mode #top-bar,
+        #game-container.choice-focus-mode #chapter-badge,
+        #game-container.choice-focus-mode #quick-actions {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-8px);
         }
 
         /* Glass backdrop ??warm semi-transparent */
@@ -711,7 +792,7 @@
                     rgba(15, 6, 0, 0.42) 0%,
                     rgba(30, 10, 0, 0.62) 100%);
             backdrop-filter: blur(6px);
-            border-top: 1px solid rgba(200, 120, 30, 0.38);
+            border-top: 1px solid var(--ui-border-soft);
         }
 
         /* Warm neon top line */
@@ -729,25 +810,30 @@
         /* Name plate */
         #speaker-plate {
             position: absolute;
-            top: -40px;
-            left: 40px;
+            top: 8px;
+            left: 12px;
             background: linear-gradient(135deg, #8b3200, #c06010);
             border: 2px solid rgba(240, 170, 60, 0.60);
-            border-radius: 12px 12px 0 0;
-            padding: 10px 36px 6px;
-            font-size: 24px;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 16px;
             font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif;
             font-weight: 700;
             color: #fff0cc;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
             text-shadow: 0 0 12px rgba(240, 160, 40, 0.9);
-            box-shadow: 0 -5px 22px rgba(160, 70, 10, 0.60);
+            box-shadow: 0 0 12px rgba(160, 70, 10, 0.55);
+            width: fit-content;
+            max-width: calc(100% - 24px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Dialogue text + inline blinking cursor */
         #dialogue-text {
             position: absolute;
-            top: 32px;
+            top: 46px;
             left: 40px;
             right: 40px;
             bottom: 52px;
@@ -757,6 +843,10 @@
             color: #f8efd8;
             text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 1);
             letter-spacing: 1px;
+        }
+
+        #game-container.choice-focus-mode #dialogue-text {
+            font-size: 22px;
         }
 
         /* Inline typing cursor ??only visible while .typing class is present */
@@ -1415,10 +1505,17 @@
             }
 
             #speaker-plate {
-                top: -18px;
-                left: -10px;
-                font-size: 16px;
-                padding: 4px 16px;
+                top: 6px;
+                left: 10px;
+                font-size: 14px;
+                padding: 3px 10px;
+                border-radius: 8px;
+                letter-spacing: 1px;
+            }
+
+            #dialogue-text {
+                top: 40px;
+                bottom: 18px;
             }
 
             .ctrl-btn {
@@ -1511,6 +1608,98 @@
 
             #ooxx-result-text {
                 font-size: 44px;
+            }
+        }
+
+        #game-container[data-device-tier="phone"] {
+            --choice-mobile-max-h: 38dvh;
+            --choice-anchor-offset: 124px;
+        }
+
+        #game-container[data-device-tier="phone"][data-height-tier="short"] {
+            --choice-mobile-max-h: 34dvh;
+            --choice-anchor-offset: 112px;
+        }
+
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] {
+            --choice-mobile-max-h: 36dvh;
+            --choice-anchor-offset: 132px;
+        }
+
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"][data-height-tier="short"] {
+            --choice-anchor-offset: 120px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #dialogue-area,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] #dialogue-area {
+            left: 10px;
+            right: 10px;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+            width: auto;
+        }
+
+        #game-container.choice-focus-mode[data-device-tier="phone"][data-orientation="portrait"] #dialogue-area,
+        #game-container.choice-focus-mode[data-device-tier="tablet"][data-orientation="portrait"] #dialogue-area {
+            height: 118px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] #choice-panel {
+            top: auto;
+            left: 10px;
+            right: 10px;
+            width: auto;
+            gap: 10px;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + var(--choice-mobile-gap) + var(--choice-anchor-offset));
+            transform: translateY(16px);
+            max-height: min(var(--choice-mobile-max-h),
+                    calc(100dvh - var(--choice-safe-top) - env(safe-area-inset-bottom, 0px) - var(--choice-mobile-gap) - var(--choice-anchor-offset)));
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] #choice-panel.visible,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] #choice-panel.visible {
+            transform: translateY(0);
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-label,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-label {
+            font-size: 16px;
+            letter-spacing: 2px;
+            padding: 6px 12px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-btn,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-btn {
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-num,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-num {
+            min-width: 32px;
+            height: 32px;
+            font-size: 14px;
+        }
+
+        #game-container[data-device-tier="phone"][data-orientation="portrait"] .choice-text,
+        #game-container[data-device-tier="tablet"][data-orientation="portrait"] .choice-text {
+            font-size: 17px;
+            line-height: 1.45;
+            letter-spacing: 0.2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #top-bar,
+            #chapter-badge,
+            #quick-actions,
+            #dialogue-area,
+            #choice-panel,
+            .choice-btn,
+            .qa-btn,
+            .particle {
+                animation: none !important;
+                transition-duration: 0.01ms !important;
+                transition-delay: 0ms !important;
             }
         }
 
