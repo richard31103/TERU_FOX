@@ -107,23 +107,7 @@ debugLog('[BOOT] game_app module active');
         function setCachedSrc(imgEl, assetKey) {
             if (!imgEl || !assetKey) return false;
             const resolvedSrc = assetStore.resolve(assetKey);
-            if (!resolvedSrc) {
-                imgEl.dataset.assetKey = assetKey;
-                debugLog('[HEAD_ASSET_PENDING]', assetKey, 'reason=cache_miss');
-                assetStore.ensure(assetKey).then((result) => {
-                    if (!result?.ok) return;
-                    const recoveredSrc = assetStore.resolve(assetKey) || result.objectUrl;
-                    if (!recoveredSrc) return;
-                    if (imgEl.dataset.assetKey !== assetKey) return;
-                    if (imgEl.getAttribute('src') !== recoveredSrc) {
-                        imgEl.setAttribute('src', recoveredSrc);
-                    }
-                    debugLog('[HEAD_ASSET_RECOVERED]', assetKey);
-                }).catch((err) => {
-                    debugLog('[HEAD_ASSET_PENDING]', assetKey, `reason=ensure_failed:${err?.message || err}`);
-                });
-                return false;
-            }
+            if (!resolvedSrc) return false;
             if (imgEl.dataset.assetKey === assetKey && imgEl.getAttribute('src') === resolvedSrc) {
                 return true;
             }
@@ -675,131 +659,61 @@ debugLog('[BOOT] game_app module active');
                 || sameChoiceSourceIndices(sourceIndices, FOLLOWUP_CHOICE_SOURCE_INDICES);
         }
 
-        function getHeadLayers() {
-            return [charIdle, charBlink, charSpeak, charAngry, charHappy, charHappyTalk].filter(Boolean);
-        }
-
-        function clearHeadActiveState() {
-            getHeadLayers().forEach((el) => el.classList.remove('active'));
-        }
-
-        function isRenderableImage(el) {
-            return Boolean(el && el.complete && el.naturalWidth > 0);
-        }
-
-        function getFirstRenderableActiveHeadLayer() {
-            return getHeadLayers().find((el) => el.classList.contains('active') && isRenderableImage(el)) || null;
-        }
-
-        function ensureHeadAssetRequested(el, reason = '') {
-            if (!el) return;
-            const assetKey = el.dataset?.assetKey;
-            if (!assetKey) return;
-            const ok = setCachedSrc(el, assetKey);
-            if (!ok) {
-                debugLog('[HEAD_ASSET_PENDING]', assetKey, `reason=${reason || 'state_guard'}`);
-            }
-        }
-
-        function activateHeadLayerSafe(targetEl, fallbackEl, reason = '') {
-            if (isRenderableImage(targetEl)) {
-                targetEl.classList.add('active');
-                return targetEl;
-            }
-            ensureHeadAssetRequested(targetEl, `${reason}:target`);
-            if (isRenderableImage(fallbackEl)) {
-                fallbackEl.classList.add('active');
-                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'target_not_renderable', 'fallback=active');
-                return fallbackEl;
-            }
-            ensureHeadAssetRequested(fallbackEl, `${reason}:fallback`);
-            debugLog('[HEAD_ASSET_PENDING]', targetEl?.dataset?.assetKey || 'unknown', `reason=${reason || 'target_not_renderable'}`);
-            return null;
-        }
-
-        function ensureAnyHeadVisible(previousRenderableHeadLayer, reason = '') {
-            const layers = getHeadLayers();
-            const hasRenderableActive = layers.some((el) => el.classList.contains('active') && isRenderableImage(el));
-            if (hasRenderableActive) return;
-
-            if (previousRenderableHeadLayer && isRenderableImage(previousRenderableHeadLayer)) {
-                clearHeadActiveState();
-                previousRenderableHeadLayer.classList.add('active');
-                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'restore_previous');
-                return;
-            }
-
-            const firstRenderable = layers.find((el) => isRenderableImage(el));
-            if (firstRenderable) {
-                clearHeadActiveState();
-                firstRenderable.classList.add('active');
-                debugLog('[HEAD_VISIBILITY_FALLBACK]', reason || 'use_first_renderable');
-                return;
-            }
-
-            ensureHeadAssetRequested(charIdle, `${reason}:force_idle`);
-            ensureHeadAssetRequested(charBlink, `${reason}:force_blink`);
-            debugLog('[HEAD_ASSET_PENDING]', 'none_renderable', `reason=${reason || 'final_guard'}`);
-        }
-
         function setCharState(state) {
-            const previousRenderableHeadLayer = getFirstRenderableActiveHeadLayer();
-            clearHeadActiveState();
-
-            const specialHappyLayer = isHappyTalkMode && happyMouthOpen && charHappyTalk ? charHappyTalk : charHappy;
+            charIdle.classList.remove('active');
+            charBlink.classList.remove('active');
+            charSpeak.classList.remove('active');
+            if (charAngry) charAngry.classList.remove('active');
+            if (charHappy) charHappy.classList.remove('active');
+            if (charHappyTalk) charHappyTalk.classList.remove('active');
 
             if (isAngry) {
-                const angryLayer = sceneSupportsSpecialHeads && charAngry ? charAngry : charIdle;
-                activateHeadLayerSafe(angryLayer, charIdle, `angry_mode:${state}`);
-                ensureAnyHeadVisible(previousRenderableHeadLayer, `angry_mode:${state}`);
+                if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
+                else charIdle.classList.add('active');
                 return;
             }
             if (isHappy) {
                 if ((isShyBedTransitionMode || isMoneyIntermission) && state === 'blink') {
-                    activateHeadLayerSafe(charBlink, specialHappyLayer || charIdle, 'happy_mode:blink');
-                    ensureAnyHeadVisible(previousRenderableHeadLayer, 'happy_mode:blink');
+                    charBlink.classList.add('active');
                     return;
                 }
-                if (sceneSupportsSpecialHeads && specialHappyLayer) {
-                    activateHeadLayerSafe(specialHappyLayer, charIdle, `happy_mode:${state}`);
+                if (sceneSupportsSpecialHeads && charHappy) {
+                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
+                    else charHappy.classList.add('active');
                 } else {
-                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, `happy_mode:${state}`);
+                    charIdle.classList.add('active');
                 }
-                ensureAnyHeadVisible(previousRenderableHeadLayer, `happy_mode:${state}`);
                 return;
             }
 
             if (state === 'idle') {
-                activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:idle');
+                charIdle.classList.add('active');
             } else if (state === 'blink') {
-                activateHeadLayerSafe(charBlink, charIdle || previousRenderableHeadLayer, 'state:blink');
+                charBlink.classList.add('active');
             } else if (state === 'speak') {
-                activateHeadLayerSafe(charSpeak, charIdle || previousRenderableHeadLayer, 'state:speak');
+                charSpeak.classList.add('active');
             } else if (state === 'angry') {
                 if (sceneSupportsSpecialHeads && charAngry) {
-                    activateHeadLayerSafe(charAngry, charIdle || previousRenderableHeadLayer, 'state:angry');
+                    charAngry.classList.add('active');
                 } else {
-                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:angry_fallback');
+                    charIdle.classList.add('active');
                 }
             } else if (state === 'happy') {
-                if (sceneSupportsSpecialHeads && specialHappyLayer) {
-                    activateHeadLayerSafe(specialHappyLayer, charIdle || previousRenderableHeadLayer, 'state:happy');
+                if (sceneSupportsSpecialHeads && charHappy) {
+                    if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
+                    else charHappy.classList.add('active');
                 } else {
-                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:happy_fallback');
+                    charIdle.classList.add('active');
                 }
             } else if (state === 'happyTalk') {
                 if (sceneSupportsSpecialHeads && charHappyTalk) {
-                    activateHeadLayerSafe(charHappyTalk, charHappy || charIdle, 'state:happyTalk');
+                    charHappyTalk.classList.add('active');
                 } else if (sceneSupportsSpecialHeads && charHappy) {
-                    activateHeadLayerSafe(charHappy, charIdle || previousRenderableHeadLayer, 'state:happyTalk_to_happy');
+                    charHappy.classList.add('active');
                 } else {
-                    activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, 'state:happyTalk_fallback');
+                    charIdle.classList.add('active');
                 }
-            } else {
-                activateHeadLayerSafe(charIdle, previousRenderableHeadLayer || charSpeak, `state:unknown:${state}`);
             }
-
-            ensureAnyHeadVisible(previousRenderableHeadLayer, `state:${state}`);
         }
 
         function getStoryText(key, fallback = '') {
@@ -3612,6 +3526,3 @@ debugLog('[BOOT] game_app module active');
         scheduleNextBlink();
         // Do not renderLine(0) immediately, wait for Start
         // renderLine(0);
-
-
-
