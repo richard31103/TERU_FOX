@@ -70,6 +70,7 @@ debugLog('[BOOT] game_app module active');
             '#head-touch-zone',
             '#controls-bar',
             '#settings-overlay',
+            '#social-overlay',
             '#history-overlay',
             '#ooxx-result',
             '#ooxx-screen',
@@ -1195,7 +1196,7 @@ debugLog('[BOOT] game_app module active');
                 const bedTitleFallbackByLang = {
                     tw: '提爾家',
                     en: "Teru's Home",
-                    jp: 'テルの家'
+                    jp: 'テールの家'
                 };
                 return ui.bedGameTitle || bedTitleFallbackByLang[currentLang] || bedTitleFallbackByLang.tw;
             }
@@ -2957,6 +2958,22 @@ debugLog('[BOOT] game_app module active');
             if (tbcTextEl) tbcTextEl.textContent = ui.toBeContinued || 'To Be Continued...';
 
             document.getElementById('lang-ui-social').textContent = ui.social;
+            const socialTitleEl = document.getElementById('lang-ui-social-title');
+            if (socialTitleEl) socialTitleEl.textContent = ui.socialTitle || ui.social;
+            const socialSubtitleEl = document.getElementById('lang-ui-social-subtitle');
+            if (socialSubtitleEl) socialSubtitleEl.textContent = ui.socialSubtitle || '';
+            const socialCloseEl = document.getElementById('lang-ui-close-social');
+            if (socialCloseEl) socialCloseEl.textContent = ui.socialClose || ui.closeSet || 'Close';
+            resetAllSocialCopyState();
+            document.querySelectorAll('[data-social-action="open"]').forEach((el) => {
+                el.textContent = ui.socialOpen || 'Open';
+            });
+            document.querySelectorAll('[data-social-action="copy"]').forEach((el) => {
+                el.textContent = ui.socialCopy || 'Copy';
+            });
+            document.querySelectorAll('[data-social-account-label]').forEach((el) => {
+                el.textContent = ui.socialAccount || 'Account';
+            });
             document.getElementById('lang-ui-audio').textContent = audioMuted ? ui.audioOff : ui.audioOn;
             document.getElementById('lang-ui-history').textContent = ui.history;
             const qaSettingsLabel = document.getElementById('lang-ui-qa-settings');
@@ -3039,16 +3056,20 @@ debugLog('[BOOT] game_app module active');
                 'open-settings': () => openSettings(),
                 'close-settings': () => closeSettings(),
                 'open-social': () => openSocial(),
+                'close-social': () => closeSocial(),
                 'toggle-audio': () => toggleAudioGlobal(),
                 'open-history': () => openHistory(),
                 'prev-line': () => prevLine(),
                 'start-game': () => startGame(),
                 'set-language': ({ actionEl }) => setLanguage(actionEl.dataset.lang),
+                'open-social-link': ({ actionEl }) => openSocialLink(actionEl),
+                'copy-social-id': ({ actionEl }) => copySocialId(actionEl),
                 'head-touch': ({ event }) => handleHeadTouchAction(event),
                 'set-toggle': ({ actionEl }) => setToggle(actionEl.dataset.toggleGroup, actionEl.dataset.toggleValue),
                 'set-fullscreen': ({ actionEl }) => setFullscreenEnabled(actionEl.dataset.fullscreen === 'on'),
                 'update-slider': ({ actionEl }) => updateSlider(actionEl),
                 'overlay-settings-dismiss': ({ event }) => handleSettingsClick(event),
+                'overlay-social-dismiss': ({ event }) => handleSocialOverlayDismiss(event),
                 'overlay-history-dismiss': ({ event }) => handleHistoryClick(event),
                 'close-history': () => closeHistory(),
                 'pick-choice': ({ actionEl }) => {
@@ -3123,10 +3144,100 @@ debugLog('[BOOT] game_app module active');
 
         // Social and history
 
-        function openSocial() {
-            if (confirm(l10n[currentLang].ui.socialPrompt)) {
-                window.open('https://www.facebook.com/teru.fox', '_blank');
+        const socialOverlayEl = document.getElementById('social-overlay');
+        const socialCardEls = Array.from(document.querySelectorAll('.social-card'));
+        const socialCopyResetTimers = new WeakMap();
+
+        function clearSocialCopyTimer(cardEl) {
+            const timerId = socialCopyResetTimers.get(cardEl);
+            if (timerId) {
+                clearTimeout(timerId);
+                socialCopyResetTimers.delete(cardEl);
             }
+        }
+
+        function resetSocialCardCopyState(cardEl) {
+            if (!cardEl) return;
+            clearSocialCopyTimer(cardEl);
+            cardEl.classList.remove('copied');
+            const actionEl = cardEl.querySelector('[data-social-action="copy"]');
+            if (actionEl) actionEl.textContent = l10n[currentLang]?.ui?.socialCopy || 'Copy';
+        }
+
+        function resetAllSocialCopyState() {
+            socialCardEls.forEach((cardEl) => resetSocialCardCopyState(cardEl));
+        }
+
+        function openSocial() {
+            if (!socialOverlayEl) return;
+            resetAllSocialCopyState();
+            socialOverlayEl.classList.remove('hidden');
+        }
+
+        function closeSocial() {
+            if (!socialOverlayEl) return;
+            socialOverlayEl.classList.add('hidden');
+            resetAllSocialCopyState();
+        }
+
+        function handleSocialOverlayDismiss(e) {
+            if (e.target === socialOverlayEl) closeSocial();
+        }
+
+        function openSocialLink(actionEl) {
+            const url = actionEl?.dataset?.url;
+            if (!url) return;
+            const popup = window.open(url, '_blank', 'noopener,noreferrer');
+            if (!popup) window.location.href = url;
+        }
+
+        async function copyTextToClipboard(text) {
+            if (!text) return false;
+            if (navigator.clipboard?.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (err) {
+                    console.warn('Clipboard API write failed:', err);
+                }
+            }
+
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            ta.style.top = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {
+                console.warn('execCommand copy failed:', err);
+            } finally {
+                document.body.removeChild(ta);
+            }
+            return ok;
+        }
+
+        async function copySocialId(actionEl) {
+            const value = actionEl?.dataset?.copyValue || '';
+            if (!value) return;
+            const ok = await copyTextToClipboard(value);
+            if (!ok) return;
+            const cardEl = actionEl.closest('.social-card');
+            if (!cardEl) return;
+            resetSocialCardCopyState(cardEl);
+            cardEl.classList.add('copied');
+            const actionChip = cardEl.querySelector('[data-social-action="copy"]');
+            if (actionChip) actionChip.textContent = l10n[currentLang]?.ui?.socialCopied || 'Copied';
+            const timerId = setTimeout(() => {
+                cardEl.classList.remove('copied');
+                if (actionChip) actionChip.textContent = l10n[currentLang]?.ui?.socialCopy || 'Copy';
+                socialCopyResetTimers.delete(cardEl);
+            }, 1200);
+            socialCopyResetTimers.set(cardEl, timerId);
         }
 
         const histOverlay = document.getElementById('history-overlay');
