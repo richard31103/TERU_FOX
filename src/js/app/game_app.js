@@ -2440,7 +2440,11 @@ debugLog('[BOOT] game_app module active');
                             runScriptedLines(
                                 opening.introLines,
                                 l10n[currentLang]?.speaker || '',
-                                startOpeningPostIntroSequence,
+                                () => {
+                                    pendingClickAdvance = () => {
+                                        startOpeningPostIntroSequence();
+                                    };
+                                },
                                 { requireClickBetweenLines: true }
                             );
                         }
