@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Story Flow Tool</title>
+    <style>
+        :root {
+            --bg: #f3f5f8;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #d5dce7;
+            --accent: #0b65d8;
+            --danger: #c03636;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            padding: 12px 14px;
+        }
+
+        .title-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .filters {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 8px;
+        }
+
+        .filters label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        select,
+        input[type="text"] {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button,
+        .file-btn {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button.primary {
+            color: #fff;
+            border-color: var(--accent);
+            background: var(--accent);
+        }
+
+        button.danger {
+            color: #fff;
+            border-color: var(--danger);
+            background: var(--danger);
+        }
+
+        main {
+            padding: 12px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .panel h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        #summary-text {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        #import-report {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .graph-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .graph-wrap {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #f8fafc;
+            overflow: auto;
+            height: 72vh;
+        }
+
+        #graph-svg {
+            display: block;
+            min-width: 100%;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: 1px solid #94a3b8;
+        }
+
+        #node-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .node-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .node-card.node-selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(11, 101, 216, 0.2);
+        }
+
+        .node-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .node-id {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .node-type {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .meta-line {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .meta-line span {
+            color: var(--muted);
+            margin-right: 6px;
+        }
+
+        .choice-list {
+            display: grid;
+            gap: 6px;
+        }
+
+        .choice-row {
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        .choice-meta {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .choice-bind {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .tw-input {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fff;
+        }
+
+        textarea.tw-input {
+            min-height: 74px;
+            resize: vertical;
+        }
+
+        .tw-input.readonly {
+            background: #edf2f7;
+            color: #6b7280;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 20px 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="title-row">
+            <strong>劇情流程工具（節點圖 + 文本編輯）</strong>
+            <span id="status-text" class="status">初始化中...</span>
+        </div>
+
+        <div class="filters">
+            <div>
+                <label for="filter-type">節點類型</label>
+                <select id="filter-type">
+                    <option value="">全部類型</option>
+                    <option value="dialogue">對話</option>
+                    <option value="choice">選項</option>
+                    <option value="transition">過場(黑畫面)</option>
+                    <option value="minigame">小遊戲</option>
+                    <option value="death">死亡</option>
+                    <option value="tbc">待續</option>
+                    <option value="title">開始標題</option>
+                </select>
+            </div>
+            <div>
+                <label for="filter-scene">場景</label>
+                <select id="filter-scene">
+                    <option value="">全部場景</option>
+                </select>
+            </div>
+            <div>
+                <label for="filter-keyword">關鍵字</label>
+                <input id="filter-keyword" type="text" placeholder="節點編號或中文內容" />
+            </div>
+            <div>
+                <label for="filter-untranslated">僅看未翻譯</label>
+                <input id="filter-untranslated" type="checkbox" />
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button id="btn-export">導出 JSON</button>
+            <label class="file-btn">
+                導入 JSON
+                <input id="import-file" type="file" accept="application/json" style="display:none" />
+            </label>
+            <button id="btn-apply" class="primary">套用到遊戲(localStorage)</button>
+            <button id="btn-clear" class="danger">清除覆寫</button>
+            <button id="btn-reset">重置編輯內容</button>
+        </div>
+
+        <div id="summary-text"></div>
+    </header>
+
+    <main>
+        <section class="panel">
+            <h2>導入/驗證報告</h2>
+            <pre id="import-report">等待資料...</pre>
+        </section>
+
+        <section class="panel">
+            <h2>全路線節點圖</h2>
+            <div class="graph-toolbar">
+                <button id="btn-graph-center">回到起點</button>
+                <label>
+                    <input id="graph-show-edge-text" type="checkbox" />
+                    顯示選項文字於連線
+                </label>
+                <span class="status">點節點可定位到下方編輯區</span>
+            </div>
+            <div id="graph-wrap" class="graph-wrap">
+                <svg id="graph-svg"></svg>
+            </div>
+            <div class="legend">
+                <span class="legend-item"><span class="dot" style="background:#e6f0ff"></span> 對話</span>
+                <span class="legend-item"><span class="dot" style="background:#eefce8"></span> 選項</span>
+                <span class="legend-item"><span class="dot" style="background:#f4f2ff"></span> 過場</span>
+                <span class="legend-item"><span class="dot" style="background:#fff8dd"></span> 小遊戲</span>
+                <span class="legend-item"><span class="dot" style="background:#ffe7e7"></span> 死亡</span>
+                <span class="legend-item"><span class="dot" style="background:#ffeef9"></span> 待續</span>
+                <span class="legend-item"><span class="dot" style="background:#f1f5f9"></span> 開始標題</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>文本編輯（中文）</h2>
+            <div id="node-list"></div>
+        </section>
+    </main>
+
+    <script type="module" src="../src/js/tools/story_flow_tool.js"></script>
+</body>
+</html>
+

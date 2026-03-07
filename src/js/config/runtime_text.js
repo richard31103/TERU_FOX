@@ -61,11 +61,40 @@ export const FIGHT_TEXT_AFTER_OOXX = {
     }
 };
 
+export const FIGHT_JOKE_RETURN_LINE = {
+    tw: '那你到底想要幹麻?',
+    en: 'So what do you actually want to do?',
+    jp: 'で、結局何したいの？'
+};
+
 export const OPENING_TEXT = {
     tw: {
-        greeting: '你好呀~ 我是提爾，很高興認識你!',
+        greeting: '你好呀，我是提爾，很高興認識你!',
         choiceIntro: '你好呀，可以自我介紹一下嗎?',
+        choiceSkipIntro: '不用介紹了',
         choiceGoHome: '我可以跟你回家嗎?',
+        choiceGoHomeAfterIntro: '我可以跟你回家嗎?',
+        choiceRecordStore: '要一起去逛唱片行嗎?',
+        choiceCoffee: '我想要去喝咖啡',
+        choiceJustChat: '什麼也不幹，就在這聊天',
+        moveToLawnLine: '我腿有點酸了，去草坪坐一下吧',
+        weatherChoiceLine: '天氣真好，你想做什麼呢?',
+        goHomeTransitionLine: '好呀，我們去草坪上面聊吧',
+        recordStoreReply: '好呀',
+        coffeeIntroLines: [
+            '我其實不常喝咖啡呢...',
+            '咖啡好苦喝了又睡不著覺',
+            '但是上次喝了賴瑞叔叔泡的咖啡讓我稍微有改觀'
+        ],
+        coffeeChoiceTitle: '你要點什麼給提爾喝?',
+        coffeeChoiceLatte: '拿鐵',
+        coffeeChoiceAmericano: '美式',
+        coffeeChoiceChocoShakeNoCream: '巧克力冰沙(不加奶油)',
+        coffeeChoiceSleepyTea: '昏睡紅茶',
+        coffeeResponseLatte: '拿鐵嗎...我想要加三包糖，真的不懂咖啡在喝什麼耶',
+        coffeeResponseAmericano: '美式...嗚嗚，(硬喝一口)，好難喝...',
+        coffeeResponseChocoShakeNoCream: '哇! 你怎麼知道我喜歡這個!',
+        coffeeResponseSleepyTea: '突然...好睏...',
         introLines: [
             '我是提爾狐',
             '你也可以叫我 "TERU FOX"',
@@ -76,10 +105,33 @@ export const OPENING_TEXT = {
     en: {
         greeting: 'Hey~ I am TERU, nice to meet you!',
         choiceIntro: 'Hey, can you introduce yourself?',
+        choiceSkipIntro: 'No need to introduce yourself.',
         choiceGoHome: 'Can I go home with you?',
+        choiceGoHomeAfterIntro: 'Can I go home with you?',
+        choiceRecordStore: 'Want to browse a record store together?',
+        choiceCoffee: 'I want to grab coffee.',
+        choiceJustChat: 'Let us just chat here.',
+        moveToLawnLine: 'My legs are a bit tired. Let us sit on the lawn.',
+        weatherChoiceLine: 'Nice weather. What do you want to do?',
+        goHomeTransitionLine: 'Sure, let us chat on the lawn first.',
+        recordStoreReply: 'Sure.',
+        coffeeIntroLines: [
+            'I actually do not drink coffee that often...',
+            'Coffee is bitter, and it keeps me awake.',
+            "But Uncle Larry's coffee last time changed my mind a little."
+        ],
+        coffeeChoiceTitle: 'What do you want to order for TERU?',
+        coffeeChoiceLatte: 'Latte',
+        coffeeChoiceAmericano: 'Americano',
+        coffeeChoiceChocoShakeNoCream: 'Chocolate Shake (No Cream)',
+        coffeeChoiceSleepyTea: 'Sleepy Black Tea',
+        coffeeResponseLatte: 'Latte... I want three sugar packets. I really do not get coffee.',
+        coffeeResponseAmericano: 'Americano... ugh... (forces one sip) it tastes awful...',
+        coffeeResponseChocoShakeNoCream: 'Wow! How did you know I like this!',
+        coffeeResponseSleepyTea: 'Suddenly... so sleepy...',
         introLines: [
             'I am TERU.',
-            'You can also call me "TERU".',
+            'You can also call me "TERU FOX".',
             'I am a music producer, and I am also a DJ!',
             'If you are interested, tap the fox button on the right to learn more!'
         ]
@@ -87,10 +139,33 @@ export const OPENING_TEXT = {
     jp: {
         greeting: 'やあ〜 ボクはテール、会えてうれしい！',
         choiceIntro: 'やあ、自己紹介してくれる？',
+        choiceSkipIntro: '自己紹介はいらないよ。',
         choiceGoHome: 'キミの家に行ってもいい？',
+        choiceGoHomeAfterIntro: 'キミの家に行ってもいい？',
+        choiceRecordStore: '一緒にレコード屋さんを見に行く？',
+        choiceCoffee: 'コーヒーを飲みに行きたい。',
+        choiceJustChat: '何もしないで、ここで話そう。',
+        moveToLawnLine: 'ちょっと足が疲れたから、芝生で座って話そう。',
+        weatherChoiceLine: 'いい天気だね。何したい？',
+        goHomeTransitionLine: 'いいよ。まずは芝生で話そうか。',
+        recordStoreReply: 'いいよ。',
+        coffeeIntroLines: [
+            '実は、コーヒーはあまり飲まないんだ...',
+            'コーヒーって苦いし、飲むと眠れなくなるし。',
+            'でもこの前ラリーさんのコーヒーを飲んで、ちょっと印象が変わった。'
+        ],
+        coffeeChoiceTitle: 'テールに何を頼んであげる？',
+        coffeeChoiceLatte: 'ラテ',
+        coffeeChoiceAmericano: 'アメリカーノ',
+        coffeeChoiceChocoShakeNoCream: 'チョコシェイク（ホイップなし）',
+        coffeeChoiceSleepyTea: '昏睡紅茶',
+        coffeeResponseLatte: 'ラテか... 砂糖3袋入れたい。コーヒーの良さ、ほんと分からないや。',
+        coffeeResponseAmericano: 'アメリカーノ... うぅ、（無理して一口）まずい...',
+        coffeeResponseChocoShakeNoCream: 'わあ！ どうして私がこれ好きって分かったの！？',
+        coffeeResponseSleepyTea: '急に... 眠い...',
         introLines: [
             'ボクはテール。',
-            '「テール」って呼んでね。',
+            '「TERU FOX」って呼んでね。',
             '音楽制作をしていて、DJもやってるよ！',
             '興味があったら、右のキツネボタンを押して詳しく見てね！'
         ]

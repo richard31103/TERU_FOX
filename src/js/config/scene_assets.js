@@ -1,4 +1,5 @@
-﻿export const SCENE_DEFAULT = 'default';
+export const SCENE_DEFAULT = 'default';
+export const SCENE_PARK = 'park';
 export const SCENE_BED = 'bed';
 export const SCENE_BED_N = 'bed_n';
 export const SCENE_FIGHT = 'fight';
@@ -23,7 +24,10 @@ export const SCENE_FIGHT = 'fight';
  * speakClosedCry?: string,
  * idleTears?: string,
  * speakTears?: string,
- * blinkSpeakTears?: string
+ * blinkSpeakTears?: string,
+ * parkEyes?: string,
+ * parkMouth?: string,
+ * parkEyebrows?: string
  * }} SceneAssets
  */
 
@@ -43,6 +47,22 @@ export const SCENE_ASSETS = {
         happyTalk: 'assets/images/scenes/default/head-happy-talk.png',
         tailOrigin: '68.7376% 75.0098%',
         hasSpecialHeads: true
+    },
+    [SCENE_PARK]: {
+        bg: 'assets/images/scenes/Park/bg-park.jpg',
+        body: 'assets/images/scenes/Park/Full_body.png',
+        tail: 'assets/images/scenes/Park/Full_body.png',
+        idle: 'assets/images/scenes/Park/Full_body.png',
+        blink: 'assets/images/scenes/Park/Full_body.png',
+        speak: 'assets/images/scenes/Park/Full_body.png',
+        angry: 'assets/images/scenes/Park/Full_body.png',
+        happy: 'assets/images/scenes/Park/Full_body.png',
+        happyTalk: 'assets/images/scenes/Park/Full_body.png',
+        parkEyes: 'assets/images/scenes/Park/eyes close.png',
+        parkMouth: 'assets/images/scenes/Park/mouth close.png',
+        parkEyebrows: 'assets/images/scenes/Park/eyebrows down.png',
+        tailOrigin: '50% 50%',
+        hasSpecialHeads: false
     },
     [SCENE_BED]: {
         bg: 'assets/images/scenes/bed/bed-bg.jpg',
@@ -128,6 +148,15 @@ const DEFAULT_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/default/pet-fox-mobile.jpg'
 ]);
 
+const PARK_SCENE_IMAGE_ASSETS = uniqueAssets([
+    'assets/images/scenes/Park/bg-park.jpg',
+    'assets/images/scenes/Park/bg-coffee.jpg',
+    'assets/images/scenes/Park/Full_body.png',
+    'assets/images/scenes/Park/eyes close.png',
+    'assets/images/scenes/Park/mouth close.png',
+    'assets/images/scenes/Park/eyebrows down.png'
+]);
+
 const BED_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/bed/bed-bg.jpg',
     'assets/images/scenes/bed/bed-body.png',
@@ -171,19 +200,23 @@ const FIGHT_SCENE_IMAGE_ASSETS = uniqueAssets([
 
 export const SCENE_IMAGE_ASSET_GROUPS = {
     [SCENE_DEFAULT]: DEFAULT_SCENE_IMAGE_ASSETS,
+    [SCENE_PARK]: PARK_SCENE_IMAGE_ASSETS,
     [SCENE_BED]: BED_SCENE_IMAGE_ASSETS,
     [SCENE_BED_N]: BED_N_SCENE_IMAGE_ASSETS,
     [SCENE_FIGHT]: FIGHT_SCENE_IMAGE_ASSETS
 };
 
 export const BOOT_IMAGE_ASSETS = uniqueAssets([
+    ...PARK_SCENE_IMAGE_ASSETS,
     ...DEFAULT_SCENE_IMAGE_ASSETS,
     'assets/images/ui/fox-face.png'
 ]);
 
 export const PRELOAD_IMAGE_ASSETS = uniqueAssets([
     ...BOOT_IMAGE_ASSETS,
+    ...PARK_SCENE_IMAGE_ASSETS,
     ...BED_SCENE_IMAGE_ASSETS,
     ...BED_N_SCENE_IMAGE_ASSETS,
     ...FIGHT_SCENE_IMAGE_ASSETS
 ]);
+

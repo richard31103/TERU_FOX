@@ -103,7 +103,8 @@
             animation: bgFloat 12s ease-in-out infinite;
         }
 
-        #game-container.scene-bed #bg {
+        #game-container.scene-bed #bg,
+        #game-container.scene-park #bg {
             animation: none;
         }
 
@@ -206,7 +207,8 @@
         }
 
         #game-container.scene-fight #head-touch-zone,
-        #game-container.scene-bed #head-touch-zone {
+        #game-container.scene-bed #head-touch-zone,
+        #game-container.scene-park #head-touch-zone {
             display: none;
         }
 
@@ -235,6 +237,28 @@
 
         #game-container.scene-fight #char-tail {
             animation: fightTailSway 0.95s ease-in-out infinite alternate;
+        }
+
+        #game-container.scene-park #char-tail,
+        #game-container.scene-park #char-head-idle,
+        #game-container.scene-park #char-head-blink,
+        #game-container.scene-park #char-head-speak,
+        #game-container.scene-park #char-head-angry,
+        #game-container.scene-park #char-head-happy,
+        #game-container.scene-park #char-head-happy-talk,
+        #game-container.scene-park #char-head-touch,
+        #game-container.scene-park #char-headphone {
+            display: none;
+        }
+
+        #game-container.scene-park #char-body,
+        #game-container.scene-park #char-park-eyes,
+        #game-container.scene-park #char-park-mouth,
+        #game-container.scene-park #char-park-eyebrows {
+            object-fit: contain;
+            object-position: 50% 6%;
+            transform-origin: 50% 0%;
+            transform: translateY(11%) scale(1.28);
         }
 
         .char-img {
@@ -277,6 +301,17 @@
             z-index: 3;
         }
 
+        #char-park-eyes,
+        #char-park-mouth {
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        #char-park-eyebrows {
+            z-index: 4;
+            pointer-events: none;
+        }
+
         #char-head-touch {
             z-index: 4;
             pointer-events: none;
@@ -285,6 +320,16 @@
         #char-headphone {
             z-index: 5;
             pointer-events: none;
+        }
+
+        @media (max-width: 820px) {
+            #game-container.scene-park #char-body,
+            #game-container.scene-park #char-park-eyes,
+            #game-container.scene-park #char-park-mouth,
+            #game-container.scene-park #char-park-eyebrows {
+                object-position: 50% 4%;
+                transform: translateY(13%) scale(1.36);
+            }
         }
 
         #money-popup {
@@ -2229,6 +2274,9 @@
         <div id="character-container">
             <img src="assets/images/scenes/default/tail-main.png" id="char-tail" class="char-img active" alt="Tail" />
             <img src="assets/images/scenes/default/body-main.png" id="char-body" class="char-img active" alt="Body" />
+            <img src="assets/images/scenes/Park/eyes close.png" id="char-park-eyes" class="char-img" alt="Park Eyes Closed" aria-hidden="true" />
+            <img src="assets/images/scenes/Park/mouth close.png" id="char-park-mouth" class="char-img" alt="Park Mouth Closed" aria-hidden="true" />
+            <img src="assets/images/scenes/Park/eyebrows down.png" id="char-park-eyebrows" class="char-img" alt="Park Eyebrows Down" aria-hidden="true" />
             <img src="assets/images/scenes/default/head-no-speak.png" id="char-head-idle" class="char-img active" alt="Head Idle" />
             <img src="assets/images/scenes/default/head-blink.png" id="char-head-blink" class="char-img" alt="Head Blink" />
             <img src="assets/images/scenes/default/head-speak.png" id="char-head-speak" class="char-img" alt="Head Speak" />

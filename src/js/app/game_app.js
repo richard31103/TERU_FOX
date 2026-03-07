@@ -2,6 +2,7 @@
 import { AppStateMachine, GAME_STATES } from '../core/app_state.js';
 import { createTransitionEngine } from '../core/transition_engine.js';
 import { createStoryEngine, loadChapterStorySet } from '../story/story_engine.js';
+import { applyStoredStoryFlowTwOverrides } from '../story/story_flow_catalog.js';
 import { checkOOXX, getBestOOXX, OOXX_AI, OOXX_HU, renderOOXXBoard } from '../minigames/ooxx.js';
 import { createAppContext } from './app_context.js';
 import {
@@ -11,6 +12,7 @@ import {
     SCENE_BED,
     SCENE_BED_N,
     SCENE_DEFAULT,
+    SCENE_PARK,
     SCENE_FIGHT,
     SCENE_IMAGE_ASSET_GROUPS
 } from '../config/scene_assets.js';
@@ -32,6 +34,7 @@ import {
     FIGHT_SCENE_OBJECT_POSITION,
     FIGHT_SOURCE_FALLBACK_SIZE,
     FIGHT_TAIL_PIVOT_SOURCE,
+    FIGHT_JOKE_RETURN_LINE,
     FIGHT_TEXT,
     FIGHT_TEXT_AFTER_OOXX,
     FOLLOWUP_CHOICE_SOURCE_INDICES,
@@ -358,6 +361,7 @@ debugLog('[BOOT] game_app module active');
 
         async function initStory() {
             const storySet = await loadChapterStorySet('chapter01', ['tw', 'en', 'jp']);
+            applyStoredStoryFlowTwOverrides(storySet);
             storyEngine = createStoryEngine(storySet, currentLang);
             refreshStoryProjection();
         }
@@ -389,6 +393,9 @@ debugLog('[BOOT] game_app module active');
         const bgSplashEl = ctxRefs.bgSplash;
         const charTail = ctxRefs.charTail;
         const charBody = ctxRefs.charBody;
+        const charParkEyes = document.getElementById('char-park-eyes');
+        const charParkMouth = document.getElementById('char-park-mouth');
+        const charParkEyebrows = document.getElementById('char-park-eyebrows');
         const charIdle = ctxRefs.charIdle;
         const charBlink = ctxRefs.charBlink;
         const charSpeak = ctxRefs.charSpeak;
@@ -444,6 +451,7 @@ debugLog('[BOOT] game_app module active');
         let isOpeningPrologueActive = false;
         let isHappyTalkMode = false;
         let happyMouthOpen = false;
+        let isParkEyebrowsDown = false;
         let isRuntimeChoiceMode = false;
         let runtimeChoiceState = null;
         let isFightSequenceActive = false;
@@ -454,6 +462,7 @@ debugLog('[BOOT] game_app module active');
         const FIGHT_POST_OOXX_POST_HIT_ASSET = 'assets/images/scenes/fight/fight-fox-naked.png';
         const BED_N_SLEEP_BG_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep.jpg';
         const BED_N_SLEEP_NO_LIGHT_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg';
+        const COFFEE_BG_ASSET = 'assets/images/scenes/Park/bg-coffee.jpg';
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -674,50 +683,62 @@ debugLog('[BOOT] game_app module active');
         }
 
         function setCharState(state) {
-            charIdle.classList.remove('active');
-            charBlink.classList.remove('active');
-            charSpeak.classList.remove('active');
+            if (charIdle) charIdle.classList.remove('active');
+            if (charBlink) charBlink.classList.remove('active');
+            if (charSpeak) charSpeak.classList.remove('active');
             if (charAngry) charAngry.classList.remove('active');
             if (charHappy) charHappy.classList.remove('active');
             if (charHappyTalk) charHappyTalk.classList.remove('active');
+            if (charParkEyes) charParkEyes.classList.remove('active');
+            if (charParkMouth) charParkMouth.classList.remove('active');
+            if (charParkEyebrows) charParkEyebrows.classList.remove('active');
+
+            if (activeSceneId === SCENE_PARK) {
+                const showEyesClose = state === 'blink';
+                const showMouthClose = !isTyping || state !== 'speak';
+                if (showEyesClose && charParkEyes) charParkEyes.classList.add('active');
+                if (showMouthClose && charParkMouth) charParkMouth.classList.add('active');
+                if (isParkEyebrowsDown && charParkEyebrows) charParkEyebrows.classList.add('active');
+                return;
+            }
 
             if (isAngry) {
                 if (sceneSupportsSpecialHeads && charAngry) charAngry.classList.add('active');
-                else charIdle.classList.add('active');
+                else if (charIdle) charIdle.classList.add('active');
                 return;
             }
             if (isHappy) {
                 if ((isShyBedTransitionMode || isMoneyIntermission) && state === 'blink') {
-                    charBlink.classList.add('active');
+                    if (charBlink) charBlink.classList.add('active');
                     return;
                 }
                 if (sceneSupportsSpecialHeads && charHappy) {
                     if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
                     else charHappy.classList.add('active');
                 } else {
-                    charIdle.classList.add('active');
+                    if (charIdle) charIdle.classList.add('active');
                 }
                 return;
             }
 
             if (state === 'idle') {
-                charIdle.classList.add('active');
+                if (charIdle) charIdle.classList.add('active');
             } else if (state === 'blink') {
-                charBlink.classList.add('active');
+                if (charBlink) charBlink.classList.add('active');
             } else if (state === 'speak') {
-                charSpeak.classList.add('active');
+                if (charSpeak) charSpeak.classList.add('active');
             } else if (state === 'angry') {
                 if (sceneSupportsSpecialHeads && charAngry) {
                     charAngry.classList.add('active');
                 } else {
-                    charIdle.classList.add('active');
+                    if (charIdle) charIdle.classList.add('active');
                 }
             } else if (state === 'happy') {
                 if (sceneSupportsSpecialHeads && charHappy) {
                     if (isHappyTalkMode && happyMouthOpen && charHappyTalk) charHappyTalk.classList.add('active');
                     else charHappy.classList.add('active');
                 } else {
-                    charIdle.classList.add('active');
+                    if (charIdle) charIdle.classList.add('active');
                 }
             } else if (state === 'happyTalk') {
                 if (sceneSupportsSpecialHeads && charHappyTalk) {
@@ -725,7 +746,7 @@ debugLog('[BOOT] game_app module active');
                 } else if (sceneSupportsSpecialHeads && charHappy) {
                     charHappy.classList.add('active');
                 } else {
-                    charIdle.classList.add('active');
+                    if (charIdle) charIdle.classList.add('active');
                 }
             }
         }
@@ -764,6 +785,34 @@ debugLog('[BOOT] game_app module active');
 
         function getOpeningTextBundle() {
             return OPENING_TEXT[currentLang] || OPENING_TEXT.tw;
+        }
+
+        function getCoffeeTextBundle() {
+            const opening = getOpeningTextBundle();
+            const fallback = OPENING_TEXT.tw || {};
+            const introLinesRaw = Array.isArray(opening.coffeeIntroLines)
+                ? opening.coffeeIntroLines
+                : (Array.isArray(fallback.coffeeIntroLines) ? fallback.coffeeIntroLines : []);
+            const introLines = introLinesRaw.filter((line) => typeof line === 'string' && line.trim() !== '');
+            return {
+                introLines,
+                choiceTitle: opening.coffeeChoiceTitle || fallback.coffeeChoiceTitle || '你要點什麼給提爾喝?',
+                optionLatte: opening.coffeeChoiceLatte || fallback.coffeeChoiceLatte || '拿鐵',
+                optionAmericano: opening.coffeeChoiceAmericano || fallback.coffeeChoiceAmericano || '美式',
+                optionChocoShakeNoCream: opening.coffeeChoiceChocoShakeNoCream || fallback.coffeeChoiceChocoShakeNoCream || '巧克力冰沙(不加奶油)',
+                optionSleepyTea: opening.coffeeChoiceSleepyTea || fallback.coffeeChoiceSleepyTea || '昏睡紅茶',
+                responseLatte: opening.coffeeResponseLatte || fallback.coffeeResponseLatte || '拿鐵嗎...我想要加三包糖，真的不懂咖啡在喝什麼耶',
+                responseAmericano: opening.coffeeResponseAmericano || fallback.coffeeResponseAmericano || '美式...嗚嗚，(硬喝一口)，好難喝...',
+                responseChocoShakeNoCream: opening.coffeeResponseChocoShakeNoCream || fallback.coffeeResponseChocoShakeNoCream || '哇! 你怎麼知道我喜歡這個!',
+                responseSleepyTea: opening.coffeeResponseSleepyTea || fallback.coffeeResponseSleepyTea || '突然...好睏...'
+            };
+        }
+
+        function setParkEyebrowsDown(flag) {
+            isParkEyebrowsDown = Boolean(flag);
+            if (activeSceneId === SCENE_PARK) {
+                setCharState(isTyping ? 'speak' : 'idle');
+            }
         }
 
         function getHeadTouchTextBundle() {
@@ -1361,6 +1410,9 @@ debugLog('[BOOT] game_app module active');
             if (nextSceneId !== activeSceneId) {
                 resetHeadTouchChain('scene_change');
             }
+            if (nextSceneId !== SCENE_PARK) {
+                isParkEyebrowsDown = false;
+            }
             activeSceneId = nextSceneId;
             sceneSupportsSpecialHeads = cfg.hasSpecialHeads !== false;
             bedHeadVariant = 'normal';
@@ -1370,6 +1422,9 @@ debugLog('[BOOT] game_app module active');
             if (bgSplashEl) setCachedBg(bgSplashEl, cfg.bg);
             if (charTail) setCachedSrc(charTail, cfg.tail);
             if (charBody) setCachedSrc(charBody, cfg.body);
+            if (charParkEyes) setCachedSrc(charParkEyes, cfg.parkEyes || SCENE_CONFIG[SCENE_PARK]?.parkEyes || '');
+            if (charParkMouth) setCachedSrc(charParkMouth, cfg.parkMouth || SCENE_CONFIG[SCENE_PARK]?.parkMouth || '');
+            if (charParkEyebrows) setCachedSrc(charParkEyebrows, cfg.parkEyebrows || SCENE_CONFIG[SCENE_PARK]?.parkEyebrows || '');
             if (charIdle) setCachedSrc(charIdle, cfg.idle);
             if (charBlink) setCachedSrc(charBlink, cfg.blink);
             if (charSpeak) setCachedSrc(charSpeak, cfg.speak);
@@ -1396,6 +1451,7 @@ debugLog('[BOOT] game_app module active');
                 charTail.classList.remove('tail-burst');
             }
             if (gameContainerEl) {
+                gameContainerEl.classList.toggle('scene-park', activeSceneId === SCENE_PARK);
                 gameContainerEl.classList.toggle('scene-bed', activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N);
                 gameContainerEl.classList.toggle('scene-bed-n', activeSceneId === SCENE_BED_N);
                 gameContainerEl.classList.toggle('scene-fight', activeSceneId === SCENE_FIGHT);
@@ -1601,16 +1657,22 @@ debugLog('[BOOT] game_app module active');
             prepareOOXXScreen();
         }
 
+        function resolveRuntimeText(value) {
+            if (typeof value === 'function') return value() || '';
+            return value || '';
+        }
+
         function renderRuntimeChoicePanel() {
             if (!runtimeChoiceState) return;
             const t = l10n[currentLang];
             const labelEl = choicePanel.querySelector('.choice-label');
+            const runtimeFallbackTitle = resolveRuntimeText(runtimeChoiceState.fallbackTitle);
             const title = runtimeChoiceState.titleKey
                 ? getStoryText(
                     runtimeChoiceState.titleKey,
-                    runtimeChoiceState.fallbackTitle || t?.choiceTitle || ''
+                    runtimeFallbackTitle || t?.choiceTitle || ''
                 )
-                : (runtimeChoiceState.fallbackTitle || t?.choiceTitle || '');
+                : (runtimeFallbackTitle || t?.choiceTitle || '');
             if (labelEl) labelEl.textContent = title;
 
             choiceButtonEls.forEach((btn, slotIndex) => {
@@ -1630,7 +1692,7 @@ debugLog('[BOOT] game_app module active');
                     else delete btn.dataset.clickSfx;
                 }
                 if (numEl) numEl.textContent = String(slotIndex + 1);
-                if (textEl) textEl.textContent = getStoryText(option.textKey, option.fallbackText || '');
+                if (textEl) textEl.textContent = getStoryText(option.textKey, resolveRuntimeText(option.fallbackText));
             });
             updateChoicePanelMeta();
         }
@@ -1663,7 +1725,7 @@ debugLog('[BOOT] game_app module active');
             if (!runtimeChoiceState) return;
             const option = runtimeChoiceState.options[slotIndex];
             if (!option || typeof option.onSelect !== 'function') return;
-            const choiceText = getStoryText(option.textKey, option.fallbackText || '');
+            const choiceText = getStoryText(option.textKey, resolveRuntimeText(option.fallbackText));
             if (choiceText) {
                 dialogueHistory.push({ speaker: '', text: choiceText, isChoice: true });
             }
@@ -1818,9 +1880,7 @@ debugLog('[BOOT] game_app module active');
             isDeathSequence = false;
             setTyping(false);
             clearFightVisualFx();
-            const line = currentLang === 'tw'
-                ? '那你到底想要幹麻?'
-                : (currentLang === 'jp' ? 'で、結局何したいの？' : 'So what do you actually want to do?');
+            const line = (FIGHT_JOKE_RETURN_LINE[currentLang] || FIGHT_JOKE_RETURN_LINE.tw || '').trim();
 
             if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'fight_exit_joke' }); } catch (e) { }
@@ -2157,37 +2217,241 @@ debugLog('[BOOT] game_app module active');
 
         function jumpToMainOpeningStory() {
             pendingClickAdvance = null;
+            setParkEyebrowsDown(false);
             applyOpeningHeadMode(false);
             lineIndex = 0;
             renderLine(0);
         }
 
-        function showOpeningGoHomeOnlyChoice() {
-            const opening = getOpeningTextBundle();
+        async function transitionOpeningToDefaultStory(onAfterTransition = jumpToMainOpeningStory) {
+            pendingClickAdvance = null;
+            pendingPostChoiceAction = null;
+            setTyping(false);
+            setParkEyebrowsDown(false);
+            if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
+                try { appState.transition(GAME_STATES.TRANSITION, { source: 'opening_park_to_default' }); } catch (e) { }
+            }
+
+            let switchedToDefault = false;
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'opening-park-to-default',
+                    fadeInMs: OPENING_TO_DEFAULT_TRANSITION.fadeInMs,
+                    holdMs: OPENING_TO_DEFAULT_TRANSITION.holdMs,
+                    fadeOutMs: OPENING_TO_DEFAULT_TRANSITION.fadeOutMs,
+                    onBlack: async () => {
+                        switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                    }
+                });
+                if ((!result || result.cancelled) && !switchedToDefault) {
+                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                }
+            } catch (err) {
+                console.error('Opening Park transition error:', err);
+                if (!switchedToDefault) {
+                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                }
+            }
+
+            if (!switchedToDefault) {
+                applyScene(SCENE_DEFAULT);
+            }
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'opening_story_resume' }); } catch (e) { }
+            }
+            if (typeof onAfterTransition === 'function') onAfterTransition();
+        }
+
+        function runCoffeeChoiceOutcomeLine(responseText) {
+            runScriptedLine(responseText || '', l10n[currentLang]?.speaker || '', () => {
+                pendingClickAdvance = () => {
+                    dispatchAction('show_to_be_continued', { delayMs: 0 });
+                };
+            });
+        }
+
+        function showCoffeeDrinkChoices() {
+            const coffee = getCoffeeTextBundle();
             showRuntimeChoicePanel({
-                titleKey: 'choice_title',
+                titleKey: '',
+                fallbackTitle: coffee.choiceTitle,
                 options: [
-                    { textKey: '', fallbackText: opening.choiceGoHome, onSelect: jumpToMainOpeningStory }
+                    {
+                        textKey: '',
+                        fallbackText: coffee.optionLatte,
+                        onSelect: () => runCoffeeChoiceOutcomeLine(coffee.responseLatte)
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: coffee.optionAmericano,
+                        onSelect: () => runCoffeeChoiceOutcomeLine(coffee.responseAmericano)
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: coffee.optionChocoShakeNoCream,
+                        onSelect: () => runCoffeeChoiceOutcomeLine(coffee.responseChocoShakeNoCream)
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: coffee.optionSleepyTea,
+                        onSelect: () => runCoffeeChoiceOutcomeLine(coffee.responseSleepyTea)
+                    }
                 ]
             });
         }
 
-        function showOpeningFirstChoice() {
+        function startCoffeeDialogueSequence() {
+            const coffee = getCoffeeTextBundle();
+            if (!coffee.introLines.length) {
+                showCoffeeDrinkChoices();
+                return;
+            }
+            runScriptedLines(
+                coffee.introLines,
+                l10n[currentLang]?.speaker || '',
+                () => {
+                    pendingClickAdvance = () => {
+                        showCoffeeDrinkChoices();
+                    };
+                },
+                { requireClickBetweenLines: true }
+            );
+        }
+
+        async function startCoffeeSceneFromOpeningChoice() {
+            pendingClickAdvance = null;
+            pendingPostChoiceAction = null;
+            setTyping(false);
+            setParkEyebrowsDown(false);
+            if (appState && appState.getState() !== GAME_STATES.TRANSITION) {
+                try { appState.transition(GAME_STATES.TRANSITION, { source: 'opening_coffee_entry' }); } catch (e) { }
+            }
+
+            let switchedToCoffee = false;
+            const applyCoffeeScene = async () => {
+                const parkScenePreload = await ensureSceneAssets(SCENE_PARK, { interactive: false });
+                if (!parkScenePreload.ok) {
+                    console.error('[ASSET] Failed park scene preload on coffee entry:', parkScenePreload.failedAssets);
+                }
+                applyScene(SCENE_PARK);
+                const coffeeBgLoaded = await ensureBgAssetLoaded(COFFEE_BG_ASSET);
+                if (coffeeBgLoaded) {
+                    if (bgEl) setCachedBg(bgEl, COFFEE_BG_ASSET);
+                    if (bgSplashEl) setCachedBg(bgSplashEl, COFFEE_BG_ASSET);
+                } else {
+                    console.error('[ASSET] Failed coffee bg preload on coffee entry:', COFFEE_BG_ASSET);
+                }
+                switchedToCoffee = true;
+            };
+
+            try {
+                const result = await ooxxTransitionEngine.runCurtainTransition({
+                    id: 'opening-coffee-entry',
+                    fadeInMs: COFFEE_ENTRY_TRANSITION.fadeInMs,
+                    holdMs: COFFEE_ENTRY_TRANSITION.holdMs,
+                    fadeOutMs: COFFEE_ENTRY_TRANSITION.fadeOutMs,
+                    onBlack: applyCoffeeScene
+                });
+                if ((!result || result.cancelled) && !switchedToCoffee) {
+                    await applyCoffeeScene();
+                }
+            } catch (err) {
+                console.error('Opening coffee transition error:', err);
+                if (!switchedToCoffee) {
+                    await applyCoffeeScene();
+                }
+            }
+
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'opening_coffee_resume' }); } catch (e) { }
+            }
+            startCoffeeDialogueSequence();
+        }
+
+        function startOpeningPostIntroSequence() {
             const opening = getOpeningTextBundle();
+            runScriptedLine(
+                opening.moveToLawnLine || '我腿有點酸了，去草坪坐一下吧',
+                l10n[currentLang]?.speaker || '',
+                () => {
+                    pendingClickAdvance = () => {
+                        void transitionOpeningToDefaultStory(() => {
+                            const openingAfterTransition = getOpeningTextBundle();
+                            runScriptedLine(
+                                openingAfterTransition.weatherChoiceLine || '天氣真好，你想做什麼呢?',
+                                l10n[currentLang]?.speaker || '',
+                                showOpeningAfterIntroChoices
+                            );
+                        });
+                    };
+                }
+            );
+        }
+
+        function showOpeningAfterIntroChoices() {
             showRuntimeChoicePanel({
                 titleKey: 'choice_title',
                 options: [
                     {
                         textKey: '',
-                        fallbackText: opening.choiceIntro,
-                        onSelect: () => runScriptedLines(
-                            opening.introLines,
-                            l10n[currentLang]?.speaker || '',
-                            showOpeningGoHomeOnlyChoice,
-                            { requireClickBetweenLines: true }
-                        )
+                        fallbackText: () => {
+                            const opening = getOpeningTextBundle();
+                            return opening.choiceGoHomeAfterIntro || opening.choiceGoHome || '';
+                        },
+                        onSelect: () => {
+                            jumpToMainOpeningStory();
+                        }
                     },
-                    { textKey: '', fallbackText: opening.choiceGoHome, onSelect: jumpToMainOpeningStory }
+                    {
+                        textKey: '',
+                        fallbackText: () => getOpeningTextBundle().choiceRecordStore || '要一起去逛唱片行嗎?',
+                        onSelect: () => {
+                            const opening = getOpeningTextBundle();
+                            runScriptedLine(
+                                opening.recordStoreReply || '好呀',
+                                l10n[currentLang]?.speaker || '',
+                                () => dispatchAction('show_to_be_continued', { delayMs: 0 })
+                            );
+                        }
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: () => getOpeningTextBundle().choiceCoffee || '我想要去喝咖啡',
+                        onSelect: () => { void startCoffeeSceneFromOpeningChoice(); }
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: () => getOpeningTextBundle().choiceJustChat || '什麼也不幹，就在這聊天',
+                        onSelect: () => dispatchAction('show_to_be_continued', { delayMs: 0 })
+                    }
+                ]
+            });
+        }
+
+        function showOpeningFirstChoice() {
+            showRuntimeChoicePanel({
+                titleKey: 'choice_title',
+                options: [
+                    {
+                        textKey: '',
+                        fallbackText: () => getOpeningTextBundle().choiceIntro || '',
+                        onSelect: () => {
+                            const opening = getOpeningTextBundle();
+                            runScriptedLines(
+                                opening.introLines,
+                                l10n[currentLang]?.speaker || '',
+                                startOpeningPostIntroSequence,
+                                { requireClickBetweenLines: true }
+                            );
+                        }
+                    },
+                    {
+                        textKey: '',
+                        fallbackText: () => getOpeningTextBundle().choiceSkipIntro || '不用介紹了',
+                        onSelect: () => {
+                            startOpeningPostIntroSequence();
+                        }
+                    }
                 ]
             });
         }
@@ -2195,6 +2459,7 @@ debugLog('[BOOT] game_app module active');
         function startOpeningPrologue() {
             isOpeningDialogueLocked = false;
             isOpeningGreetingHeadTouchLocked = true;
+            setParkEyebrowsDown(false);
             applyOpeningHeadMode(true);
             const opening = getOpeningTextBundle();
             runScriptedLine(opening.greeting, l10n[currentLang]?.speaker || '', () => {
@@ -2614,6 +2879,8 @@ debugLog('[BOOT] game_app module active');
 
         const OVERLAY_FADE_MS = 1000;
         const FIGHT_ENTRY_TRANSITION = { fadeInMs: 450, holdMs: 100, fadeOutMs: 400 };
+        const OPENING_TO_DEFAULT_TRANSITION = { fadeInMs: 420, holdMs: 2000, fadeOutMs: 420 };
+        const COFFEE_ENTRY_TRANSITION = { fadeInMs: 420, holdMs: 2000, fadeOutMs: 420 };
         const OOXX_ENTRY_TRANSITION = { fadeInMs: 1200, holdMs: 1800, fadeOutMs: 1200 };
         const OOXX_RESULT_TRANSITION = { fadeInMs: 350, holdMs: 120, fadeOutMs: 350 };
         const BED_N_SLEEP_ENTRY_TRANSITION = { fadeInMs: 420, holdMs: 120, fadeOutMs: 420 };
@@ -3548,6 +3815,7 @@ debugLog('[BOOT] game_app module active');
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
+            isParkEyebrowsDown = false;
             isFightSequenceActive = false;
             isOpeningDialogueLocked = true;
             isOpeningGreetingHeadTouchLocked = false;
@@ -3584,19 +3852,19 @@ debugLog('[BOOT] game_app module active');
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
             applyOpeningHeadMode(true);
-            const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
-            if (!defaultScenePreload.ok) {
-                console.error('[ASSET] Failed default scene preload on start_game:', defaultScenePreload.failedAssets);
+            const parkScenePreload = await ensureSceneAssets(SCENE_PARK, { interactive: false });
+            if (!parkScenePreload.ok) {
+                console.error('[ASSET] Failed park scene preload on start_game:', parkScenePreload.failedAssets);
                 const loadingText = document.getElementById('loading-text');
                 if (loadingText) {
-                    const failedCount = defaultScenePreload.failedAssets?.length || 0;
+                    const failedCount = parkScenePreload.failedAssets?.length || 0;
                     loadingText.textContent = `Failed to load ${failedCount} image(s). Please refresh.`;
                 }
                 const loadingContainer = document.getElementById('loading-container');
                 if (loadingContainer) loadingContainer.style.display = 'flex';
                 return;
             }
-            applyScene(SCENE_DEFAULT);
+            applyScene(SCENE_PARK);
             setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
 
             // Fade out assets/images/scenes/default/bg-main.jpg splash as character fades in
@@ -3639,6 +3907,7 @@ debugLog('[BOOT] game_app module active');
             isShyBedTransitionMode = false;
             isOpeningPrologueActive = false;
             isHappyTalkMode = false;
+            isParkEyebrowsDown = false;
             isFightSequenceActive = false;
             isOpeningDialogueLocked = false;
             isOpeningGreetingHeadTouchLocked = false;
