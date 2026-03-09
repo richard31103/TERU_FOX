@@ -1,0 +1,10 @@
+{
+  "name": "img-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local image optimization tools",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
+}
