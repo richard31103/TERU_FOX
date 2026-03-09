@@ -6,7 +6,7 @@
   "entryNode": "line_1",
   "strings": {
     "startBtn": "開始",
-    "deathText": "你被咬死了",
+    "deathText": "{{player_name}}被咬死了",
     "speaker": "提爾狐",
     "ui": {
       "docTitle": "公園 - 草地",
@@ -64,7 +64,7 @@
       "toBeContinued": "待續..."
     },
     "text": {
-      "line_1": "你該不會是奇怪的獸控吧？",
+      "line_1": "{{player_name}}該不會是奇怪的獸控吧？",
       "line_2": "才剛見面就說要跟我回家...還一直盯著我的尾巴...",
       "line_3": "先說好，不准碰我的尾巴！",
       "line_4": "要是敢亂摸，我會咬人喔！",

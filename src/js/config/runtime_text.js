@@ -1,4 +1,4 @@
-﻿import { withAssetVersion } from './asset_versioning.js';
+﻿import { DIALOGUE_EXPRESSION_LIBRARY } from './expression_library.js';
 
 export const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
 export const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
@@ -74,13 +74,20 @@ export const OPENING_TEXT = {
         greeting: '你好呀，我是提爾，很高興認識你!',
         choiceIntro: '你好呀，可以自我介紹一下嗎?',
         choiceSkipIntro: '不用介紹了',
+        nameQuestionTitle: '你叫什麼名字?',
+        choiceEnterName: '點擊選項輸入名字',
+        choiceNoName: '不想告訴你',
+        namePrompt: '請輸入你的名字（最多10個字）',
+        nameTooLongAlert: '名字不能超過{max}個字，請重新輸入。',
+        nameConfirmLine: '你好阿{name}',
+        nameDeclineReplyLine: '好吧...那就不叫你名字',
         choiceGoHome: '我可以跟你回家嗎?',
         choiceGoHomeAfterIntro: '我可以跟你回家嗎?',
         choiceRecordStore: '要一起去逛唱片行嗎?',
         choiceCoffee: '我想要去喝咖啡',
         choiceJustChat: '什麼也不幹，就在這聊天',
         moveToLawnLine: '我腿有點酸了，去草坪坐一下吧',
-        weatherChoiceLine: '天氣真好，你想做什麼呢?',
+        weatherChoiceLine: '天氣真好，{{player_name}}想做什麼呢?',
         goHomeTransitionLine: '好呀，我們去草坪上面聊吧',
         recordStoreReply: '好呀',
         coffeeIntroLines: [
@@ -88,14 +95,14 @@ export const OPENING_TEXT = {
             '咖啡好苦喝了又睡不著覺',
             '但是上次喝了賴瑞叔叔泡的咖啡讓我稍微有改觀'
         ],
-        coffeeChoiceTitle: '你要點什麼給提爾喝?',
+        coffeeChoiceTitle: '{{player_name}}要點什麼給提爾喝?',
         coffeeChoiceLatte: '拿鐵',
         coffeeChoiceAmericano: '美式',
         coffeeChoiceChocoShakeNoCream: '巧克力冰沙(不加奶油)',
         coffeeChoiceSleepyTea: '昏睡紅茶',
         coffeeResponseLatte: '拿鐵嗎...我想要加三包糖，真的不懂咖啡在喝什麼耶',
         coffeeResponseAmericano: '美式...嗚嗚，(硬喝一口)，好難喝...',
-        coffeeResponseChocoShakeNoCream: '哇! 你怎麼知道我喜歡這個!',
+        coffeeResponseChocoShakeNoCream: '哇! {{player_name}}怎麼知道我喜歡這個!',
         coffeeResponseSleepyTea: '突然...好睏...',
         introLines: [
             '我是提爾狐',
@@ -108,6 +115,13 @@ export const OPENING_TEXT = {
         greeting: 'Hey~ I am TERU, nice to meet you!',
         choiceIntro: 'Hey, can you introduce yourself?',
         choiceSkipIntro: 'No need to introduce yourself.',
+        nameQuestionTitle: 'What is your name?',
+        choiceEnterName: 'Tap to enter your name',
+        choiceNoName: 'I do not want to tell you',
+        namePrompt: 'Please enter your name (max 10 characters).',
+        nameTooLongAlert: 'Name cannot be longer than {max} characters. Please try again.',
+        nameConfirmLine: 'Hi {name}',
+        nameDeclineReplyLine: 'Alright... I will not call your name.',
         choiceGoHome: 'Can I go home with you?',
         choiceGoHomeAfterIntro: 'Can I go home with you?',
         choiceRecordStore: 'Want to browse a record store together?',
@@ -142,6 +156,13 @@ export const OPENING_TEXT = {
         greeting: 'やあ〜 ボクはテール、会えてうれしい！',
         choiceIntro: 'やあ、自己紹介してくれる？',
         choiceSkipIntro: '自己紹介はいらないよ。',
+        nameQuestionTitle: 'キミの名前は？',
+        choiceEnterName: '名前を入力する',
+        choiceNoName: '教えたくない',
+        namePrompt: '名前を入力してね（10文字以内）。',
+        nameTooLongAlert: '名前は{max}文字以内で入力してね。',
+        nameConfirmLine: 'こんにちは{name}',
+        nameDeclineReplyLine: 'そっか... じゃあ名前では呼ばないね。',
         choiceGoHome: 'キミの家に行ってもいい？',
         choiceGoHomeAfterIntro: 'キミの家に行ってもいい？',
         choiceRecordStore: '一緒にレコード屋さんを見に行く？',
@@ -174,17 +195,9 @@ export const OPENING_TEXT = {
     }
 };
 
-export const OPENING_HEADS = {
-    idle: withAssetVersion('assets/images/scenes/default/head-no-speak-normal.png'),
-    blink: withAssetVersion('assets/images/scenes/default/head-blink-normal.png'),
-    speak: withAssetVersion('assets/images/scenes/default/head-speak.png')
-};
+export const OPENING_HEADS = { ...DIALOGUE_EXPRESSION_LIBRARY.opening };
 
-export const AFRAID_HEADS = {
-    idle: withAssetVersion('assets/images/scenes/default/head-afraid.png'),
-    blink: withAssetVersion('assets/images/scenes/default/head-afraid-blink.png'),
-    speak: withAssetVersion('assets/images/scenes/default/head-afraid-speak.png')
-};
+export const AFRAID_HEADS = { ...DIALOGUE_EXPRESSION_LIBRARY.afraid };
 
 export const AFRAID_TARGET_LINES_TW = new Set([
     '你……你想做什麼？',
@@ -193,11 +206,7 @@ export const AFRAID_TARGET_LINES_TW = new Set([
 
 export const AFRAID_TARGET_CHOICE_TITLE_TW = '你想做什麼？';
 
-export const SHY_BED_TRANSITION_HEADS = {
-    happy: withAssetVersion('assets/images/scenes/default/head-shy.png'),
-    speak: withAssetVersion('assets/images/scenes/default/head-shy-speak.png'),
-    blink: withAssetVersion('assets/images/scenes/default/head-shy-blink.png')
-};
+export const SHY_BED_TRANSITION_HEADS = { ...DIALOGUE_EXPRESSION_LIBRARY.shyBedTransition };
 
 export const FIGHT_TAIL_PIVOT_SOURCE = { x: 1389.57, y: 1259.96 };
 export const FIGHT_SCENE_OBJECT_POSITION = { x: 0.5, y: 0.58 };
@@ -296,12 +305,12 @@ export const BED_N_DIALOGUE_LINES = {
 
 export const BED_N_SLEEP_BRANCH_TEXT = {
     tw: {
-        postSleepLine: '床是我的，你去睡沙發!',
+        postSleepLine: '床是我的，{{player_name}}去睡沙發!',
         choiceTitle: '你要怎麼做？',
         optionUnderBlanket: '鑽進棉被裡',
         optionSleepSofa: '乖乖去睡沙發',
         goodNightLine: '晚安',
-        deathText: '你被咬死了'
+        deathText: '{{player_name}}被咬死了'
     },
     en: {
         postSleepLine: 'The bed is mine. Go sleep on the couch!',
@@ -333,7 +342,7 @@ export const HEAD_TOUCH_TEXT = {
     tw: {
         mild: '你幹麻啦',
         angry: '你很煩耶! 再弄我咬你喔!',
-        fatal: '你被咬死了'
+        fatal: '{{player_name}}被咬死了'
     },
     en: {
         mild: 'Hey, what are you doing?',
@@ -347,9 +356,4 @@ export const HEAD_TOUCH_TEXT = {
     }
 };
 
-export const HEAD_TOUCH_ASSETS = {
-    normal: withAssetVersion('assets/images/scenes/default/head-touch.png'),
-    angry: withAssetVersion('assets/images/scenes/default/head-touch-angry.png'),
-    angryBlink: withAssetVersion('assets/images/scenes/default/head-touch-angry-blink.png'),
-    angryTouch: withAssetVersion('assets/images/scenes/default/head-touch-angry-touch.png')
-};
+export const HEAD_TOUCH_ASSETS = { ...DIALOGUE_EXPRESSION_LIBRARY.headTouch };

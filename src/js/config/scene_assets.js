@@ -1,10 +1,17 @@
 import { withAssetVersion } from './asset_versioning.js';
+import { SCENE_EXPRESSION_LIBRARY } from './expression_library.js';
 
 export const SCENE_DEFAULT = 'default';
 export const SCENE_PARK = 'park';
 export const SCENE_BED = 'bed';
 export const SCENE_BED_N = 'bed_n';
 export const SCENE_FIGHT = 'fight';
+
+const DEFAULT_EXPR = SCENE_EXPRESSION_LIBRARY.default;
+const PARK_EXPR = SCENE_EXPRESSION_LIBRARY.park;
+const BED_EXPR = SCENE_EXPRESSION_LIBRARY.bed;
+const BED_N_EXPR = SCENE_EXPRESSION_LIBRARY.bed_n;
+const FIGHT_EXPR = SCENE_EXPRESSION_LIBRARY.fight;
 
 /** @typedef {{
  * bg: string,
@@ -44,81 +51,81 @@ function mapSceneAssetRecord(sceneAssetRecord) {
 /** @type {Record<string, SceneAssets>} */
 const RAW_SCENE_ASSETS = {
     [SCENE_DEFAULT]: {
-        bg: 'assets/images/scenes/default/bg-main.jpg',
-        body: 'assets/images/scenes/default/body-main.png',
-        tail: 'assets/images/scenes/default/tail-main.png',
-        idle: 'assets/images/scenes/default/head-no-speak.png',
-        blink: 'assets/images/scenes/default/head-blink.png',
-        speak: 'assets/images/scenes/default/head-speak.png',
-        angry: 'assets/images/scenes/default/head-angry.png',
-        happy: 'assets/images/scenes/default/head-happy.png',
-        moneyHead: 'assets/images/scenes/default/head-money.png',
-        moneyBlink: 'assets/images/scenes/default/head-money-blink.png',
-        happyTalk: 'assets/images/scenes/default/head-happy-talk.png',
+        bg: DEFAULT_EXPR.bg,
+        body: DEFAULT_EXPR.body,
+        tail: DEFAULT_EXPR.tail,
+        idle: DEFAULT_EXPR.idle,
+        blink: DEFAULT_EXPR.blink,
+        speak: DEFAULT_EXPR.speak,
+        angry: DEFAULT_EXPR.angry,
+        happy: DEFAULT_EXPR.happy,
+        moneyHead: DEFAULT_EXPR.moneyHead,
+        moneyBlink: DEFAULT_EXPR.moneyBlink,
+        happyTalk: DEFAULT_EXPR.happyTalk,
         tailOrigin: '68.7376% 75.0098%',
         hasSpecialHeads: true
     },
     [SCENE_PARK]: {
-        bg: 'assets/images/scenes/Park/bg-park.jpg',
-        body: 'assets/images/scenes/Park/Full_body.png',
-        tail: 'assets/images/scenes/Park/Full_body.png',
-        idle: 'assets/images/scenes/Park/Full_body.png',
-        blink: 'assets/images/scenes/Park/Full_body.png',
-        speak: 'assets/images/scenes/Park/Full_body.png',
-        angry: 'assets/images/scenes/Park/Full_body.png',
-        happy: 'assets/images/scenes/Park/Full_body.png',
-        happyTalk: 'assets/images/scenes/Park/Full_body.png',
-        parkEyes: 'assets/images/scenes/Park/eyes close.png',
-        parkMouth: 'assets/images/scenes/Park/mouth close.png',
-        parkEyebrows: 'assets/images/scenes/Park/eyebrows down.png',
+        bg: PARK_EXPR.bgPark,
+        body: PARK_EXPR.fullBody,
+        tail: PARK_EXPR.fullBody,
+        idle: PARK_EXPR.fullBody,
+        blink: PARK_EXPR.fullBody,
+        speak: PARK_EXPR.fullBody,
+        angry: PARK_EXPR.fullBody,
+        happy: PARK_EXPR.fullBody,
+        happyTalk: PARK_EXPR.fullBody,
+        parkEyes: PARK_EXPR.eyesClosed,
+        parkMouth: PARK_EXPR.mouthClosed,
+        parkEyebrows: PARK_EXPR.eyebrowsDown,
         tailOrigin: '50% 50%',
         hasSpecialHeads: false
     },
     [SCENE_BED]: {
-        bg: 'assets/images/scenes/bed/bed-bg.jpg',
-        body: 'assets/images/scenes/bed/bed-body.png',
-        tail: 'assets/images/scenes/bed/bed-tail.png',
-        idle: 'assets/images/scenes/bed/bed-head-no-speak.png',
-        blink: 'assets/images/scenes/bed/bed-head-blink.png',
-        speak: 'assets/images/scenes/bed/bed-head-speak.png',
-        moneyHead: 'assets/images/scenes/bed/bed-head-shock.png',
-        moneyBlink: 'assets/images/scenes/bed/bed-head-blink-shock.png',
-        idleClosed: 'assets/images/scenes/bed/bed-head-no-speak-eyes-close.png',
-        speakClosed: 'assets/images/scenes/bed/bed-head-speak-eyes-close.png',
-        idleClosedCry: 'assets/images/scenes/bed/bed-head-no-speak-eyes-close-cry.png',
-        speakClosedCry: 'assets/images/scenes/bed/bed-head-speak-eyes-close-cry.png',
-        idleTears: 'assets/images/scenes/bed/bed-head-no-speak-tears.png',
-        speakTears: 'assets/images/scenes/bed/bed-head-speak-tears.png',
-        blinkSpeakTears: 'assets/images/scenes/bed/bed-head-blink-speak-tears.png',
-        angry: 'assets/images/scenes/bed/bed-head-no-speak.png',
-        happy: 'assets/images/scenes/bed/bed-head-no-speak.png',
-        happyTalk: 'assets/images/scenes/bed/bed-head-no-speak.png',
+        bg: BED_EXPR.bg,
+        body: BED_EXPR.body,
+        tail: BED_EXPR.tail,
+        idle: BED_EXPR.idle,
+        blink: BED_EXPR.blink,
+        speak: BED_EXPR.speak,
+        moneyHead: BED_EXPR.moneyHead,
+        moneyBlink: BED_EXPR.moneyBlink,
+        idleClosed: BED_EXPR.idleClosed,
+        speakClosed: BED_EXPR.speakClosed,
+        idleClosedCry: BED_EXPR.idleClosedCry,
+        speakClosedCry: BED_EXPR.speakClosedCry,
+        idleTears: BED_EXPR.idleTears,
+        speakTears: BED_EXPR.speakTears,
+        blinkSpeakTears: BED_EXPR.blinkSpeakTears,
+        angry: BED_EXPR.idle,
+        happy: BED_EXPR.idle,
+        happyTalk: BED_EXPR.idle,
         tailOrigin: '42.6980% 62.0781%',
         hasSpecialHeads: false
     },
     [SCENE_BED_N]: {
-        bg: 'assets/images/scenes/bed_N/bed_N-bg.jpg',
-        body: 'assets/images/scenes/bed_N/bed_N-body-naked.png',
-        tail: 'assets/images/scenes/bed_N/bed_N-tail.png',
-        idle: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-        blink: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-        speak: 'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
-        angry: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-        happy: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-        happyTalk: 'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
+        bg: BED_N_EXPR.bg,
+        body: BED_N_EXPR.body,
+        tail: BED_N_EXPR.tail,
+        idle: BED_N_EXPR.idle,
+        blink: BED_N_EXPR.blink,
+        speak: BED_N_EXPR.speak,
+        angry: BED_N_EXPR.idle,
+        happy: BED_N_EXPR.idle,
+        happyTalk: BED_N_EXPR.idle,
         tailOrigin: '42.6980% 62.0781%',
         hasSpecialHeads: false
     },
     [SCENE_FIGHT]: {
-        bg: 'assets/images/scenes/default/bg-main.jpg',
-        body: 'assets/images/scenes/fight/fight-fox-notail.png',
-        tail: 'assets/images/scenes/fight/fight-tail.png',
-        idle: 'assets/images/scenes/fight/fight-fox-notail.png',
-        blink: 'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
-        speak: 'assets/images/scenes/fight/fight-fox-notail.png',
-        angry: 'assets/images/scenes/fight/fight-fox-damage-notail.png',
-        happy: 'assets/images/scenes/fight/fight-fox-notail.png',
-        happyTalk: 'assets/images/scenes/fight/fight-fox-notail.png',
+        bg: FIGHT_EXPR.bg,
+        body: FIGHT_EXPR.body,
+        tail: FIGHT_EXPR.tail,
+        idle: FIGHT_EXPR.idle,
+        blink: FIGHT_EXPR.blink,
+        speak: FIGHT_EXPR.speak,
+        angry: FIGHT_EXPR.angry,
+        happy: FIGHT_EXPR.happy,
+        happyTalk: FIGHT_EXPR.happyTalk,
         tailOrigin: '67.8501% 61.5215%',
         hasSpecialHeads: true
     }
@@ -141,83 +148,83 @@ function versionAssetList(assets) {
 }
 
 const DEFAULT_SCENE_IMAGE_ASSETS = versionAssetList([
-    'assets/images/scenes/default/bg-main.jpg',
-    'assets/images/scenes/default/body-main.png',
-    'assets/images/scenes/default/tail-main.png',
-    'assets/images/scenes/default/head-no-speak.png',
-    'assets/images/scenes/default/head-blink.png',
-    'assets/images/scenes/default/head-speak.png',
-    'assets/images/scenes/default/head-angry.png',
-    'assets/images/scenes/default/head-happy.png',
-    'assets/images/scenes/default/head-happy-talk.png',
-    'assets/images/scenes/default/head-no-speak-normal.png',
-    'assets/images/scenes/default/head-blink-normal.png',
-    'assets/images/scenes/default/head-touch.png',
-    'assets/images/scenes/default/head-touch-angry.png',
-    'assets/images/scenes/default/head-touch-angry-blink.png',
-    'assets/images/scenes/default/head-touch-angry-touch.png',
-    'assets/images/scenes/default/headphone.png',
-    'assets/images/scenes/default/head-money.png',
-    'assets/images/scenes/default/head-money-blink.png',
-    'assets/images/scenes/default/head-afraid.png',
-    'assets/images/scenes/default/head-afraid-blink.png',
-    'assets/images/scenes/default/head-afraid-speak.png',
-    'assets/images/scenes/default/head-shy.png',
-    'assets/images/scenes/default/head-shy-speak.png',
-    'assets/images/scenes/default/head-shy-blink.png',
-    'assets/images/scenes/default/money-popup.png',
-    'assets/images/scenes/default/pet-fox-desktop.jpg',
-    'assets/images/scenes/default/pet-fox-mobile.jpg'
+    DEFAULT_EXPR.bg,
+    DEFAULT_EXPR.body,
+    DEFAULT_EXPR.tail,
+    DEFAULT_EXPR.idle,
+    DEFAULT_EXPR.blink,
+    DEFAULT_EXPR.speak,
+    DEFAULT_EXPR.angry,
+    DEFAULT_EXPR.happy,
+    DEFAULT_EXPR.happyTalk,
+    DEFAULT_EXPR.idleNormal,
+    DEFAULT_EXPR.blinkNormal,
+    DEFAULT_EXPR.touchNormal,
+    DEFAULT_EXPR.touchAngry,
+    DEFAULT_EXPR.touchAngryBlink,
+    DEFAULT_EXPR.touchAngryTouch,
+    DEFAULT_EXPR.headphone,
+    DEFAULT_EXPR.moneyHead,
+    DEFAULT_EXPR.moneyBlink,
+    DEFAULT_EXPR.afraidIdle,
+    DEFAULT_EXPR.afraidBlink,
+    DEFAULT_EXPR.afraidSpeak,
+    DEFAULT_EXPR.shyHappy,
+    DEFAULT_EXPR.shySpeak,
+    DEFAULT_EXPR.shyBlink,
+    DEFAULT_EXPR.moneyPopup,
+    DEFAULT_EXPR.petDesktop,
+    DEFAULT_EXPR.petMobile
 ]);
 
 const PARK_SCENE_IMAGE_ASSETS = versionAssetList([
-    'assets/images/scenes/Park/bg-park.jpg',
-    'assets/images/scenes/Park/bg-coffee.jpg',
-    'assets/images/scenes/Park/Full_body.png',
-    'assets/images/scenes/Park/eyes close.png',
-    'assets/images/scenes/Park/mouth close.png',
-    'assets/images/scenes/Park/eyebrows down.png'
+    PARK_EXPR.bgPark,
+    PARK_EXPR.bgCoffee,
+    PARK_EXPR.fullBody,
+    PARK_EXPR.eyesClosed,
+    PARK_EXPR.mouthClosed,
+    PARK_EXPR.eyebrowsDown
 ]);
 
 const BED_SCENE_IMAGE_ASSETS = versionAssetList([
-    'assets/images/scenes/bed/bed-bg.jpg',
-    'assets/images/scenes/bed/bed-body.png',
-    'assets/images/scenes/bed/bed-tail.png',
-    'assets/images/scenes/bed/bed-head-no-speak.png',
-    'assets/images/scenes/bed/bed-head-blink.png',
-    'assets/images/scenes/bed/bed-head-speak.png',
-    'assets/images/scenes/bed/bed-head-shock.png',
-    'assets/images/scenes/bed/bed-head-blink-shock.png',
-    'assets/images/scenes/bed/bed-head-no-speak-eyes-close.png',
-    'assets/images/scenes/bed/bed-head-speak-eyes-close.png',
-    'assets/images/scenes/bed/bed-head-no-speak-eyes-close-cry.png',
-    'assets/images/scenes/bed/bed-head-speak-eyes-close-cry.png',
-    'assets/images/scenes/bed/bed-head-no-speak-tears.png',
-    'assets/images/scenes/bed/bed-head-speak-tears.png',
-    'assets/images/scenes/bed/bed-head-blink-speak-tears.png',
-    'assets/images/scenes/bed/bed-headphone.png',
-    'assets/images/scenes/bed/bed-money-popup.png'
+    BED_EXPR.bg,
+    BED_EXPR.body,
+    BED_EXPR.tail,
+    BED_EXPR.idle,
+    BED_EXPR.blink,
+    BED_EXPR.speak,
+    BED_EXPR.moneyHead,
+    BED_EXPR.moneyBlink,
+    BED_EXPR.idleClosed,
+    BED_EXPR.speakClosed,
+    BED_EXPR.idleClosedCry,
+    BED_EXPR.speakClosedCry,
+    BED_EXPR.idleTears,
+    BED_EXPR.speakTears,
+    BED_EXPR.blinkSpeakTears,
+    BED_EXPR.headphone,
+    BED_EXPR.moneyPopup
 ]);
 
 const BED_N_SCENE_IMAGE_ASSETS = versionAssetList([
-    'assets/images/scenes/bed_N/bed_N-bg.jpg',
-    'assets/images/scenes/bed_N/bed_N-body-naked.png',
-    'assets/images/scenes/bed_N/bed_N-tail.png',
-    'assets/images/scenes/bed_N/bed_N-head-blink-speak-tears.png',
-    'assets/images/scenes/bed_N/bed_N-head-speak-eyes-close-cry.png',
-    'assets/images/scenes/bed_N/bed_N-sleep.jpg',
-    'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg'
+    BED_N_EXPR.bg,
+    BED_N_EXPR.body,
+    BED_N_EXPR.tail,
+    BED_N_EXPR.idle,
+    BED_N_EXPR.speak,
+    BED_N_EXPR.sleep,
+    BED_N_EXPR.sleepNoLight
 ]);
 
 const FIGHT_SCENE_IMAGE_ASSETS = versionAssetList([
-    'assets/images/scenes/default/bg-main.jpg',
-    'assets/images/scenes/fight/fight-fox-notail.png',
-    'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
-    'assets/images/scenes/fight/fight-fox-damage-notail.png',
-    'assets/images/scenes/fight/fight-fox-damage-notail-break.png',
-    'assets/images/scenes/fight/fight-fox-naked.png',
-    'assets/images/scenes/fight/fight-tail.png',
-    'assets/images/scenes/fight/fight-headphone.png'
+    FIGHT_EXPR.bg,
+    FIGHT_EXPR.body,
+    FIGHT_EXPR.blink,
+    FIGHT_EXPR.angry,
+    FIGHT_EXPR.damageBreak,
+    FIGHT_EXPR.postHit,
+    FIGHT_EXPR.tail,
+    FIGHT_EXPR.headphone
 ]);
 
 export const SCENE_IMAGE_ASSET_GROUPS = {
@@ -231,7 +238,7 @@ export const SCENE_IMAGE_ASSET_GROUPS = {
 export const BOOT_IMAGE_ASSETS = uniqueAssets([
     ...PARK_SCENE_IMAGE_ASSETS,
     ...DEFAULT_SCENE_IMAGE_ASSETS,
-    withAssetVersion('assets/images/ui/fox-face.png')
+    SCENE_EXPRESSION_LIBRARY.ui.foxFace
 ]);
 
 export const PRELOAD_IMAGE_ASSETS = uniqueAssets([

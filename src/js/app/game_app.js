@@ -56,7 +56,8 @@ import { createFightFlowFx } from '../features/fight_flow.js';
 import { bindOverlayController } from '../features/overlay_controller.js';
 import { applyViewportProfile, computeViewportProfile } from '../ui/viewport_profile.js';
 import { triggerSoftVibration } from '../ui/ui_feedback.js';
-import { applyDevAssetVersionToDom, withAssetVersion } from '../config/asset_versioning.js';
+import { applyDevAssetVersionToDom } from '../config/asset_versioning.js';
+import { SCENE_EXPRESSION_LIBRARY } from '../config/expression_library.js';
 
 const DEBUG = false;
 const debugLog = (...args) => {
@@ -377,6 +378,9 @@ applyDevAssetVersionToDom(document);
         let currentDialogueLineText = '';
         let inChoiceMode = false;
         let isChoicePickPending = false;
+        const PLAYER_NAME_MAX_LENGTH = 10;
+        const PLAYER_NAME_FALLBACK = '你';
+        let playerDisplayName = PLAYER_NAME_FALLBACK;
 
         // Character Animation State
         let isSpeaking = false;
@@ -409,8 +413,13 @@ applyDevAssetVersionToDom(document);
         const toBeContinuedEl = ctxRefs.toBeContinuedScreen;
         const petFoxScreenEl = ctxRefs.petFoxScreen;
         const gameContainerEl = ctxRefs.gameContainer;
-        const DEFAULT_MONEY_POPUP_ASSET = withAssetVersion('assets/images/scenes/default/money-popup.png');
-        const BED_MONEY_POPUP_ASSET = withAssetVersion('assets/images/scenes/bed/bed-money-popup.png');
+        const DEFAULT_EXPR = SCENE_EXPRESSION_LIBRARY.default;
+        const PARK_EXPR = SCENE_EXPRESSION_LIBRARY.park;
+        const BED_EXPR = SCENE_EXPRESSION_LIBRARY.bed;
+        const BED_N_EXPR = SCENE_EXPRESSION_LIBRARY.bed_n;
+        const FIGHT_EXPR = SCENE_EXPRESSION_LIBRARY.fight;
+        const DEFAULT_MONEY_POPUP_ASSET = DEFAULT_EXPR.moneyPopup;
+        const BED_MONEY_POPUP_ASSET = BED_EXPR.moneyPopup;
         // Decouple mobile money popup offset from character framing:
         // character stays stable while money popup can be repositioned.
         const MOBILE_MONEY_CHARACTER_SHIFT_PX = 0;
@@ -460,14 +469,14 @@ applyDevAssetVersionToDom(document);
         let isBedNSleepBgOnlyMode = false;
         let hasUsedMainOOXXChoice = false;
         let viewportProfile = null;
-        const FIGHT_POST_OOXX_DAMAGE_ASSET = withAssetVersion('assets/images/scenes/fight/fight-fox-damage-notail-break.png');
-        const FIGHT_POST_OOXX_POST_HIT_ASSET = withAssetVersion('assets/images/scenes/fight/fight-fox-naked.png');
-        const BED_N_SLEEP_BG_ASSET = withAssetVersion('assets/images/scenes/bed_N/bed_N-sleep.jpg');
-        const BED_N_SLEEP_NO_LIGHT_ASSET = withAssetVersion('assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg');
-        const COFFEE_BG_ASSET = withAssetVersion('assets/images/scenes/Park/bg-coffee.jpg');
-        const DEFAULT_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/default/headphone.png');
-        const BED_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/bed/bed-headphone.png');
-        const FIGHT_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/fight/fight-headphone.png');
+        const FIGHT_POST_OOXX_DAMAGE_ASSET = FIGHT_EXPR.damageBreak;
+        const FIGHT_POST_OOXX_POST_HIT_ASSET = FIGHT_EXPR.postHit;
+        const BED_N_SLEEP_BG_ASSET = BED_N_EXPR.sleep;
+        const BED_N_SLEEP_NO_LIGHT_ASSET = BED_N_EXPR.sleepNoLight;
+        const COFFEE_BG_ASSET = PARK_EXPR.bgCoffee;
+        const DEFAULT_HEADPHONE_ASSET = DEFAULT_EXPR.headphone;
+        const BED_HEADPHONE_ASSET = BED_EXPR.headphone;
+        const FIGHT_HEADPHONE_ASSET = FIGHT_EXPR.headphone;
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -790,6 +799,57 @@ applyDevAssetVersionToDom(document);
 
         function getOpeningTextBundle() {
             return OPENING_TEXT[currentLang] || OPENING_TEXT.tw;
+        }
+
+        function normalizePlayerName(rawName) {
+            if (typeof rawName !== 'string') return '';
+            return rawName.replace(/[\r\n]+/g, ' ').trim();
+        }
+
+        function setPlayerDisplayName(rawName) {
+            const normalized = normalizePlayerName(rawName);
+            playerDisplayName = normalized || PLAYER_NAME_FALLBACK;
+            return playerDisplayName;
+        }
+
+        function getPlayerDisplayName() {
+            return playerDisplayName || PLAYER_NAME_FALLBACK;
+        }
+
+        function applyPlayerNameTemplate(text) {
+            if (typeof text !== 'string' || !text) return text || '';
+            const playerName = getPlayerDisplayName();
+            return text
+                .replace(/\{\{\s*player_name\s*\}\}/g, playerName)
+                .replace(/\{name\}/g, playerName);
+        }
+
+        function formatOpeningNameConfirmLine(template, playerName) {
+            const safeTemplate = String(template || '你好阿{name}');
+            const resolvedName = normalizePlayerName(playerName) || PLAYER_NAME_FALLBACK;
+            return safeTemplate
+                .replace(/\{\{\s*player_name\s*\}\}/g, resolvedName)
+                .replace(/\{name\}/g, resolvedName);
+        }
+
+        function promptForPlayerNameWithLimit() {
+            while (true) {
+                const opening = getOpeningTextBundle();
+                const promptText = opening.namePrompt || `請輸入你的名字（最多${PLAYER_NAME_MAX_LENGTH}個字）`;
+                const raw = window.prompt(promptText, '');
+                if (raw === null) return '';
+                const normalized = normalizePlayerName(raw);
+                if (!normalized) return '';
+                const charCount = Array.from(normalized).length;
+                if (charCount > PLAYER_NAME_MAX_LENGTH) {
+                    const tooLongTextTemplate = opening.nameTooLongAlert || '名字不能超過{max}個字，請重新輸入。';
+                    window.alert(
+                        tooLongTextTemplate.replace(/\{max\}/g, String(PLAYER_NAME_MAX_LENGTH))
+                    );
+                    continue;
+                }
+                return normalized;
+            }
         }
 
         function getCoffeeTextBundle() {
@@ -1580,11 +1640,12 @@ applyDevAssetVersionToDom(document);
             isRuntimeChoiceMode = false;
             runtimeChoiceState = null;
             clearChoicePressedState();
+            const choiceTitle = applyPlayerNameTemplate(t.choiceTitle || '');
 
             const labelEl = choicePanel.querySelector('.choice-label');
-            if (labelEl) labelEl.textContent = t.choiceTitle;
+            if (labelEl) labelEl.textContent = choiceTitle;
             dialogueUI.renderChoiceTexts(
-                t.choiceTitle,
+                choiceTitle,
                 sourceIndices.map((sourceIndex) => {
                     if (typeof sourceIndex !== 'number') return '';
                     if (isMainChoiceOptionDisabled(sourceIndex)) return '';
@@ -1595,7 +1656,7 @@ applyDevAssetVersionToDom(document);
                     ) {
                         text = getFightChoiceLabel();
                     }
-                    return text;
+                    return applyPlayerNameTemplate(text);
                 })
             );
 
@@ -1626,7 +1687,7 @@ applyDevAssetVersionToDom(document);
                 btn.style.display = '';
                 if (btn.dataset) delete btn.dataset.clickSfx;
                 if (numEl) numEl.textContent = String(slotIndex + 1);
-                if (textEl) textEl.textContent = text;
+                if (textEl) textEl.textContent = applyPlayerNameTemplate(text);
             });
             updateChoicePanelMeta();
         }
@@ -1678,7 +1739,7 @@ applyDevAssetVersionToDom(document);
                     runtimeFallbackTitle || t?.choiceTitle || ''
                 )
                 : (runtimeFallbackTitle || t?.choiceTitle || '');
-            if (labelEl) labelEl.textContent = title;
+            if (labelEl) labelEl.textContent = applyPlayerNameTemplate(title);
 
             choiceButtonEls.forEach((btn, slotIndex) => {
                 const option = runtimeChoiceState.options[slotIndex];
@@ -1697,7 +1758,11 @@ applyDevAssetVersionToDom(document);
                     else delete btn.dataset.clickSfx;
                 }
                 if (numEl) numEl.textContent = String(slotIndex + 1);
-                if (textEl) textEl.textContent = getStoryText(option.textKey, resolveRuntimeText(option.fallbackText));
+                if (textEl) {
+                    textEl.textContent = applyPlayerNameTemplate(
+                        getStoryText(option.textKey, resolveRuntimeText(option.fallbackText))
+                    );
+                }
             });
             updateChoicePanelMeta();
         }
@@ -1730,7 +1795,9 @@ applyDevAssetVersionToDom(document);
             if (!runtimeChoiceState) return;
             const option = runtimeChoiceState.options[slotIndex];
             if (!option || typeof option.onSelect !== 'function') return;
-            const choiceText = getStoryText(option.textKey, resolveRuntimeText(option.fallbackText));
+            const choiceText = applyPlayerNameTemplate(
+                getStoryText(option.textKey, resolveRuntimeText(option.fallbackText))
+            );
             if (choiceText) {
                 dialogueHistory.push({ speaker: '', text: choiceText, isChoice: true });
             }
@@ -2059,7 +2126,7 @@ applyDevAssetVersionToDom(document);
             speakerPlate.textContent = t.speaker;
             dialogueText.textContent = '';
             charIndex = 0;
-            const lineText = t.lines[idx];
+            const lineText = applyPlayerNameTemplate(t.lines[idx] || '');
             rememberCurrentLineText(lineText);
             applyAfraidHeadMode(isAfraidTargetLineText(lineText));
             setTyping(true);
@@ -2091,7 +2158,7 @@ applyDevAssetVersionToDom(document);
                 clearInterval(typeTimer);
                 setTyping(false);
                 // Use localized text, not the undefined script[].text
-                const lineText = l10n[currentLang].lines[lineIndex];
+                const lineText = applyPlayerNameTemplate(l10n[currentLang].lines[lineIndex] || '');
                 if (lineText) {
                     dialogueText.textContent = lineText;
                     rememberCurrentLineText(lineText);
@@ -2149,25 +2216,26 @@ applyDevAssetVersionToDom(document);
         }
 
         function runScriptedLine(responseText, speakerName, onDone) {
+            const resolvedText = applyPlayerNameTemplate(responseText || '');
             speakerPlate.textContent = speakerName;
             dialogueText.textContent = '';
             charIndex = 0;
-            rememberCurrentLineText(responseText || '');
-            applyAfraidHeadMode(isAfraidTargetLineText(responseText));
+            rememberCurrentLineText(resolvedText);
+            applyAfraidHeadMode(isAfraidTargetLineText(resolvedText));
             setTyping(true);
             clearInterval(typeTimer);
 
             typeTimer = setInterval(() => {
-                if (charIndex < responseText.length) {
-                    dialogueText.textContent += responseText[charIndex++];
+                if (charIndex < resolvedText.length) {
+                    dialogueText.textContent += resolvedText[charIndex++];
                     syncDialogueFitForMobile();
                     playTap();
                 } else {
                     clearInterval(typeTimer);
                     setTyping(false);
                     syncDialogueFitForMobile();
-                    if (responseText) {
-                        dialogueHistory.push({ speaker: speakerName, text: responseText, isChoice: false });
+                    if (resolvedText) {
+                        dialogueHistory.push({ speaker: speakerName, text: resolvedText, isChoice: false });
                     }
                     if (typeof onDone === 'function') onDone();
                 }
@@ -2373,6 +2441,61 @@ applyDevAssetVersionToDom(document);
             startCoffeeDialogueSequence();
         }
 
+        function showOpeningNameChoice() {
+            const opening = getOpeningTextBundle();
+            const speakerName = l10n[currentLang]?.speaker || '';
+            const nameQuestionLine = opening.nameQuestionTitle || '你叫什麼名字?';
+
+            const proceedAfterResponse = () => {
+                pendingClickAdvance = () => {
+                    startOpeningPostIntroSequence();
+                };
+            };
+
+            const runNoNameResponse = () => {
+                setPlayerDisplayName('');
+                runScriptedLine(
+                    opening.nameDeclineReplyLine || '好吧...那就不叫你名字',
+                    speakerName,
+                    proceedAfterResponse
+                );
+            };
+
+            runScriptedLine(nameQuestionLine, speakerName, () => {
+                showRuntimeChoicePanel({
+                    titleKey: '',
+                    fallbackTitle: nameQuestionLine,
+                    options: [
+                        {
+                            textKey: '',
+                            fallbackText: () => opening.choiceEnterName || '點擊選項輸入名字',
+                            onSelect: () => {
+                                const inputName = promptForPlayerNameWithLimit();
+                                if (!inputName) {
+                                    runNoNameResponse();
+                                    return;
+                                }
+                                const savedName = setPlayerDisplayName(inputName);
+                                runScriptedLine(
+                                    formatOpeningNameConfirmLine(
+                                        opening.nameConfirmLine || '你好阿{name}',
+                                        savedName
+                                    ),
+                                    speakerName,
+                                    proceedAfterResponse
+                                );
+                            }
+                        },
+                        {
+                            textKey: '',
+                            fallbackText: () => opening.choiceNoName || '不想告訴你',
+                            onSelect: runNoNameResponse
+                        }
+                    ]
+                });
+            });
+        }
+
         function startOpeningPostIntroSequence() {
             const opening = getOpeningTextBundle();
             runScriptedLine(
@@ -2447,7 +2570,7 @@ applyDevAssetVersionToDom(document);
                                 l10n[currentLang]?.speaker || '',
                                 () => {
                                     pendingClickAdvance = () => {
-                                        startOpeningPostIntroSequence();
+                                        showOpeningNameChoice();
                                     };
                                 },
                                 { requireClickBetweenLines: true }
@@ -2458,7 +2581,7 @@ applyDevAssetVersionToDom(document);
                         textKey: '',
                         fallbackText: () => getOpeningTextBundle().choiceSkipIntro || '不用介紹了',
                         onSelect: () => {
-                            startOpeningPostIntroSequence();
+                            showOpeningNameChoice();
                         }
                     }
                 ]
@@ -2468,6 +2591,7 @@ applyDevAssetVersionToDom(document);
         function startOpeningPrologue() {
             isOpeningDialogueLocked = false;
             isOpeningGreetingHeadTouchLocked = true;
+            setPlayerDisplayName('');
             setParkEyebrowsDown(false);
             applyOpeningHeadMode(true);
             const opening = getOpeningTextBundle();
@@ -2488,7 +2612,11 @@ applyDevAssetVersionToDom(document);
                 && !isFightSequenceActive
                 && sameChoiceSourceIndices(currentChoiceSourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
             ) {
-                dialogueHistory.push({ speaker: '', text: getFightChoiceLabel(), isChoice: true });
+                dialogueHistory.push({
+                    speaker: '',
+                    text: applyPlayerNameTemplate(getFightChoiceLabel()),
+                    isChoice: true
+                });
                 startFightEncounter();
                 return;
             }
@@ -2502,7 +2630,11 @@ applyDevAssetVersionToDom(document);
             const responseText = outcome?.responseText || '';
 
             // Add user choice to history
-            dialogueHistory.push({ speaker: '', text: t.choices[idx], isChoice: true });
+            dialogueHistory.push({
+                speaker: '',
+                text: applyPlayerNameTemplate(t.choices[idx] || ''),
+                isChoice: true
+            });
 
             if (actionId === 'start_ooxx' && !responseText) {
                 if (idx === 3) hasUsedMainOOXXChoice = true;
@@ -3194,9 +3326,12 @@ applyDevAssetVersionToDom(document);
             clearFightVisualFx();
             const deathScreen = document.getElementById('death-screen');
             const deathTextEl = document.getElementById('death-text');
-            const defaultDeathText = l10n[currentLang]?.deathText || deathTextEl?.textContent || '';
+            const defaultDeathText = applyPlayerNameTemplate(
+                l10n[currentLang]?.deathText || deathTextEl?.textContent || ''
+            );
+            const overrideDeathText = applyPlayerNameTemplate(overrideText || '');
             if (deathTextEl) {
-                deathTextEl.textContent = overrideText || defaultDeathText;
+                deathTextEl.textContent = overrideDeathText || defaultDeathText;
             }
             if (appState && appState.getState() !== GAME_STATES.DEATH) {
                 try { appState.transition(GAME_STATES.DEATH, { source: 'trigger_death' }); } catch (e) { }
@@ -3433,9 +3568,10 @@ applyDevAssetVersionToDom(document);
             if (!isDeathSequence && !isTyping && !inChoiceMode && script[lineIndex] && !isOpeningPrologueActive) {
                 const t = l10n[lang];
                 speakerPlate.textContent = t.speaker;
-                dialogueText.textContent = t.lines[lineIndex];
-                rememberCurrentLineText(t.lines[lineIndex]);
-                applyAfraidHeadMode(isAfraidTargetLineText(t.lines[lineIndex]));
+                const lineText = applyPlayerNameTemplate(t.lines[lineIndex] || '');
+                dialogueText.textContent = lineText;
+                rememberCurrentLineText(lineText);
+                applyAfraidHeadMode(isAfraidTargetLineText(lineText));
             } else if (inChoiceMode) {
                 if (isRuntimeChoiceMode) {
                     renderRuntimeChoicePanel();
@@ -3461,7 +3597,7 @@ applyDevAssetVersionToDom(document);
             speakerPlate.textContent = t.speaker;
 
             document.getElementById('start-btn').textContent = t.startBtn;
-            document.getElementById('death-text').textContent = t.deathText;
+            document.getElementById('death-text').textContent = applyPlayerNameTemplate(t.deathText || '');
             const tbcTextEl = document.getElementById('to-be-continued-text');
             if (tbcTextEl) tbcTextEl.textContent = ui.toBeContinued || 'To Be Continued...';
 
