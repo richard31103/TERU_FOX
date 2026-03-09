@@ -3691,8 +3691,7 @@ debugLog('[BOOT] game_app module active');
         function openSocialLink(actionEl) {
             const url = actionEl?.dataset?.url;
             if (!url) return;
-            const popup = window.open(url, '_blank', 'noopener,noreferrer');
-            if (!popup) window.location.href = url;
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
 
         async function copyTextToClipboard(text) {
