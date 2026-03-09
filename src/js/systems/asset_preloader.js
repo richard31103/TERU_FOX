@@ -62,7 +62,7 @@
             startBtnEl.disabled = true;
         }
 
-        const imageAssets = Array.from(new Set(assets.filter((src) => /\.(png|jpe?g|webp|gif)$/i.test(src))));
+        const imageAssets = Array.from(new Set(assets.filter((src) => /\.(png|jpe?g|webp|gif)(?:[?#].*)?$/i.test(src))));
         const totalCount = imageAssets.length;
         if (totalCount === 0) {
             updateLoaderProgress(1);

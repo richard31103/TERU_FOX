@@ -1,4 +1,4 @@
-const IMAGE_ASSET_RE = /\.(png|jpe?g|webp|gif)$/i;
+const IMAGE_ASSET_RE = /\.(png|jpe?g|webp|gif)(?:[?#].*)?$/i;
 
 function isImageAsset(src) {
     return typeof src === 'string' && IMAGE_ASSET_RE.test(src);

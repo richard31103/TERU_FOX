@@ -1,3 +1,5 @@
+import { withAssetVersion } from './asset_versioning.js';
+
 export const SCENE_DEFAULT = 'default';
 export const SCENE_PARK = 'park';
 export const SCENE_BED = 'bed';
@@ -31,8 +33,16 @@ export const SCENE_FIGHT = 'fight';
  * }} SceneAssets
  */
 
+function mapSceneAssetRecord(sceneAssetRecord) {
+    const mappedRecord = {};
+    Object.entries(sceneAssetRecord || {}).forEach(([key, value]) => {
+        mappedRecord[key] = typeof value === 'string' ? withAssetVersion(value) : value;
+    });
+    return mappedRecord;
+}
+
 /** @type {Record<string, SceneAssets>} */
-export const SCENE_ASSETS = {
+const RAW_SCENE_ASSETS = {
     [SCENE_DEFAULT]: {
         bg: 'assets/images/scenes/default/bg-main.jpg',
         body: 'assets/images/scenes/default/body-main.png',
@@ -114,11 +124,23 @@ export const SCENE_ASSETS = {
     }
 };
 
+/** @type {Record<string, SceneAssets>} */
+export const SCENE_ASSETS = Object.fromEntries(
+    Object.entries(RAW_SCENE_ASSETS).map(([sceneId, sceneAssets]) => [
+        sceneId,
+        mapSceneAssetRecord(sceneAssets)
+    ])
+);
+
 function uniqueAssets(assets) {
     return Array.from(new Set(assets));
 }
 
-const DEFAULT_SCENE_IMAGE_ASSETS = uniqueAssets([
+function versionAssetList(assets) {
+    return uniqueAssets((assets || []).map((assetPath) => withAssetVersion(assetPath)));
+}
+
+const DEFAULT_SCENE_IMAGE_ASSETS = versionAssetList([
     'assets/images/scenes/default/bg-main.jpg',
     'assets/images/scenes/default/body-main.png',
     'assets/images/scenes/default/tail-main.png',
@@ -148,7 +170,7 @@ const DEFAULT_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/default/pet-fox-mobile.jpg'
 ]);
 
-const PARK_SCENE_IMAGE_ASSETS = uniqueAssets([
+const PARK_SCENE_IMAGE_ASSETS = versionAssetList([
     'assets/images/scenes/Park/bg-park.jpg',
     'assets/images/scenes/Park/bg-coffee.jpg',
     'assets/images/scenes/Park/Full_body.png',
@@ -157,7 +179,7 @@ const PARK_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/Park/eyebrows down.png'
 ]);
 
-const BED_SCENE_IMAGE_ASSETS = uniqueAssets([
+const BED_SCENE_IMAGE_ASSETS = versionAssetList([
     'assets/images/scenes/bed/bed-bg.jpg',
     'assets/images/scenes/bed/bed-body.png',
     'assets/images/scenes/bed/bed-tail.png',
@@ -177,7 +199,7 @@ const BED_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/bed/bed-money-popup.png'
 ]);
 
-const BED_N_SCENE_IMAGE_ASSETS = uniqueAssets([
+const BED_N_SCENE_IMAGE_ASSETS = versionAssetList([
     'assets/images/scenes/bed_N/bed_N-bg.jpg',
     'assets/images/scenes/bed_N/bed_N-body-naked.png',
     'assets/images/scenes/bed_N/bed_N-tail.png',
@@ -187,7 +209,7 @@ const BED_N_SCENE_IMAGE_ASSETS = uniqueAssets([
     'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg'
 ]);
 
-const FIGHT_SCENE_IMAGE_ASSETS = uniqueAssets([
+const FIGHT_SCENE_IMAGE_ASSETS = versionAssetList([
     'assets/images/scenes/default/bg-main.jpg',
     'assets/images/scenes/fight/fight-fox-notail.png',
     'assets/images/scenes/fight/fight-fox-eyes-close-notail.png',
@@ -209,7 +231,7 @@ export const SCENE_IMAGE_ASSET_GROUPS = {
 export const BOOT_IMAGE_ASSETS = uniqueAssets([
     ...PARK_SCENE_IMAGE_ASSETS,
     ...DEFAULT_SCENE_IMAGE_ASSETS,
-    'assets/images/ui/fox-face.png'
+    withAssetVersion('assets/images/ui/fox-face.png')
 ]);
 
 export const PRELOAD_IMAGE_ASSETS = uniqueAssets([

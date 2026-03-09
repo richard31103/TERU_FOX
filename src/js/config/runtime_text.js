@@ -1,4 +1,6 @@
-﻿export const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
+﻿import { withAssetVersion } from './asset_versioning.js';
+
+export const DEFAULT_CHOICE_SOURCE_INDICES = [0, 1, 2, 3];
 export const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
 
 export const FIGHT_CHOICE_LABELS = {
@@ -173,15 +175,15 @@ export const OPENING_TEXT = {
 };
 
 export const OPENING_HEADS = {
-    idle: 'assets/images/scenes/default/head-no-speak-normal.png',
-    blink: 'assets/images/scenes/default/head-blink-normal.png',
-    speak: 'assets/images/scenes/default/head-speak.png'
+    idle: withAssetVersion('assets/images/scenes/default/head-no-speak-normal.png'),
+    blink: withAssetVersion('assets/images/scenes/default/head-blink-normal.png'),
+    speak: withAssetVersion('assets/images/scenes/default/head-speak.png')
 };
 
 export const AFRAID_HEADS = {
-    idle: 'assets/images/scenes/default/head-afraid.png',
-    blink: 'assets/images/scenes/default/head-afraid-blink.png',
-    speak: 'assets/images/scenes/default/head-afraid-speak.png'
+    idle: withAssetVersion('assets/images/scenes/default/head-afraid.png'),
+    blink: withAssetVersion('assets/images/scenes/default/head-afraid-blink.png'),
+    speak: withAssetVersion('assets/images/scenes/default/head-afraid-speak.png')
 };
 
 export const AFRAID_TARGET_LINES_TW = new Set([
@@ -192,9 +194,9 @@ export const AFRAID_TARGET_LINES_TW = new Set([
 export const AFRAID_TARGET_CHOICE_TITLE_TW = '你想做什麼？';
 
 export const SHY_BED_TRANSITION_HEADS = {
-    happy: 'assets/images/scenes/default/head-shy.png',
-    speak: 'assets/images/scenes/default/head-shy-speak.png',
-    blink: 'assets/images/scenes/default/head-shy-blink.png'
+    happy: withAssetVersion('assets/images/scenes/default/head-shy.png'),
+    speak: withAssetVersion('assets/images/scenes/default/head-shy-speak.png'),
+    blink: withAssetVersion('assets/images/scenes/default/head-shy-blink.png')
 };
 
 export const FIGHT_TAIL_PIVOT_SOURCE = { x: 1389.57, y: 1259.96 };
@@ -346,8 +348,8 @@ export const HEAD_TOUCH_TEXT = {
 };
 
 export const HEAD_TOUCH_ASSETS = {
-    normal: 'assets/images/scenes/default/head-touch.png',
-    angry: 'assets/images/scenes/default/head-touch-angry.png',
-    angryBlink: 'assets/images/scenes/default/head-touch-angry-blink.png',
-    angryTouch: 'assets/images/scenes/default/head-touch-angry-touch.png'
+    normal: withAssetVersion('assets/images/scenes/default/head-touch.png'),
+    angry: withAssetVersion('assets/images/scenes/default/head-touch-angry.png'),
+    angryBlink: withAssetVersion('assets/images/scenes/default/head-touch-angry-blink.png'),
+    angryTouch: withAssetVersion('assets/images/scenes/default/head-touch-angry-touch.png')
 };

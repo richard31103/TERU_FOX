@@ -56,6 +56,7 @@ import { createFightFlowFx } from '../features/fight_flow.js';
 import { bindOverlayController } from '../features/overlay_controller.js';
 import { applyViewportProfile, computeViewportProfile } from '../ui/viewport_profile.js';
 import { triggerSoftVibration } from '../ui/ui_feedback.js';
+import { applyDevAssetVersionToDom, withAssetVersion } from '../config/asset_versioning.js';
 
 const DEBUG = false;
 const debugLog = (...args) => {
@@ -63,6 +64,7 @@ const debugLog = (...args) => {
 };
 
 debugLog('[BOOT] game_app module active');
+applyDevAssetVersionToDom(document);
 
         const DEFAULT_TEXT_SPEED_LEVEL = 3;
         const NO_ADVANCE_SELECTORS = [
@@ -407,8 +409,8 @@ debugLog('[BOOT] game_app module active');
         const toBeContinuedEl = ctxRefs.toBeContinuedScreen;
         const petFoxScreenEl = ctxRefs.petFoxScreen;
         const gameContainerEl = ctxRefs.gameContainer;
-        const DEFAULT_MONEY_POPUP_ASSET = 'assets/images/scenes/default/money-popup.png';
-        const BED_MONEY_POPUP_ASSET = 'assets/images/scenes/bed/bed-money-popup.png';
+        const DEFAULT_MONEY_POPUP_ASSET = withAssetVersion('assets/images/scenes/default/money-popup.png');
+        const BED_MONEY_POPUP_ASSET = withAssetVersion('assets/images/scenes/bed/bed-money-popup.png');
         // Decouple mobile money popup offset from character framing:
         // character stays stable while money popup can be repositioned.
         const MOBILE_MONEY_CHARACTER_SHIFT_PX = 0;
@@ -458,11 +460,14 @@ debugLog('[BOOT] game_app module active');
         let isBedNSleepBgOnlyMode = false;
         let hasUsedMainOOXXChoice = false;
         let viewportProfile = null;
-        const FIGHT_POST_OOXX_DAMAGE_ASSET = 'assets/images/scenes/fight/fight-fox-damage-notail-break.png';
-        const FIGHT_POST_OOXX_POST_HIT_ASSET = 'assets/images/scenes/fight/fight-fox-naked.png';
-        const BED_N_SLEEP_BG_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep.jpg';
-        const BED_N_SLEEP_NO_LIGHT_ASSET = 'assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg';
-        const COFFEE_BG_ASSET = 'assets/images/scenes/Park/bg-coffee.jpg';
+        const FIGHT_POST_OOXX_DAMAGE_ASSET = withAssetVersion('assets/images/scenes/fight/fight-fox-damage-notail-break.png');
+        const FIGHT_POST_OOXX_POST_HIT_ASSET = withAssetVersion('assets/images/scenes/fight/fight-fox-naked.png');
+        const BED_N_SLEEP_BG_ASSET = withAssetVersion('assets/images/scenes/bed_N/bed_N-sleep.jpg');
+        const BED_N_SLEEP_NO_LIGHT_ASSET = withAssetVersion('assets/images/scenes/bed_N/bed_N-sleep_nolight.jpg');
+        const COFFEE_BG_ASSET = withAssetVersion('assets/images/scenes/Park/bg-coffee.jpg');
+        const DEFAULT_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/default/headphone.png');
+        const BED_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/bed/bed-headphone.png');
+        const FIGHT_HEADPHONE_ASSET = withAssetVersion('assets/images/scenes/fight/fight-headphone.png');
         let headTouchStage = 0;
         let headTouchTapCount = 0;
         let headTouchInterruptActive = false;
@@ -1366,17 +1371,17 @@ debugLog('[BOOT] game_app module active');
         function syncHeadphoneLayer() {
             if (!charHeadphone) return;
             if (activeSceneId === SCENE_DEFAULT) {
-                setCachedSrc(charHeadphone, 'assets/images/scenes/default/headphone.png');
+                setCachedSrc(charHeadphone, DEFAULT_HEADPHONE_ASSET);
                 charHeadphone.classList.add('active');
                 return;
             }
             if (activeSceneId === SCENE_BED) {
-                setCachedSrc(charHeadphone, 'assets/images/scenes/bed/bed-headphone.png');
+                setCachedSrc(charHeadphone, BED_HEADPHONE_ASSET);
                 charHeadphone.classList.add('active');
                 return;
             }
             if (activeSceneId === SCENE_FIGHT) {
-                setCachedSrc(charHeadphone, 'assets/images/scenes/fight/fight-headphone.png');
+                setCachedSrc(charHeadphone, FIGHT_HEADPHONE_ASSET);
                 charHeadphone.classList.add('active');
                 return;
             }
