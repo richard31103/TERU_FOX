@@ -1103,6 +1103,42 @@
             opacity: 1;
         }
 
+        #tower-screen {
+            background: radial-gradient(circle at 50% 0%, #1b2238 0%, #090d18 60%, #05070f 100%);
+            z-index: 101;
+        }
+
+        #tower-root {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #tower-screen.tower-shake-sm #tower-root .tower-shake-layer {
+            animation: towerScreenShakeSm 0.18s ease-out 1;
+        }
+
+        #tower-screen.tower-shake-lg #tower-root .tower-shake-layer {
+            animation: towerScreenShakeLg 0.24s ease-out 1;
+        }
+
+        @keyframes towerScreenShakeSm {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            50% { transform: translateX(3px); }
+            75% { transform: translateX(-2px); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes towerScreenShakeLg {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(3px); }
+            100% { transform: translateX(0); }
+        }
+
         /* ???? LOADING BAR ???? */
         #loading-container {
             width: 300px;
@@ -2399,6 +2435,13 @@
                     <input type="range" class="setting-slider" id="sfx-vol" min="0" max="100" value="80"
                         data-action="update-slider" style="--val:80%">
                 </div>
+                <div class="setting-row">
+                    <span class="setting-label" id="lang-ui-voice">????</span>
+                    <div class="setting-toggle">
+                        <button class="tog-btn on" id="tog-voice-off" data-action="set-voice" data-voice="off">??</button>
+                        <button class="tog-btn" id="tog-voice-on" data-action="set-voice" data-voice="on">On</button>
+                    </div>
+                </div>
 
                 <div class="setting-divider"></div>
 
@@ -2461,6 +2504,11 @@
             <source media="(hover: none) and (pointer: coarse)" srcset="assets/images/scenes/default/pet-fox-mobile.jpg">
             <img src="assets/images/scenes/default/pet-fox-desktop.jpg" id="pet-fox-image" alt="Pet Fox">
         </picture>
+    </div>
+
+    <!-- Tower Game Screen -->
+    <div id="tower-screen" class="overlay-screen hidden">
+        <div id="tower-root"></div>
     </div>
 
     <!-- OOXX Game Screen -->

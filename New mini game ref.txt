@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貪婪靈狐的深淵遠征 (戰鬥視角版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; color: white; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #gameCanvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; position: absolute; top: 0; left: 0; z-index: 0; }
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; }
+        .interactive { pointer-events: auto; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+
+        .hp-bar-container { background: #1a1a1a; border: 3px solid #333; border-radius: 10px; width: 400px; height: 30px; position: relative; overflow: hidden; box-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #b91c1c); transition: width 0.1s linear; }
+        .boss-timer-bar { height: 4px; background: #eab308; transition: width 0.1s linear; }
+        
+        @keyframes float-up {
+            0% { opacity: 0; transform: translateY(10px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(-20px); }
+            100% { opacity: 0; transform: translateY(-30px); }
+        }
+        .toast { animation: float-up 1.5s ease-out forwards; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <!-- 頂部資訊：資源與關卡狀態 -->
+        <div class="flex justify-between items-start p-6">
+            <!-- 左側：資源與傷害 -->
+            <div class="flex flex-col gap-1 interactive w-1/3">
+                <div class="text-4xl font-black text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] tracking-wider">
+                    <span id="ui-souls">0</span> <span class="text-xl text-purple-600">靈魂</span>
+                </div>
+                <div class="text-lg text-gray-300 font-bold mt-2">
+                    被動傷害 (DPS): <span id="ui-dps" class="text-red-400">0</span>
+                </div>
+                <div class="text-md text-gray-400 font-bold">
+                    點擊傷害: <span id="ui-click-dmg" class="text-orange-400">1</span>
+                </div>
+            </div>
+
+            <!-- 中央：關卡與怪物血條 -->
+            <div class="flex flex-col items-center gap-2 interactive w-1/3 mt-4">
+                <div class="text-2xl font-black text-gray-200 tracking-widest drop-shadow-lg flex items-center gap-3">
+                    <button onclick="changeStage(-1)" class="px-2 bg-gray-800 rounded hover:bg-gray-700 disabled:opacity-50" id="btn-prev-stage">◀</button>
+                    關卡 <span id="ui-stage" class="text-white">1</span>
+                    <button onclick="changeStage(1)" class="px-2 bg-gray-800 rounded hover:bg-gray-700 disabled:opacity-50 hidden" id="btn-next-stage">▶</button>
+                </div>
+                
+                <div class="text-sm text-gray-400 font-bold mb-1" id="ui-kills-text">擊殺: 0 / 10</div>
+
+                <!-- Boss 倒數條 -->
+                <div id="boss-timer-container" class="w-full max-w-[400px] hidden mb-1">
+                    <div class="text-xs text-yellow-400 font-bold text-center mb-1">BOSS 挑戰時間: <span id="ui-boss-time">30.0</span>s</div>
+                    <div class="w-full bg-gray-800 h-1 rounded">
+                        <div id="ui-boss-bar" class="boss-timer-bar w-full"></div>
+                    </div>
+                </div>
+
+                <!-- 血條 -->
+                <div class="hp-bar-container">
+                    <div id="ui-hp-bar" class="hp-bar-fill w-full"></div>
+                    <div class="absolute inset-0 flex items-center justify-center font-black text-white text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,1)] pointer-events-none">
+                        <span id="ui-hp-text">10 / 10</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：轉生系統 -->
+            <div class="flex flex-col items-end gap-2 interactive w-1/3">
+                <div class="text-xl font-bold text-teal-400 drop-shadow-[0_0_8px_rgba(45,212,191,0.8)]">
+                    業力: <span id="ui-karma">0</span>
+                </div>
+                <div class="text-xs text-teal-600 mb-2 text-right">每 1 業力提供全局傷害 +10%</div>
+                <button onclick="prestige()" class="px-4 py-2 bg-teal-900 border border-teal-500 text-teal-100 rounded hover:bg-teal-800 transition shadow-[0_0_15px_rgba(45,212,191,0.4)] font-bold text-sm">
+                    轉生 (重置並獲得業力)
+                </button>
+                <div class="text-xs text-gray-500">預計獲得: +<span id="ui-pending-karma">0</span></div>
+            </div>
+        </div>
+
+        <!-- 右側欄：英雄商店 -->
+        <div class="absolute right-6 top-32 bottom-6 w-80 bg-gray-900/90 border border-gray-700 rounded-xl p-3 flex flex-col interactive shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm">
+            <h3 class="text-purple-400 text-center font-black text-lg border-b border-purple-900/50 pb-2 mb-3 tracking-widest">深淵契約 (英雄)</h3>
+            <div id="heroes-container" class="flex flex-col gap-2 overflow-y-auto pr-1 flex-1 pb-4">
+                <!-- JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed top-1/4 left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center gap-2"></div>
+
+    <script>
+        // --- 遊戲狀態 ---
+        const state = {
+            souls: 0,
+            karma: parseFloat(localStorage.getItem('karma')) || 0,
+            
+            stage: 1,
+            highestStage: 1,
+            kills: 0,
+            killsRequired: 10,
+            
+            monsterHp: 10,
+            monsterMaxHp: 10,
+            isBoss: false,
+            bossTimeLeft: 30,
+            bossTimeMax: 30,
+            
+            heroes: {
+                clicker: { name: '靈狐之爪', desc: '提升點擊傷害', type: 'click', baseCost: 5, costMult: 1.07, level: 1, basePower: 1 },
+                wisp: { name: '遊蕩鬼火', desc: '微弱的持續灼燒', type: 'dps', baseCost: 50, costMult: 1.07, level: 0, basePower: 5 },
+                cultist: { name: '瘋狂教徒', desc: '用鮮血進行詛咒', type: 'dps', baseCost: 250, costMult: 1.07, level: 0, basePower: 22 },
+                demon: { name: '下級惡魔', desc: '撕裂敵人的防禦', type: 'dps', baseCost: 1000, costMult: 1.07, level: 0, basePower: 74 },
+                reaper: { name: '深淵死神', desc: '帶來純粹的死亡', type: 'dps', baseCost: 4000, costMult: 1.07, level: 0, basePower: 245 },
+                leviathan: { name: '虛空巨獸', desc: '吞噬一切存在', type: 'dps', baseCost: 20000, costMult: 1.07, level: 0, basePower: 976 }
+            }
+        };
+
+        // --- 核心數學公式 ---
+        function getGlobalMultiplier() { return 1 + (state.karma * 0.1); }
+        function getClickDamage() { return state.heroes.clicker.level * state.heroes.clicker.basePower * getGlobalMultiplier(); }
+        function getDPS() {
+            let dps = 0;
+            for (let key in state.heroes) {
+                if (state.heroes[key].type === 'dps') dps += state.heroes[key].level * state.heroes[key].basePower;
+            }
+            return dps * getGlobalMultiplier();
+        }
+        function getMonsterMaxHp(stage, isBoss) {
+            let hp = 10 * Math.pow(1.57, stage - 1);
+            if (isBoss) hp *= 10;
+            return Math.ceil(hp);
+        }
+        function getMonsterReward(maxHp, isBoss) {
+            let gold = Math.max(1, maxHp / 15);
+            if (isBoss) gold *= 5;
+            return Math.ceil(gold * (0.8 + Math.random() * 0.4));
+        }
+
+        // --- 關卡與怪物邏輯 ---
+        function spawnMonster() {
+            state.isBoss = (state.stage % 5 === 0);
+            state.monsterMaxHp = getMonsterMaxHp(state.stage, state.isBoss);
+            state.monsterHp = state.monsterMaxHp;
+            
+            if (state.isBoss) {
+                state.bossTimeLeft = state.bossTimeMax;
+                document.getElementById('boss-timer-container').classList.remove('hidden');
+            } else {
+                document.getElementById('boss-timer-container').classList.add('hidden');
+            }
+
+            monsterEntity.resetShape();
+            updateStageUI();
+        }
+
+        function damageMonster(amount, isClick = false) {
+            if (state.monsterHp <= 0) return;
+            
+            state.monsterHp -= amount;
+            
+            if (isClick) {
+                // 點擊特效
+                isHitFrame = 3;
+                monsterEntity.scale = 0.85;
+                createFloatingText(enemyX + (Math.random()-0.5)*40, enemyY - 50, formatNumber(amount), '#fb923c');
+                createParticles(enemyX, enemyY, 5, '#ef4444', 'blood');
+            }
+
+            if (state.monsterHp <= 0) {
+                state.monsterHp = 0;
+                killMonster();
+            }
+            updateHpUI();
+        }
+
+        function killMonster() {
+            screenShake = 15;
+            createParticles(enemyX, enemyY, 40, '#a855f7', 'gold'); 
+
+            const reward = getMonsterReward(state.monsterMaxHp, state.isBoss);
+            state.souls += reward;
+            createFloatingText(enemyX, enemyY - 80, `+${formatNumber(reward)}`, '#a855f7', true);
+
+            if (!state.isBoss) {
+                state.kills++;
+                if (state.kills >= state.killsRequired) advanceStage();
+                else spawnMonster(); 
+            } else {
+                advanceStage();
+            }
+        }
+
+        function advanceStage() {
+            state.stage++;
+            if (state.stage > state.highestStage) state.highestStage = state.stage;
+            state.kills = 0;
+            spawnMonster();
+        }
+
+        function changeStage(dir) {
+            const newStage = state.stage + dir;
+            if (newStage >= 1 && newStage <= state.highestStage) {
+                state.stage = newStage;
+                state.kills = 0;
+                spawnMonster();
+            }
+        }
+
+        function failBoss() {
+            showToast("DPS 不足！被 Boss 擊退...", "text-red-500");
+            state.stage--;
+            state.kills = 0;
+            spawnMonster();
+        }
+
+        // --- 轉生與商店系統 ---
+        function calculatePendingKarma() {
+            if (state.highestStage <= 5) return 0;
+            return Math.floor(Math.pow(state.highestStage / 5, 1.5));
+        }
+
+        function prestige() {
+            const gain = calculatePendingKarma();
+            if (gain < 1) {
+                showToast("進度太淺，還無法凝結業力 (需通關第 5 關以上)", "text-gray-400");
+                return;
+            }
+            if(confirm(`確定要轉生嗎？\n你將失去所有金幣、英雄等級與關卡進度。\n但你會獲得 ${gain} 點業力，使未來的全局傷害提升 ${gain * 10}%！`)) {
+                state.karma += gain;
+                saveData();
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            state.souls = 0;
+            state.stage = 1;
+            state.highestStage = 1;
+            state.kills = 0;
+            for (let key in state.heroes) state.heroes[key].level = (key === 'clicker') ? 1 : 0;
+            spawnMonster();
+            renderHeroes();
+            updateUI();
+        }
+
+        function buyHero(key) {
+            const h = state.heroes[key];
+            const cost = Math.floor(h.baseCost * Math.pow(h.costMult, h.level));
+            if (state.souls >= cost) {
+                state.souls -= cost;
+                h.level++;
+                renderHeroes();
+                updateUI();
+            }
+        }
+
+        function renderHeroes() {
+            const container = document.getElementById('heroes-container');
+            container.innerHTML = '';
+            for (let key in state.heroes) {
+                const h = state.heroes[key];
+                const cost = Math.floor(h.baseCost * Math.pow(h.costMult, h.level));
+                const canBuy = state.souls >= cost;
+                const effectStr = h.type === 'click' 
+                    ? `+${formatNumber(h.basePower * getGlobalMultiplier())} 點擊` 
+                    : `+${formatNumber(h.basePower * getGlobalMultiplier())}/s`;
+
+                container.innerHTML += `
+                    <div onclick="if(${canBuy}) buyHero('${key}')" class="p-3 rounded-lg border-2 ${canBuy ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-teal-500 cursor-pointer' : 'bg-gray-950 border-gray-800 opacity-50 cursor-not-allowed'} transition">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold ${canBuy ? 'text-gray-100' : 'text-gray-500'} text-lg">${h.name}</span>
+                            <span class="bg-gray-900 px-2 py-0.5 rounded text-sm text-gray-400 border border-gray-700">Lv.${h.level}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mb-2">${h.desc}</div>
+                        <div class="flex justify-between items-end">
+                            <div class="${canBuy ? 'text-yellow-400' : 'text-gray-600'} font-bold flex items-center gap-1">
+                                <span class="text-xs text-gray-400">花費</span> ${formatNumber(cost)}
+                            </div>
+                            <div class="${h.type === 'click' ? 'text-orange-400' : 'text-red-400'} text-sm font-bold">
+                                ${effectStr}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // --- Canvas 核心與視覺實體 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let playerX, playerY, enemyX, enemyY;
+        let particles = [], floatingTexts = [], projectiles = [];
+        let screenShake = 0;
+        let isHitFrame = 0; 
+        
+        let dpsAccumulator = 0; // 用於控制子彈發射頻率
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            // 重新計算左右位置
+            playerX = width * 0.3;
+            enemyX = width * 0.7;
+            playerY = height * 0.55;
+            enemyY = height * 0.55;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 玩家實體 (靈狐)
+        const playerEntity = {
+            attackAnim: 0, // 0~1 的動畫進度
+            
+            draw() {
+                ctx.save();
+                
+                // 攻擊時往前突進
+                let xOffset = 0;
+                if (this.attackAnim > 0) {
+                    xOffset = Math.sin(this.attackAnim * Math.PI) * 40; // 向右突刺 40px
+                    this.attackAnim -= 0.1;
+                    if (this.attackAnim < 0) this.attackAnim = 0;
+                }
+                
+                ctx.translate(playerX + xOffset, playerY);
+                
+                // 靈魂光環
+                ctx.beginPath();
+                ctx.arc(0, 0, 70, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(45, 212, 191, 0.1)';
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#2dd4bf';
+                ctx.fill();
+
+                // 幾何靈狐本體 (使用路徑繪製)
+                ctx.fillStyle = '#0f766e';
+                ctx.strokeStyle = '#2dd4bf';
+                ctx.lineWidth = 3;
+                
+                // 身體
+                ctx.beginPath();
+                ctx.moveTo(-30, 40);
+                ctx.lineTo(20, 20);
+                ctx.lineTo(-10, -30);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+                
+                // 尾巴
+                ctx.beginPath();
+                ctx.moveTo(-30, 40);
+                ctx.quadraticCurveTo(-80, 20, -60, -20);
+                ctx.quadraticCurveTo(-40, 10, -20, 10);
+                ctx.fillStyle = '#115e59';
+                ctx.fill(); ctx.stroke();
+
+                // 頭部
+                ctx.beginPath();
+                ctx.moveTo(10, -10);
+                ctx.lineTo(50, -20);
+                ctx.lineTo(15, -40);
+                ctx.closePath();
+                ctx.fillStyle = '#134e4a';
+                ctx.fill(); ctx.stroke();
+                
+                // 狐狸耳朵
+                ctx.beginPath();
+                ctx.moveTo(15, -40);
+                ctx.lineTo(5, -60);
+                ctx.lineTo(0, -35);
+                ctx.fillStyle = '#2dd4bf';
+                ctx.fill();
+                
+                // 發光的眼睛
+                ctx.beginPath();
+                ctx.arc(30, -22, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#fff';
+                ctx.fill();
+
+                ctx.restore();
+            },
+            
+            doAttack() {
+                this.attackAnim = 1;
+                // 發射劍氣/抓痕特效
+                createParticles(playerX + 50, playerY, 5, '#2dd4bf', 'slash');
+            }
+        };
+
+        // 怪物實體
+        const monsterEntity = {
+            scale: 1, points: [], numPoints: 12, baseRadius: 100,
+            colorHues: [0, 60, 120, 180, 240, 300], 
+            
+            resetShape() {
+                this.points = [];
+                for(let i=0; i<this.numPoints; i++) {
+                    this.points.push({
+                        angle: (i / this.numPoints) * Math.PI * 2,
+                        offset: Math.random() * 20 - 10,
+                        speed: Math.random() * 0.05 + 0.02
+                    });
+                }
+                this.baseRadius = state.isBoss ? 160 : 90;
+            },
+
+            draw(time) {
+                const hue = this.colorHues[(Math.floor((state.stage - 1) / 5)) % this.colorHues.length];
+                const isBoss = state.isBoss;
+                const radius = this.baseRadius * this.scale;
+                
+                ctx.save();
+                ctx.translate(enemyX, enemyY);
+
+                if (isHitFrame > 0) ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
+
+                ctx.beginPath();
+                for(let i=0; i<=this.numPoints; i++) {
+                    const idx = i % this.numPoints;
+                    const p = this.points[idx];
+                    const r = radius + Math.sin(time * p.speed) * 15 + p.offset;
+                    const x = Math.cos(p.angle) * r;
+                    const y = Math.sin(p.angle) * r;
+                    
+                    if(i === 0) ctx.moveTo(x, y);
+                    else {
+                        const prevIdx = (i - 1 + this.numPoints) % this.numPoints;
+                        const prevP = this.points[prevIdx];
+                        const prevR = radius + Math.sin(time * prevP.speed) * 15 + prevP.offset;
+                        const prevX = Math.cos(prevP.angle) * prevR;
+                        const prevY = Math.sin(prevP.angle) * prevR;
+                        const cpX = (x + prevX) / 2;
+                        const cpY = (y + prevY) / 2;
+                        ctx.quadraticCurveTo(prevX, prevY, cpX, cpY);
+                    }
+                }
+                ctx.closePath();
+
+                if (isHitFrame > 0) {
+                    ctx.fillStyle = 'white';
+                    isHitFrame--;
+                } else {
+                    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 1.5);
+                    grad.addColorStop(0, `hsl(${hue}, 80%, ${isBoss ? '20%' : '40%'})`);
+                    grad.addColorStop(1, '#000');
+                    ctx.fillStyle = grad;
+                    ctx.shadowBlur = isBoss ? 50 : 20;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                }
+                ctx.fill();
+
+                // 畫眼睛
+                ctx.beginPath();
+                ctx.arc(0, -radius*0.2, radius*0.3, 0, Math.PI*2);
+                ctx.fillStyle = 'black';
+                ctx.shadowBlur = 0;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(0, -radius*0.2, radius*0.1, 0, Math.PI*2);
+                ctx.fillStyle = isHitFrame > 0 ? 'red' : 'white';
+                ctx.fill();
+
+                ctx.restore();
+                this.scale += (1 - this.scale) * 0.2;
+            }
+        };
+
+        // 點擊判定 (點擊右半邊或怪物)
+        function handleHit(e) {
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX; clientY = e.clientY;
+            }
+
+            // 只要點擊畫面右側 40% 區域都算攻擊成功，提升爽快感
+            if (clientX > width * 0.4) {
+                playerEntity.doAttack(); // 觸發靈狐攻擊動畫
+                
+                // 發射一個高速子彈代表點擊
+                fireProjectile(playerX + 50, playerY, enemyX, enemyY + (Math.random()-0.5)*40, '#f97316', 20, getClickDamage(), true);
+                
+                // 更新 UI
+                renderHeroes(); 
+            }
+        }
+
+        canvas.addEventListener('mousedown', handleHit);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleHit(e); }, {passive: false});
+
+        // 視覺特效與彈道系統
+        function fireProjectile(startX, startY, targetX, targetY, color, speed, damage, isClick) {
+            const angle = Math.atan2(targetY - startY, targetX - startX);
+            projectiles.push({
+                x: startX, y: startY,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                targetX: targetX, targetY: targetY,
+                color: color, damage: damage, isClick: isClick,
+                size: isClick ? 8 : 4
+            });
+        }
+
+        function createParticles(x, y, count, color, type) {
+            for (let i = 0; i < count; i++) {
+                const angle = type === 'slash' ? (Math.random() * Math.PI - Math.PI/2) : (Math.random() * Math.PI * 2);
+                const speed = Math.random() * (type === 'gold' ? 8 : 6) + 2;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed * (type==='slash'? 2:1), 
+                    vy: Math.sin(angle) * speed,
+                    life: 1, decay: Math.random() * 0.02 + 0.015,
+                    color: color, 
+                    size: Math.random() * (type === 'gold' ? 4 : 3) + 2,
+                    isGold: type === 'gold'
+                });
+            }
+        }
+
+        function createFloatingText(x, y, text, color, isReward = false) {
+            floatingTexts.push({ 
+                x: x, y: y, text: text, color: color, life: 1, 
+                vy: isReward ? -2.5 : -1.5, isReward: isReward
+            });
+        }
+
+        function drawJuice() {
+            // 彈道
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx; p.y += p.vy;
+                
+                // 畫殘影
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x - p.vx*2, p.y - p.vy*2);
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = p.size;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // 命中判定
+                const dist = Math.hypot(p.targetX - p.x, p.targetY - p.y);
+                if (dist < 20 || p.x > enemyX) {
+                    damageMonster(p.damage, p.isClick);
+                    if(!p.isClick) {
+                        createFloatingText(enemyX + (Math.random()-0.5)*60, enemyY - 20, formatNumber(p.damage), '#f87171');
+                    }
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // 粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.vy += p.isGold ? 0.3 : 0.15; 
+                p.life -= p.decay;
+                if (p.life <= 0) { particles.splice(i, 1); continue; }
+                
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            }
+            
+            // 浮動文字
+            ctx.globalAlpha = 1;
+            ctx.textAlign = "center";
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy; ft.life -= 0.02;
+                if (ft.life <= 0) { floatingTexts.splice(i, 1); continue; }
+                
+                ctx.globalAlpha = ft.life;
+                ctx.fillStyle = ft.color;
+                ctx.font = ft.isReward ? "black 26px 'Segoe UI'" : "bold 22px 'Segoe UI'";
+                ctx.strokeStyle = "rgba(0,0,0,0.8)";
+                ctx.lineWidth = 4;
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillText(ft.text, ft.x, ft.y);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // --- 遊戲主迴圈 ---
+        let lastTime = Date.now();
+        
+        function loop() {
+            const now = Date.now();
+            const dt = Math.min(now - lastTime, 1000); 
+            lastTime = now;
+            const dtSec = dt / 1000;
+
+            // 1. 處理被動傷害 (DPS) 與自動發射子彈
+            const dps = getDPS();
+            if (dps > 0 && state.monsterHp > 0) {
+                dpsAccumulator += dtSec;
+                // 每 0.2 秒發射一次被動彈道，避免畫面太亂
+                if (dpsAccumulator >= 0.2) {
+                    const dmgPerTick = dps * 0.2;
+                    fireProjectile(playerX, playerY - 30, enemyX, enemyY + (Math.random()-0.5)*50, '#ef4444', 12, dmgPerTick, false);
+                    dpsAccumulator -= 0.2;
+                }
+            }
+
+            // 2. 處理 Boss 倒數計時
+            if (state.isBoss && state.monsterHp > 0) {
+                state.bossTimeLeft -= dtSec;
+                if (state.bossTimeLeft <= 0) failBoss();
+                else {
+                    document.getElementById('ui-boss-time').innerText = state.bossTimeLeft.toFixed(1);
+                    document.getElementById('ui-boss-bar').style.width = `${(state.bossTimeLeft / state.bossTimeMax) * 100}%`;
+                }
+            }
+
+            // --- 繪製 ---
+            // 戰鬥背景 (可以加入地平線)
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 地板線
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.65);
+            ctx.lineTo(width, height * 0.65);
+            ctx.strokeStyle = '#1f2937';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+                screenShake *= 0.85;
+                if (screenShake < 0.5) screenShake = 0;
+            }
+
+            // 畫主角與怪物
+            playerEntity.draw();
+            if (state.monsterHp > 0) monsterEntity.draw(now);
+            
+            // 畫特效
+            drawJuice();
+            ctx.restore();
+
+            document.getElementById('ui-souls').innerText = formatNumber(state.souls);
+            requestAnimationFrame(loop);
+        }
+
+        // --- UI 更新工具 ---
+        function updateUI() {
+            document.getElementById('ui-dps').innerText = formatNumber(getDPS(), 1);
+            document.getElementById('ui-click-dmg').innerText = formatNumber(getClickDamage(), 1);
+            document.getElementById('ui-karma').innerText = formatNumber(state.karma);
+            document.getElementById('ui-pending-karma').innerText = calculatePendingKarma();
+            updateStageUI();
+        }
+
+        function updateStageUI() {
+            document.getElementById('ui-stage').innerText = state.stage;
+            document.getElementById('ui-kills-text').innerText = state.isBoss ? `BOSS 戰` : `擊殺: ${state.kills} / ${state.killsRequired}`;
+            
+            const btnPrev = document.getElementById('btn-prev-stage');
+            const btnNext = document.getElementById('btn-next-stage');
+            btnPrev.disabled = state.stage <= 1;
+            if (state.stage < state.highestStage) btnNext.classList.remove('hidden');
+            else btnNext.classList.add('hidden');
+
+            updateHpUI();
+        }
+
+        function updateHpUI() {
+            const pct = Math.max(0, (state.monsterHp / state.monsterMaxHp) * 100);
+            document.getElementById('ui-hp-bar').style.width = `${pct}%`;
+            document.getElementById('ui-hp-text').innerText = `${formatNumber(Math.ceil(state.monsterHp))} / ${formatNumber(state.monsterMaxHp)}`;
+        }
+
+        function formatNumber(num, decimals = 0) {
+            if (num === 0) return "0";
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+            return num.toFixed(decimals);
+        }
+
+        function showToast(msg, colorClass) {
+            const c = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast px-6 py-3 bg-gray-900 border border-gray-700 rounded-full shadow-lg font-bold ${colorClass}`;
+            el.innerText = msg;
+            c.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        function saveData() { localStorage.setItem('karma', state.karma); }
+
+        // 初始化
+        monsterEntity.resetShape();
+        spawnMonster();
+        renderHeroes();
+        updateUI();
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>

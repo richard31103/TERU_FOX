@@ -74,11 +74,12 @@ function findFirstChoiceNode(content, nodeMap) {
 }
 
 function findChoiceOutcome(content, nodeMap, option) {
-    if (!option) return { actionId: null, responseText: "" };
-    if (option.actionId) return { actionId: option.actionId, responseText: "" };
+    if (!option) return { actionId: null, responseText: "", responseTextKey: "" };
+    if (option.actionId) return { actionId: option.actionId, responseText: "", responseTextKey: "" };
 
     let cursor = option.nextNodeId;
     let responseText = "";
+    let responseTextKey = "";
     let actionId = null;
     const guard = new Set();
 
@@ -89,6 +90,7 @@ function findChoiceOutcome(content, nodeMap, option) {
 
         if (node.type === "line" && !responseText) {
             responseText = content.strings.text[node.textKey] || "";
+            responseTextKey = node.textKey || "";
         }
         if (node.type === "action") {
             actionId = node.actionId;
@@ -98,7 +100,7 @@ function findChoiceOutcome(content, nodeMap, option) {
         cursor = node.nextNodeId;
     }
 
-    return { actionId, responseText };
+    return { actionId, responseText, responseTextKey };
 }
 
 function toLegacyLanguageBundle(content) {
@@ -222,7 +224,10 @@ export function createStoryEngine(storyByLang, defaultLang = "tw") {
         const map = getNodeMap();
         const openingLineIds = collectOpeningLineNodes(content, map);
         const choiceNode = findFirstChoiceNode(content, map);
-        const list = openingLineIds.map(() => ({ type: "line" }));
+        const list = openingLineIds.map((id) => {
+            const node = map.get(id);
+            return { type: "line", textKey: node?.textKey || "" };
+        });
         if (choiceNode) list.push({ type: "choice" });
         return list;
     }
@@ -241,7 +246,7 @@ export function createStoryEngine(storyByLang, defaultLang = "tw") {
         const content = getContent();
         const nodeMap = getNodeMap();
         const choiceNode = getChoiceNode();
-        if (!choiceNode || !choiceNode.options[index]) return { actionId: null, responseText: "" };
+        if (!choiceNode || !choiceNode.options[index]) return { actionId: null, responseText: "", responseTextKey: "" };
         return findChoiceOutcome(content, nodeMap, choiceNode.options[index]);
     }
 

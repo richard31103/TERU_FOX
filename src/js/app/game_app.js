@@ -4,6 +4,7 @@ import { createTransitionEngine } from '../core/transition_engine.js';
 import { createStoryEngine, loadChapterStorySet } from '../story/story_engine.js';
 import { applyStoredStoryFlowTwOverrides } from '../story/story_flow_catalog.js';
 import { checkOOXX, getBestOOXX, OOXX_AI, OOXX_HU, renderOOXXBoard } from '../minigames/ooxx.js';
+import { mountTowerGame, unmountTowerGame } from '../minigames/tower_bridge.js';
 import { createAppContext } from './app_context.js';
 import {
     BOOT_IMAGE_ASSETS,
@@ -67,7 +68,30 @@ const debugLog = (...args) => {
 debugLog('[BOOT] game_app module active');
 applyDevAssetVersionToDom(document);
 
-        const DEFAULT_TEXT_SPEED_LEVEL = 3;
+        const DEFAULT_DIALOGUE_TYPE_INTERVAL_MS = 66;
+        const DEFAULT_DIALOGUE_TEXT_SPEED_VALUE = 3;
+        const DIALOGUE_TEXT_SPEED_MIN = 1;
+        const DIALOGUE_TEXT_SPEED_MAX = 10;
+        const DIALOGUE_TEXT_SPEED_BASE_MS = 90;
+        const DIALOGUE_TEXT_SPEED_STEP_MS = 8;
+        const DIALOGUE_VOICE_META_TIMEOUT_MS = 3000;
+        const DIALOGUE_VOICE_MIN_DURATION_MS = 240;
+        const DIALOGUE_VOICE_BASE_PATH = 'assets/audio/voice/story/chapter01/jp';
+        const CHAPTER01_VOICE_FILENAME_BY_TEXT_KEY = Object.freeze({
+            line_1: 'キミ、まさか変なケモナーじゃないよね？.mp3',
+            line_2: '会ったばかりなのに家に行きたいって... しかもずっとボクのしっぽ見てるし....mp3',
+            line_3: '先に言っとくけど、ボクのしっぽは触っちゃダメ！.mp3',
+            line_4: '勝手に触ったら、噛むよ！.mp3',
+            line_5: 'えっ... き、キミ... 何するつもり？.mp3',
+            resp_3: 'え...なに...そのサービスは...今日だけだよ....mp3',
+            resp_2_after_pet: 'さ...触りすぎでしょ... で、まだ何したいの？.mp3',
+            bed_line_1: 'し...しっぽだけって約束したでしょ.mp3',
+            bed_line_2: 'うぅ...ボクのしっぽ、すごく敏感なの....mp3',
+            bed_line_continue: 'うぅ.....mp3',
+            bed_line_continue_cry: 'もう無理....mp3',
+            bed_line_stop: 'さ...触りすぎでしょ... で、まだ何したいの？.mp3',
+            bed_choice_stop: 'もうやめる.mp3'
+        });
         const NO_ADVANCE_SELECTORS = [
             'button',
             '.qa-btn',
@@ -82,14 +106,15 @@ applyDevAssetVersionToDom(document);
             '#history-overlay',
             '#ooxx-result',
             '#ooxx-screen',
+            '#tower-screen',
             '#money-popup',
             '#pet-fox-screen',
             '#to-be-continued-screen',
             '#title-screen'
         ].join(', ');
 
-        function textSpeedLevelToMs(level) {
-            return Math.round(90 - Number(level) * 8);
+        function buildDialogueVoiceSrc(filename) {
+            return `${DIALOGUE_VOICE_BASE_PATH}/${encodeURIComponent(filename)}`;
         }
 
         function waitForMs(ms) {
@@ -101,9 +126,47 @@ applyDevAssetVersionToDom(document);
         const assetStore = createImageAssetStore();
         const globalLoadingIndicatorEl = document.getElementById('global-loading-indicator');
         const globalLoadingLabelEl = document.getElementById('global-loading-label');
+        const toastEl = document.getElementById('toast');
         let audioMuted = false;
+        let toastTimer = null;
         const PUNCH_SFX_MIN_INTERVAL_MS = 100;
         let lastPunchSfxAt = 0;
+        const TOWER_SFX_PATHS = Object.freeze({
+            slot_start: 'assets/audio/sfx/tower/SlotMachine_start.wav',
+            slot_click: 'assets/audio/sfx/tower/SlotMachine_click.wav'
+        });
+        const towerSfxCache = new Map();
+
+        function getTowerSfx(soundId) {
+            const src = TOWER_SFX_PATHS[soundId];
+            if (!src) return null;
+            let audioEl = towerSfxCache.get(src);
+            if (!audioEl) {
+                audioEl = new Audio(src);
+                audioEl.preload = 'auto';
+                towerSfxCache.set(src, audioEl);
+            }
+            return audioEl;
+        }
+
+        function getCurrentSfxVolume() {
+            const slider = document.getElementById('sfx-vol');
+            const volume = Number.parseFloat(slider?.value || '100') / 100;
+            if (!Number.isFinite(volume)) return 1;
+            return Math.max(0, Math.min(1, volume));
+        }
+
+        function showToast(message, durationMs = 1600) {
+            if (!toastEl || !message) return;
+            toastEl.textContent = String(message);
+            toastEl.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                if (!toastEl) return;
+                toastEl.classList.remove('show');
+                toastTimer = null;
+            }, Math.max(600, Number(durationMs) || 1600));
+        }
 
         function setGlobalLoadingVisible(visible) {
             if (!globalLoadingIndicatorEl) return;
@@ -181,7 +244,7 @@ applyDevAssetVersionToDom(document);
         // Tiny synth tap: short band-pass burst, typewriter feel
         function playTap() {
             if (audioMuted) return;
-            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            const vol = getCurrentSfxVolume();
             if (vol === 0) return;
             const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
             const data = buf.getChannelData(0);
@@ -203,7 +266,7 @@ applyDevAssetVersionToDom(document);
         // Soft hover blip: short sine fade
         function playHover() {
             if (audioMuted) return;
-            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            const vol = getCurrentSfxVolume();
             if (vol === 0) return;
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
@@ -220,7 +283,7 @@ applyDevAssetVersionToDom(document);
 
         function playPunchSfx() {
             if (audioMuted) return;
-            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            const vol = getCurrentSfxVolume();
             if (vol === 0) return;
             const now = performance.now();
             if (now - lastPunchSfxAt < PUNCH_SFX_MIN_INTERVAL_MS) return;
@@ -234,7 +297,7 @@ applyDevAssetVersionToDom(document);
 
         function playClick() {
             if (audioMuted) return;
-            const vol = parseFloat(document.getElementById('sfx-vol').value) / 100;
+            const vol = getCurrentSfxVolume();
             if (vol === 0) return;
             [520, 760].forEach((freq, i) => {
                 const osc = audioCtx.createOscillator();
@@ -341,12 +404,10 @@ applyDevAssetVersionToDom(document);
             createParticles();
             startAssetLoader();
             updateUIText();
+            const textSpeedSliderEl = document.getElementById('text-speed');
+            if (textSpeedSliderEl) updateSlider(textSpeedSliderEl);
+            setVoiceEnabled(false);
             syncFullscreenToggle();
-            const textSpeedSlider = document.getElementById('text-speed');
-            if (textSpeedSlider) {
-                textSpeedSlider.value = String(DEFAULT_TEXT_SPEED_LEVEL);
-                updateSlider(textSpeedSlider);
-            }
         });
 
         // Dialogue script and localization (JSON-driven)
@@ -372,12 +433,17 @@ applyDevAssetVersionToDom(document);
         let lineIndex = 0;
         let charIndex = 0;
         let typeTimer = null;
+        let dialogueTypingToken = 0;
+        let activeDialogueVoice = null;
         let isTyping = false;
         let autoPlay = false;
-        let textSpeedMs = textSpeedLevelToMs(DEFAULT_TEXT_SPEED_LEVEL);
+        let dialogueVoiceEnabled = false;
+        let dialogueTypeIntervalMs = DEFAULT_DIALOGUE_TYPE_INTERVAL_MS;
         let currentDialogueLineText = '';
         let inChoiceMode = false;
         let isChoicePickPending = false;
+        let currentDialogueStep = null;
+        let scriptedSequenceIdCounter = 0;
         const PLAYER_NAME_MAX_LENGTH = 10;
         const PLAYER_NAME_FALLBACK = '你';
         let playerDisplayName = PLAYER_NAME_FALLBACK;
@@ -393,6 +459,7 @@ applyDevAssetVersionToDom(document);
         let moneyIntermissionDone = null;
         let mobileMoneyFocusActive = false;
         let blinkTimeout = null;
+        let blinkTimerToken = 0;
         let speakInterval = null;
 
         const bgEl = ctxRefs.bg;
@@ -412,6 +479,8 @@ applyDevAssetVersionToDom(document);
         const moneyPopupEl = ctxRefs.moneyPopup;
         const toBeContinuedEl = ctxRefs.toBeContinuedScreen;
         const petFoxScreenEl = ctxRefs.petFoxScreen;
+        const towerScreenEl = document.getElementById('tower-screen');
+        const towerRootEl = document.getElementById('tower-root');
         const gameContainerEl = ctxRefs.gameContainer;
         const DEFAULT_EXPR = SCENE_EXPRESSION_LIBRARY.default;
         const PARK_EXPR = SCENE_EXPRESSION_LIBRARY.park;
@@ -454,6 +523,9 @@ applyDevAssetVersionToDom(document);
         });
         let currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
         let petFoxTimer = null;
+        let isTowerActive = false;
+        let towerBgmWasPlaying = false;
+        let towerBgmResumeTime = 0;
         let activeSceneId = SCENE_DEFAULT;
         let sceneSupportsSpecialHeads = true;
         let bedHeadVariant = 'normal';
@@ -1126,6 +1198,7 @@ applyDevAssetVersionToDom(document);
             if (deathScreen && !deathScreen.classList.contains('hidden')) return false;
             if (toBeContinuedEl && !toBeContinuedEl.classList.contains('hidden')) return false;
             if (petFoxScreenEl && !petFoxScreenEl.classList.contains('hidden')) return false;
+            if (towerScreenEl && !towerScreenEl.classList.contains('hidden')) return false;
             const ooxxScreen = document.getElementById('ooxx-screen');
             if (ooxxScreen && !ooxxScreen.classList.contains('hidden')) return false;
             const ooxxResult = document.getElementById('ooxx-result');
@@ -1144,12 +1217,59 @@ applyDevAssetVersionToDom(document);
             };
         }
 
+        function getNoPreviousLineMessage() {
+            if (currentLang === 'en') return 'No previous line';
+            if (currentLang === 'jp') return '前の台詞はありません';
+            return '沒有上一句';
+        }
+
+        function isPrevLineBlockedByOverlay() {
+            return (
+                isOpeningDialogueLocked ||
+                isChoicePickPending ||
+                isMoneyIntermission ||
+                inChoiceMode ||
+                headTouchInterruptActive ||
+                headTouchAwaitResumeClick ||
+                (overlay && overlay.classList.contains('open')) ||
+                (histOverlay && !histOverlay.classList.contains('hidden')) ||
+                (towerScreenEl && !towerScreenEl.classList.contains('hidden')) ||
+                (petFoxScreenEl && !petFoxScreenEl.classList.contains('hidden')) ||
+                (toBeContinuedEl && !toBeContinuedEl.classList.contains('hidden')) ||
+                (document.getElementById('death-screen') && !document.getElementById('death-screen').classList.contains('hidden')) ||
+                (document.getElementById('ooxx-screen') && !document.getElementById('ooxx-screen').classList.contains('hidden')) ||
+                (document.getElementById('ooxx-result') && !document.getElementById('ooxx-result').classList.contains('hidden'))
+            );
+        }
+
+        function canGoPreviousDialogueStep() {
+            if (isTyping || isPrevLineBlockedByOverlay()) return false;
+            return Boolean(currentDialogueStep && typeof currentDialogueStep.goPrev === 'function' && currentDialogueStep.canGoPrev());
+        }
+
+        function updatePrevLineButtonVisibility() {
+            const prevBtn = document.getElementById('lang-btn-prev');
+            if (!prevBtn) return;
+            const canShow = canGoPreviousDialogueStep();
+            prevBtn.style.display = canShow ? '' : 'none';
+            prevBtn.disabled = !canShow;
+            prevBtn.setAttribute('aria-hidden', canShow ? 'false' : 'true');
+        }
+
+        function setCurrentDialogueStep(step) {
+            currentDialogueStep = step || null;
+            updatePrevLineButtonVisibility();
+        }
+
+        function clearCurrentDialogueStep() {
+            setCurrentDialogueStep(null);
+        }
+
         function pauseDialogueForHeadTouch() {
             if (!headTouchSnapshot) {
                 headTouchSnapshot = snapshotCurrentDialogue();
             }
-            clearInterval(typeTimer);
-            typeTimer = null;
+            interruptDialogueTyping({ resetVoiceTime: true });
             setTyping(false);
         }
 
@@ -1179,21 +1299,25 @@ applyDevAssetVersionToDom(document);
             charIndex = 0;
             applyAfraidHeadMode(isAfraidTargetLineText(fullLineText));
             setTyping(true);
-            clearInterval(typeTimer);
+            interruptDialogueTyping({ resetVoiceTime: true });
+            const typingToken = dialogueTypingToken;
             typeTimer = setInterval(() => {
+                if (typingToken !== dialogueTypingToken) {
+                    stopDialogueTypingPlayback();
+                    return;
+                }
                 if (charIndex < fullLineText.length) {
                     dialogueText.textContent += fullLineText[charIndex++];
                     playTap();
                 } else {
-                    clearInterval(typeTimer);
-                    typeTimer = null;
+                    stopDialogueTypingPlayback();
                     setTyping(false);
                     if (!dialogueHistory.some(r => r.text === fullLineText && (!r.isChoice))) {
                         dialogueHistory.push({ speaker: snapshot.speaker, text: fullLineText, isChoice: false });
                     }
                     if (snapshot.wasTyping && autoPlay && lineIndex < script.length - 1) setTimeout(nextLine, 1800);
                 }
-            }, textSpeedMs);
+            }, dialogueTypeIntervalMs);
         }
 
         function rememberCurrentLineText(text) {
@@ -1229,14 +1353,18 @@ applyDevAssetVersionToDom(document);
             speakerPlate.textContent = l10n[currentLang]?.speaker || speakerPlate.textContent;
             dialogueText.textContent = '';
             setTyping(!keepIdleFace);
-            clearInterval(typeTimer);
+            interruptDialogueTyping({ resetVoiceTime: true });
+            const typingToken = dialogueTypingToken;
             typeTimer = setInterval(() => {
+                if (typingToken !== dialogueTypingToken) {
+                    stopDialogueTypingPlayback();
+                    return;
+                }
                 if (insertIndex < text.length) {
                     dialogueText.textContent += text[insertIndex++];
                     playTap();
                 } else {
-                    clearInterval(typeTimer);
-                    typeTimer = null;
+                    stopDialogueTypingPlayback();
                     setTyping(false);
                     if (text) {
                         dialogueHistory.push({ speaker: l10n[currentLang]?.speaker || '', text, isChoice: false });
@@ -1264,7 +1392,7 @@ applyDevAssetVersionToDom(document);
                     }
                     restoreHeadTouchSnapshot();
                 }
-            }, textSpeedMs);
+            }, dialogueTypeIntervalMs);
         }
 
         function handleHeadTouchAction(event) {
@@ -1621,6 +1749,7 @@ applyDevAssetVersionToDom(document);
             clearChoicePressedState();
             syncChoiceUiState();
             validateChoiceOcclusion();
+            updatePrevLineButtonVisibility();
         }
 
         function playTailWagBurst() {
@@ -1693,6 +1822,7 @@ applyDevAssetVersionToDom(document);
         }
 
         function showChoicePanel(sourceIndices = DEFAULT_CHOICE_SOURCE_INDICES) {
+            clearCurrentDialogueStep();
             if (appState && appState.getState() !== GAME_STATES.CHOICE) {
                 try { appState.transition(GAME_STATES.CHOICE, { source: 'show_choice_panel' }); } catch (e) { }
             }
@@ -1717,6 +1847,7 @@ applyDevAssetVersionToDom(document);
             setChoiceButtons(sourceIndices);
             choiceController.animateChoiceIn();
             scheduleChoiceOcclusionValidation();
+            updatePrevLineButtonVisibility();
 
             // Preload OOXX UI/AI while user is still on choice screen.
             warmupOOXXEngine();
@@ -1768,6 +1899,7 @@ applyDevAssetVersionToDom(document);
         }
 
         function showRuntimeChoicePanel({ titleKey, options, fallbackTitle = '' }) {
+            clearCurrentDialogueStep();
             runtimeChoiceState = {
                 titleKey,
                 fallbackTitle,
@@ -1787,6 +1919,7 @@ applyDevAssetVersionToDom(document);
             renderRuntimeChoicePanel();
             choiceController.animateChoiceIn();
             scheduleChoiceOcclusionValidation();
+            updatePrevLineButtonVisibility();
             warmupOOXXEngine();
             prepareOOXXScreen();
         }
@@ -2013,23 +2146,34 @@ applyDevAssetVersionToDom(document);
             choicePanel.addEventListener('pointerleave', releasePressed);
         }
 
+        function cancelBlinkTimer() {
+            blinkTimerToken += 1;
+            if (blinkTimeout) {
+                clearTimeout(blinkTimeout);
+                blinkTimeout = null;
+            }
+        }
+
         function scheduleNextBlink() {
+            cancelBlinkTimer();
             if (isSpeaking) return;
+            const blinkToken = blinkTimerToken;
             // Human-like blink interval: 2s to 6s
             const nextBlinkTime = 2000 + Math.random() * 4000;
             blinkTimeout = setTimeout(() => {
-                if (isSpeaking) return;
+                if (blinkToken !== blinkTimerToken || isSpeaking) return;
+                blinkTimeout = null;
                 setCharState('blink');
                 setTimeout(() => {
-                    if (isSpeaking) return;
+                    if (blinkToken !== blinkTimerToken || isSpeaking) return;
                     setCharState('idle');
                     // 20% chance for a quick double blink
                     if (Math.random() < 0.2) {
                         setTimeout(() => {
-                            if (isSpeaking) return;
+                            if (blinkToken !== blinkTimerToken || isSpeaking) return;
                             setCharState('blink');
                             setTimeout(() => {
-                                if (isSpeaking) return;
+                                if (blinkToken !== blinkTimerToken || isSpeaking) return;
                                 setCharState('idle');
                                 scheduleNextBlink();
                             }, 100);
@@ -2069,21 +2213,124 @@ applyDevAssetVersionToDom(document);
             happyMouthOpen = false;
         }
 
+        function nextDialogueTypingToken() {
+            dialogueTypingToken += 1;
+            return dialogueTypingToken;
+        }
+
+        function stopActiveDialogueVoice({ resetTime = false } = {}) {
+            if (!activeDialogueVoice) return;
+            const audioEl = activeDialogueVoice.audioEl;
+            activeDialogueVoice = null;
+            if (!audioEl) return;
+            audioEl.onended = null;
+            audioEl.onerror = null;
+            audioEl.pause();
+            if (resetTime) {
+                try {
+                    audioEl.currentTime = 0;
+                } catch (err) { }
+            }
+        }
+
+        function stopDialogueTypingPlayback({ resetVoiceTime = false } = {}) {
+            if (typeTimer) {
+                clearInterval(typeTimer);
+                typeTimer = null;
+            }
+            stopActiveDialogueVoice({ resetTime: resetVoiceTime });
+        }
+
+        function interruptDialogueTyping(options = {}) {
+            nextDialogueTypingToken();
+            stopDialogueTypingPlayback(options);
+        }
+
+        function waitForDialogueVoiceDuration(audioEl) {
+            return new Promise((resolve, reject) => {
+                if (!audioEl) {
+                    reject(new Error('voice audio missing'));
+                    return;
+                }
+                const currentDuration = Number(audioEl.duration);
+                if (Number.isFinite(currentDuration) && currentDuration > 0) {
+                    resolve(currentDuration);
+                    return;
+                }
+
+                let settled = false;
+                const cleanup = () => {
+                    clearTimeout(timeoutId);
+                    audioEl.removeEventListener('loadedmetadata', handleLoadedMeta);
+                    audioEl.removeEventListener('error', handleError);
+                };
+                const finish = (fn, value) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    fn(value);
+                };
+                const handleLoadedMeta = () => {
+                    const duration = Number(audioEl.duration);
+                    if (Number.isFinite(duration) && duration > 0) {
+                        finish(resolve, duration);
+                    } else {
+                        finish(reject, new Error('invalid voice duration'));
+                    }
+                };
+                const handleError = () => finish(reject, new Error('voice metadata load failed'));
+                const timeoutId = setTimeout(() => {
+                    finish(reject, new Error('voice metadata timeout'));
+                }, DIALOGUE_VOICE_META_TIMEOUT_MS);
+
+                audioEl.addEventListener('loadedmetadata', handleLoadedMeta);
+                audioEl.addEventListener('error', handleError);
+                try {
+                    audioEl.load();
+                } catch (err) {
+                    finish(reject, err);
+                }
+            });
+        }
+
+        function createDialogueVoiceAudio(textKey) {
+            if (!dialogueVoiceEnabled) return null;
+            const fileName = CHAPTER01_VOICE_FILENAME_BY_TEXT_KEY[textKey];
+            if (!fileName) return null;
+            const audioEl = new Audio(buildDialogueVoiceSrc(fileName));
+            audioEl.preload = 'auto';
+            audioEl.volume = getCurrentSfxVolume();
+            return audioEl;
+        }
+
+        function resolveOpeningLineText(entry, idx, localizedBundle) {
+            const textKey = typeof entry?.textKey === 'string' ? entry.textKey : '';
+            const localizedTextByKey = textKey && storyEngine
+                ? storyEngine.getTextByKey(textKey, currentLang)
+                : '';
+            const fallbackByIndex = localizedBundle?.lines?.[idx] || '';
+            return {
+                textKey,
+                lineText: applyPlayerNameTemplate(localizedTextByKey || fallbackByIndex || '')
+            };
+        }
+
         function setTyping(flag) {
             isTyping = flag;
             dialogueText.classList.toggle('typing', flag);
 
             isSpeaking = flag;
+            updatePrevLineButtonVisibility();
 
             if (isAngry) {
                 stopSpeakingAnimation();
-                clearTimeout(blinkTimeout);
+                cancelBlinkTimer();
                 setCharState('angry');
                 return;
             }
 
             if (isHappy) {
-                clearTimeout(blinkTimeout);
+                cancelBlinkTimer();
                 if (isHappyTalkMode && isSpeaking) {
                     startHappySpeakingAnimation();
                 } else {
@@ -2095,7 +2342,7 @@ applyDevAssetVersionToDom(document);
             }
 
             if (isSpeaking) {
-                clearTimeout(blinkTimeout); // Stop blinking when starting to type
+                cancelBlinkTimer(); // Stop blinking when starting to type
                 startSpeakingAnimation();
             } else {
                 stopSpeakingAnimation();
@@ -2110,6 +2357,7 @@ applyDevAssetVersionToDom(document);
             if (!entry || !t) return;
 
             if (entry.type === 'choice') {
+                clearCurrentDialogueStep();
                 showChoicePanel(DEFAULT_CHOICE_SOURCE_INDICES);
                 return;
             }
@@ -2126,28 +2374,122 @@ applyDevAssetVersionToDom(document);
             speakerPlate.textContent = t.speaker;
             dialogueText.textContent = '';
             charIndex = 0;
-            const lineText = applyPlayerNameTemplate(t.lines[idx] || '');
+            const { textKey, lineText } = resolveOpeningLineText(entry, idx, t);
             rememberCurrentLineText(lineText);
+            setCurrentDialogueStep({
+                kind: 'presentation',
+                canGoPrev: () => idx > 0 && !isOpeningPrologueActive,
+                goPrev: () => {
+                    lineIndex = Math.max(0, idx - 1);
+                    renderLine(lineIndex);
+                }
+            });
             applyAfraidHeadMode(isAfraidTargetLineText(lineText));
             setTyping(true);
-            clearInterval(typeTimer);
+            stopDialogueTypingPlayback({ resetVoiceTime: true });
+            const typingToken = nextDialogueTypingToken();
 
-            typeTimer = setInterval(() => {
-                if (charIndex < lineText.length) {
-                    dialogueText.textContent += lineText[charIndex++];
-                    syncDialogueFitForMobile();
-                    playTap();
-                } else {
-                    clearInterval(typeTimer);
-                    setTyping(false);
-                    syncDialogueFitForMobile();
-                    // Add to history once complete typing
-                    if (!dialogueHistory.some(r => r.text === lineText && (!r.isChoice))) {
-                        dialogueHistory.push({ speaker: t.speaker, text: lineText, isChoice: false });
-                    }
-                    if (autoPlay && idx < script.length - 1) setTimeout(nextLine, 1800);
+            const finishLineTyping = () => {
+                if (typingToken !== dialogueTypingToken) return;
+                stopDialogueTypingPlayback();
+                setTyping(false);
+                syncDialogueFitForMobile();
+                if (!dialogueHistory.some(r => r.text === lineText && (!r.isChoice))) {
+                    dialogueHistory.push({ speaker: t.speaker, text: lineText, isChoice: false });
                 }
-            }, textSpeedMs);
+                if (autoPlay && idx < script.length - 1) setTimeout(nextLine, 1800);
+            };
+
+            const startPlainTyping = () => {
+                typeTimer = setInterval(() => {
+                    if (typingToken !== dialogueTypingToken) {
+                        stopDialogueTypingPlayback();
+                        return;
+                    }
+                    if (charIndex < lineText.length) {
+                        dialogueText.textContent += lineText[charIndex++];
+                        syncDialogueFitForMobile();
+                        playTap();
+                    } else {
+                        finishLineTyping();
+                    }
+                }, dialogueTypeIntervalMs);
+            };
+
+            const voiceAudio = createDialogueVoiceAudio(textKey);
+            if (!voiceAudio || lineText.length === 0) {
+                startPlainTyping();
+                return;
+            }
+
+            waitForDialogueVoiceDuration(voiceAudio)
+                .then((durationSec) => {
+                    if (typingToken !== dialogueTypingToken) return;
+                    const totalMs = Math.max(DIALOGUE_VOICE_MIN_DURATION_MS, Math.round(durationSec * 1000));
+                    const charIntervalMs = Math.max(12, Math.ceil(totalMs / Math.max(1, lineText.length)));
+                    let voiceEnded = false;
+
+                    const finishIfReady = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        if (voiceEnded && charIndex >= lineText.length) finishLineTyping();
+                    };
+
+                    voiceAudio.volume = getCurrentSfxVolume();
+                    voiceAudio.onended = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        voiceEnded = true;
+                        if (charIndex < lineText.length) {
+                            dialogueText.textContent = lineText;
+                            charIndex = lineText.length;
+                            syncDialogueFitForMobile();
+                        }
+                        finishIfReady();
+                    };
+                    voiceAudio.onerror = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        stopActiveDialogueVoice();
+                        if (typeTimer) {
+                            clearInterval(typeTimer);
+                            typeTimer = null;
+                        }
+                        charIndex = 0;
+                        dialogueText.textContent = '';
+                        startPlainTyping();
+                    };
+                    activeDialogueVoice = { audioEl: voiceAudio, typingToken };
+
+                    typeTimer = setInterval(() => {
+                        if (typingToken !== dialogueTypingToken) {
+                            stopDialogueTypingPlayback();
+                            return;
+                        }
+                        if (charIndex < lineText.length) {
+                            dialogueText.textContent += lineText[charIndex++];
+                            syncDialogueFitForMobile();
+                        } else {
+                            if (typeTimer) {
+                                clearInterval(typeTimer);
+                                typeTimer = null;
+                            }
+                            finishIfReady();
+                        }
+                    }, charIntervalMs);
+
+                    const playPromise = voiceAudio.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(() => {
+                            if (typingToken !== dialogueTypingToken) return;
+                            stopDialogueTypingPlayback({ resetVoiceTime: true });
+                            charIndex = 0;
+                            dialogueText.textContent = '';
+                            startPlainTyping();
+                        });
+                    }
+                })
+                .catch(() => {
+                    if (typingToken !== dialogueTypingToken) return;
+                    startPlainTyping();
+                });
         }
 
         // function updateDots(idx) { ... } (Removed)
@@ -2155,10 +2497,11 @@ applyDevAssetVersionToDom(document);
         function nextLine() {
             if (inChoiceMode) return;
             if (isTyping) {
-                clearInterval(typeTimer);
+                interruptDialogueTyping({ resetVoiceTime: true });
                 setTyping(false);
-                // Use localized text, not the undefined script[].text
-                const lineText = applyPlayerNameTemplate(l10n[currentLang].lines[lineIndex] || '');
+                const entry = script[lineIndex];
+                const localized = l10n[currentLang];
+                const { lineText } = resolveOpeningLineText(entry, lineIndex, localized);
                 if (lineText) {
                     dialogueText.textContent = lineText;
                     rememberCurrentLineText(lineText);
@@ -2176,20 +2519,28 @@ applyDevAssetVersionToDom(document);
         }
 
         function prevLine() {
-            if (lineIndex > 0) {
-                resetHeadTouchChain('prev_line');
-                lineIndex--;
-                renderLine(lineIndex);
+            if (!canGoPreviousDialogueStep()) {
+                showToast(getNoPreviousLineMessage());
+                return;
             }
+            resetHeadTouchChain('prev_line');
+            currentDialogueStep.goPrev();
         }
 
         let isDeathSequence = false;
 
         function dispatchAction(actionId, context = {}) {
             if (!actionId) return;
+            clearCurrentDialogueStep();
+            interruptDialogueTyping({ resetVoiceTime: true });
             switch (actionId) {
                 case 'start_ooxx':
                     startOOXX();
+                    return;
+                case 'start_tower':
+                    setTimeout(() => {
+                        void startTowerGame();
+                    }, context.delayMs ?? 0);
                     return;
                 case 'trigger_death':
                     isDeathSequence = true;
@@ -2215,34 +2566,128 @@ applyDevAssetVersionToDom(document);
             }
         }
 
-        function runScriptedLine(responseText, speakerName, onDone) {
+        function runScriptedLine(responseText, speakerName, onDone, options = {}) {
             const resolvedText = applyPlayerNameTemplate(responseText || '');
+            const voiceTextKey = typeof options?.voiceTextKey === 'string' ? options.voiceTextKey : '';
+            const dialogueStep = options?.dialogueStep || {
+                kind: 'scripted',
+                canGoPrev: () => false,
+                goPrev: null
+            };
             speakerPlate.textContent = speakerName;
             dialogueText.textContent = '';
             charIndex = 0;
             rememberCurrentLineText(resolvedText);
+            setCurrentDialogueStep(dialogueStep);
             applyAfraidHeadMode(isAfraidTargetLineText(resolvedText));
             setTyping(true);
-            clearInterval(typeTimer);
+            interruptDialogueTyping({ resetVoiceTime: true });
+            const typingToken = dialogueTypingToken;
 
-            typeTimer = setInterval(() => {
-                if (charIndex < resolvedText.length) {
-                    dialogueText.textContent += resolvedText[charIndex++];
-                    syncDialogueFitForMobile();
-                    playTap();
-                } else {
-                    clearInterval(typeTimer);
-                    setTyping(false);
-                    syncDialogueFitForMobile();
-                    if (resolvedText) {
-                        dialogueHistory.push({ speaker: speakerName, text: resolvedText, isChoice: false });
-                    }
-                    if (typeof onDone === 'function') onDone();
+            const finishScriptedLineTyping = () => {
+                if (typingToken !== dialogueTypingToken) return;
+                stopDialogueTypingPlayback();
+                setTyping(false);
+                syncDialogueFitForMobile();
+                if (resolvedText) {
+                    dialogueHistory.push({ speaker: speakerName, text: resolvedText, isChoice: false });
                 }
-            }, textSpeedMs);
+                if (typeof onDone === 'function') onDone();
+            };
+
+            const startPlainTyping = () => {
+                typeTimer = setInterval(() => {
+                    if (typingToken !== dialogueTypingToken) {
+                        stopDialogueTypingPlayback();
+                        return;
+                    }
+                    if (charIndex < resolvedText.length) {
+                        dialogueText.textContent += resolvedText[charIndex++];
+                        syncDialogueFitForMobile();
+                        playTap();
+                    } else {
+                        finishScriptedLineTyping();
+                    }
+                }, dialogueTypeIntervalMs);
+            };
+
+            const voiceAudio = createDialogueVoiceAudio(voiceTextKey);
+            if (!voiceAudio || resolvedText.length === 0) {
+                startPlainTyping();
+                return;
+            }
+
+            waitForDialogueVoiceDuration(voiceAudio)
+                .then((durationSec) => {
+                    if (typingToken !== dialogueTypingToken) return;
+                    const totalMs = Math.max(DIALOGUE_VOICE_MIN_DURATION_MS, Math.round(durationSec * 1000));
+                    const charIntervalMs = Math.max(12, Math.ceil(totalMs / Math.max(1, resolvedText.length)));
+                    let voiceEnded = false;
+
+                    const finishIfReady = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        if (voiceEnded && charIndex >= resolvedText.length) finishScriptedLineTyping();
+                    };
+
+                    voiceAudio.volume = getCurrentSfxVolume();
+                    voiceAudio.onended = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        voiceEnded = true;
+                        if (charIndex < resolvedText.length) {
+                            dialogueText.textContent = resolvedText;
+                            charIndex = resolvedText.length;
+                            syncDialogueFitForMobile();
+                        }
+                        finishIfReady();
+                    };
+                    voiceAudio.onerror = () => {
+                        if (typingToken !== dialogueTypingToken) return;
+                        stopActiveDialogueVoice();
+                        if (typeTimer) {
+                            clearInterval(typeTimer);
+                            typeTimer = null;
+                        }
+                        charIndex = 0;
+                        dialogueText.textContent = '';
+                        startPlainTyping();
+                    };
+                    activeDialogueVoice = { audioEl: voiceAudio, typingToken };
+
+                    typeTimer = setInterval(() => {
+                        if (typingToken !== dialogueTypingToken) {
+                            stopDialogueTypingPlayback();
+                            return;
+                        }
+                        if (charIndex < resolvedText.length) {
+                            dialogueText.textContent += resolvedText[charIndex++];
+                            syncDialogueFitForMobile();
+                        } else {
+                            if (typeTimer) {
+                                clearInterval(typeTimer);
+                                typeTimer = null;
+                            }
+                            finishIfReady();
+                        }
+                    }, charIntervalMs);
+
+                    const playPromise = voiceAudio.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(() => {
+                            if (typingToken !== dialogueTypingToken) return;
+                            stopDialogueTypingPlayback({ resetVoiceTime: true });
+                            charIndex = 0;
+                            dialogueText.textContent = '';
+                            startPlainTyping();
+                        });
+                    }
+                })
+                .catch(() => {
+                    if (typingToken !== dialogueTypingToken) return;
+                    startPlainTyping();
+                });
         }
 
-        function runChoiceResponse(responseText, actionId, speakerName) {
+        function runChoiceResponse(responseText, actionId, speakerName, responseTextKey = '') {
             runScriptedLine(responseText, speakerName, () => {
                 if (actionId === 'show_to_be_continued' || actionId === 'start_bed_scene') {
                     pendingPostChoiceAction = actionId;
@@ -2253,39 +2698,52 @@ applyDevAssetVersionToDom(document);
                     return;
                 }
                 dispatchAction(actionId, { delayMs: 1000 });
-            });
+            }, { voiceTextKey: responseTextKey });
         }
 
         function runScriptedLines(lines, speakerName, onDone, options = {}) {
             const requireClickBetweenLines = !!options.requireClickBetweenLines;
-            const queue = Array.isArray(lines) ? lines.filter(Boolean) : [];
+            const sequence = {
+                id: ++scriptedSequenceIdCounter,
+                lines: Array.isArray(lines) ? lines.filter(Boolean) : [],
+                speakerName,
+                onDone,
+                requireClickBetweenLines
+            };
             pendingClickAdvance = null;
-            if (queue.length === 0) {
+            if (sequence.lines.length === 0) {
                 if (typeof onDone === 'function') onDone();
                 return;
             }
-            const playNext = () => {
-                const text = queue.shift();
-                if (!text) {
-                    if (queue.length === 0) {
-                        if (typeof onDone === 'function') onDone();
-                        return;
+            playScriptedSequenceLine(sequence, 0);
+        }
+
+        function playScriptedSequenceLine(sequence, index) {
+            if (!sequence || !Array.isArray(sequence.lines)) return;
+            const safeIndex = Math.max(0, Math.min(index, sequence.lines.length - 1));
+            const text = sequence.lines[safeIndex];
+            pendingClickAdvance = null;
+            runScriptedLine(text, sequence.speakerName, () => {
+                if (safeIndex < sequence.lines.length - 1) {
+                    const playNext = () => playScriptedSequenceLine(sequence, safeIndex + 1);
+                    if (sequence.requireClickBetweenLines) {
+                        pendingClickAdvance = playNext;
+                    } else {
+                        playNext();
                     }
-                    playNext();
-                    return;
+                } else if (typeof sequence.onDone === 'function') {
+                    sequence.onDone();
                 }
-                runScriptedLine(text, speakerName, () => {
-                    if (queue.length > 0) {
-                        if (requireClickBetweenLines) {
-                            pendingClickAdvance = playNext;
-                        } else {
-                            playNext();
-                        }
-                    }
-                    else if (typeof onDone === 'function') onDone();
-                });
-            };
-            playNext();
+                updatePrevLineButtonVisibility();
+            }, {
+                dialogueStep: {
+                    kind: 'scripted-sequence',
+                    sequenceId: sequence.id,
+                    index: safeIndex,
+                    canGoPrev: () => safeIndex > 0,
+                    goPrev: () => playScriptedSequenceLine(sequence, safeIndex - 1)
+                }
+            });
         }
 
         function jumpToMainOpeningStory() {
@@ -2549,11 +3007,94 @@ applyDevAssetVersionToDom(document);
                     },
                     {
                         textKey: '',
-                        fallbackText: () => getOpeningTextBundle().choiceJustChat || '什麼也不幹，就在這聊天',
-                        onSelect: () => dispatchAction('show_to_be_continued', { delayMs: 0 })
+                        fallbackText: () => getOpeningTextBundle().choiceJustChat || '和提爾狐爬塔',
+                        onSelect: () => dispatchAction('start_tower', { delayMs: 0 })
                     }
                 ]
             });
+        }
+
+        async function reviveToOpeningAfterIntroChoices(sourceOverlayEl) {
+            interruptDialogueTyping({ resetVoiceTime: true });
+            lineIndex = 0;
+            charIndex = 0;
+            rememberCurrentLineText('');
+            isTyping = false;
+            isDeathSequence = false;
+            isAngry = false;
+            isHappy = false;
+            isAfraidHeadMode = false;
+            isShyBedTransitionMode = false;
+            isOpeningPrologueActive = false;
+            isHappyTalkMode = false;
+            isParkEyebrowsDown = false;
+            isFightSequenceActive = false;
+            isOpeningDialogueLocked = false;
+            isOpeningGreetingHeadTouchLocked = false;
+            pendingPostChoiceAction = null;
+            pendingClickAdvance = null;
+            currentChoiceSourceIndices = [...DEFAULT_CHOICE_SOURCE_INDICES];
+            ooxxReturnChoiceSourceIndices = null;
+            clearCurrentDialogueStep();
+            resetBedFlow();
+            resetHeadTouchChain('death_revive');
+            hideChoicePanel();
+            clearFightVisualFx();
+            setBedNSleepBgOnlyMode(false);
+            resetMoneyIntermission();
+            applyOpeningHeadMode(false);
+            setParkEyebrowsDown(false);
+            if (sourceOverlayEl) sourceOverlayEl.classList.remove('show-text');
+            if (toBeContinuedEl && toBeContinuedEl !== sourceOverlayEl) toBeContinuedEl.classList.add('hidden');
+            if (petFoxTimer) {
+                clearTimeout(petFoxTimer);
+                petFoxTimer = null;
+            }
+            if (petFoxScreenEl && petFoxScreenEl !== sourceOverlayEl) petFoxScreenEl.classList.add('hidden');
+            clearTowerOverlayState();
+            resetTowerAudioState();
+            cancelOOXXTransitions('death revive reset');
+            const ooxxScreen = document.getElementById('ooxx-screen');
+            if (ooxxScreen) ooxxScreen.classList.add('hidden');
+            const ooxxResult = document.getElementById('ooxx-result');
+            if (ooxxResult) {
+                ooxxResult.classList.add('hidden');
+                ooxxResult.classList.remove('show-text');
+            }
+            const title = document.getElementById('title-screen');
+            if (title) {
+                title.style.opacity = '';
+                title.classList.add('hidden');
+            }
+            dialogueText.textContent = '';
+
+            const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
+            if (!defaultScenePreload.ok) {
+                console.warn('[ASSET] Default scene preload failed during death revive:', defaultScenePreload.failedAssets);
+            }
+            applyScene(SCENE_DEFAULT);
+            setChoiceButtons(DEFAULT_CHOICE_SOURCE_INDICES);
+            setCharState('idle');
+            startBGM();
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'death_revive' }); } catch (e) { }
+            }
+
+            const showWakeChoiceLine = () => {
+                const opening = getOpeningTextBundle();
+                runScriptedLine(
+                    opening.wakeChoiceLine || '你醒啦...你想做什麼呢?',
+                    l10n[currentLang]?.speaker || '',
+                    showOpeningAfterIntroChoices
+                );
+            };
+
+            if (sourceOverlayEl) {
+                sourceOverlayEl.classList.add('hidden');
+                setTimeout(showWakeChoiceLine, OVERLAY_FADE_MS + 40);
+            } else {
+                showWakeChoiceLine();
+            }
         }
 
         function showOpeningFirstChoice() {
@@ -2625,9 +3166,10 @@ applyDevAssetVersionToDom(document);
                 : (idx === 2 ? 'start_bed_scene' : (idx === 1 ? 'show_pet_fox' : 'trigger_death'));
             const outcome = storyEngine
                 ? storyEngine.getChoiceOutcomeByIndex(idx)
-                : { actionId: fallbackActionId, responseText: t.responses[idx] };
+                : { actionId: fallbackActionId, responseText: t.responses[idx], responseTextKey: '' };
             const actionId = outcome?.actionId || fallbackActionId;
             const responseText = outcome?.responseText || '';
+            const responseTextKey = outcome?.responseTextKey || '';
 
             // Add user choice to history
             dialogueHistory.push({
@@ -2652,12 +3194,12 @@ applyDevAssetVersionToDom(document);
             if (actionId === 'show_to_be_continued' || actionId === 'start_bed_scene') {
                 setTyping(false);
                 beginMoneyIntermission(() => {
-                    runChoiceResponse(responseText, actionId, t.speaker);
+                    runChoiceResponse(responseText, actionId, t.speaker, responseTextKey);
                 });
                 return;
             }
 
-            runChoiceResponse(responseText, actionId, t.speaker);
+            runChoiceResponse(responseText, actionId, t.speaker, responseTextKey);
         }
 
         function showBedPhase1() {
@@ -2700,7 +3242,12 @@ applyDevAssetVersionToDom(document);
             bedFlow.tearsAfterStop = false;
             applyBedHeadVariant('eyes_closed');
             const line = getStoryText('bed_line_2', '嗚...我尾巴很敏感的...你再摸我就要...');
-            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
+            runScriptedLine(
+                line,
+                l10n[currentLang]?.speaker || '',
+                () => showBedPhase2(),
+                { voiceTextKey: 'bed_line_2' }
+            );
         }
 
         function onBedContinueTouch() {
@@ -2721,7 +3268,16 @@ applyDevAssetVersionToDom(document);
             const line = isCryMode
                 ? cryLoopLine
                 : getStoryText('bed_line_continue', '嗚嗚....');
-            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase2());
+            const defaultCryLine = getStoryText('bed_line_continue_cry', '我受不了拉...');
+            const voiceTextKey = isCryMode
+                ? (line === defaultCryLine ? 'bed_line_continue_cry' : '')
+                : 'bed_line_continue';
+            runScriptedLine(
+                line,
+                l10n[currentLang]?.speaker || '',
+                () => showBedPhase2(),
+                { voiceTextKey }
+            );
         }
 
         function onBedStopTouch() {
@@ -2733,8 +3289,15 @@ applyDevAssetVersionToDom(document);
             bedFlow.tearsAfterStop = shouldUseTears;
             applyBedHeadVariant(shouldUseTears ? 'tears' : 'normal');
             const fallbackStopLine = BED_STOP_LINE_BY_LANG[currentLang] || BED_STOP_LINE_BY_LANG.tw;
-            const line = getStoryText('bed_line_stop', fallbackStopLine);
-            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
+            const stopAfterPetLine = getStoryText('resp_2_after_pet', fallbackStopLine);
+            const line = getStoryText('bed_line_stop', stopAfterPetLine);
+            const voiceTextKey = line === stopAfterPetLine ? 'resp_2_after_pet' : 'bed_line_stop';
+            runScriptedLine(
+                line,
+                l10n[currentLang]?.speaker || '',
+                () => showBedPhase1(),
+                { voiceTextKey }
+            );
         }
 
         function showBedNSleepBranchChoices() {
@@ -2883,6 +3446,125 @@ applyDevAssetVersionToDom(document);
             dispatchAction('start_ooxx');
         }
 
+        function playTowerSound(soundId) {
+            if (audioMuted) return;
+            const audioEl = getTowerSfx(soundId);
+            if (!audioEl) return;
+            const vol = audioService.getSfxVolume();
+            if (vol <= 0) return;
+            ensureAudio();
+            audioEl.volume = vol;
+            audioEl.currentTime = 0;
+            audioEl.play().catch(() => { });
+        }
+
+        function shakeTowerScreen(level = 'sm') {
+            if (!towerScreenEl) return;
+            const shakeClass = level === 'lg' ? 'tower-shake-lg' : 'tower-shake-sm';
+            towerScreenEl.classList.remove('tower-shake-sm', 'tower-shake-lg');
+            void towerScreenEl.offsetWidth;
+            towerScreenEl.classList.add(shakeClass);
+            setTimeout(() => {
+                if (!towerScreenEl) return;
+                towerScreenEl.classList.remove(shakeClass);
+            }, level === 'lg' ? 260 : 210);
+        }
+
+        function pauseAudioForTower() {
+            if (!bgmEl) return;
+            towerBgmWasPlaying = !bgmEl.paused;
+            try {
+                towerBgmResumeTime = Number.isFinite(bgmEl.currentTime) ? bgmEl.currentTime : 0;
+            } catch (err) {
+                towerBgmResumeTime = 0;
+            }
+            bgmEl.pause();
+        }
+
+        function resumeAudioAfterTower() {
+            if (!bgmEl) {
+                towerBgmWasPlaying = false;
+                towerBgmResumeTime = 0;
+                return;
+            }
+            if (towerBgmWasPlaying) {
+                try {
+                    bgmEl.currentTime = towerBgmResumeTime || 0;
+                } catch (err) { }
+                const playPromise = bgmEl.play?.();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(() => { });
+                }
+            }
+            towerBgmWasPlaying = false;
+            towerBgmResumeTime = 0;
+        }
+
+        function resetTowerAudioState() {
+            towerBgmWasPlaying = false;
+            towerBgmResumeTime = 0;
+        }
+
+        function clearTowerOverlayState() {
+            unmountTowerGame();
+            isTowerActive = false;
+            if (towerScreenEl) {
+                towerScreenEl.classList.add('hidden');
+                towerScreenEl.classList.remove('tower-shake-sm', 'tower-shake-lg');
+            }
+        }
+
+        function exitTowerGameToOpeningChoices() {
+            clearTowerOverlayState();
+            resumeAudioAfterTower();
+            if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                try { appState.transition(GAME_STATES.DIALOGUE, { source: 'tower_exit' }); } catch (e) { }
+            }
+            showOpeningAfterIntroChoices();
+        }
+
+        async function startTowerGame() {
+            if (isTowerActive) return;
+            if (!towerScreenEl || !towerRootEl) {
+                console.error('[TOWER] Missing tower-screen or tower-root element.');
+                showToast('爬塔遊戲載入失敗，請稍後再試');
+                showOpeningAfterIntroChoices();
+                return;
+            }
+
+            setTyping(false);
+            pendingClickAdvance = null;
+            pendingPostChoiceAction = null;
+            resetHeadTouchChain('start_tower');
+            hideChoicePanel();
+            pauseAudioForTower();
+
+            towerScreenEl.classList.remove('hidden');
+            isTowerActive = true;
+            if (appState && appState.getState() !== GAME_STATES.TOWER) {
+                try { appState.transition(GAME_STATES.TOWER, { source: 'start_tower' }); } catch (e) { }
+            }
+
+            try {
+                await mountTowerGame({
+                    rootEl: towerRootEl,
+                    lang: currentLang,
+                    onExit: exitTowerGameToOpeningChoices,
+                    playSound: playTowerSound,
+                    shakeScreen: shakeTowerScreen
+                });
+            } catch (error) {
+                console.error('[TOWER] Failed to mount tower game:', error);
+                clearTowerOverlayState();
+                resumeAudioAfterTower();
+                if (appState && appState.getState() !== GAME_STATES.DIALOGUE) {
+                    try { appState.transition(GAME_STATES.DIALOGUE, { source: 'tower_mount_failed' }); } catch (e) { }
+                }
+                showToast('爬塔遊戲載入失敗，請稍後再試');
+                showOpeningAfterIntroChoices();
+            }
+        }
+
         async function startBedScene() {
             if (bedFlow.active) return;
             setBedNSleepBgOnlyMode(false);
@@ -2939,7 +3621,12 @@ applyDevAssetVersionToDom(document);
                 try { appState.transition(GAME_STATES.DIALOGUE, { source: 'bed_scene' }); } catch (e) { }
             }
             const line = getStoryText('bed_line_1', '說...說好只能摸尾巴的喔');
-            runScriptedLine(line, l10n[currentLang]?.speaker || '', () => showBedPhase1());
+            runScriptedLine(
+                line,
+                l10n[currentLang]?.speaker || '',
+                () => showBedPhase1(),
+                { voiceTextKey: 'bed_line_1' }
+            );
         }
 
         // OOXX mini-game
@@ -3350,7 +4037,7 @@ applyDevAssetVersionToDom(document);
                 setTimeout(() => {
                     deathScreen.classList.remove('show-text');
                     if (deathTextEl) deathTextEl.textContent = defaultDeathText;
-                    returnToTitle(deathScreen);
+                    void reviveToOpeningAfterIntroChoices(deathScreen);
                 }, 4000);
             }, 1000);
         }
@@ -3456,7 +4143,7 @@ applyDevAssetVersionToDom(document);
             }
             if (!petFoxScreenEl) {
                 const line = (storyEngine && storyEngine.getTextByKey('resp_2_after_pet', currentLang)) || '摸...摸夠了吧...你還想幹嘛?';
-                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '');
+                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '', 'resp_2_after_pet');
                 return;
             }
 
@@ -3465,7 +4152,7 @@ applyDevAssetVersionToDom(document);
                 petFoxTimer = null;
                 petFoxScreenEl.classList.add('hidden');
                 const line = (storyEngine && storyEngine.getTextByKey('resp_2_after_pet', currentLang)) || '摸...摸夠了吧...你還想幹嘛?';
-                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '');
+                runChoiceResponse(line, 'show_followup_choices', l10n[currentLang]?.speaker || '', 'resp_2_after_pet');
             }, PET_FOX_DISPLAY_MS);
         }
 
@@ -3547,6 +4234,8 @@ applyDevAssetVersionToDom(document);
         function handleSettingsClick(e) { if (e.target === overlay) closeSettings(); }
 
         function setLanguage(lang) {
+            interruptDialogueTyping({ resetVoiceTime: true });
+            if (isTyping) setTyping(false);
             if (storyEngine) {
                 const ok = storyEngine.setLanguage(lang);
                 if (!ok) return;
@@ -3568,7 +4257,7 @@ applyDevAssetVersionToDom(document);
             if (!isDeathSequence && !isTyping && !inChoiceMode && script[lineIndex] && !isOpeningPrologueActive) {
                 const t = l10n[lang];
                 speakerPlate.textContent = t.speaker;
-                const lineText = applyPlayerNameTemplate(t.lines[lineIndex] || '');
+                const { lineText } = resolveOpeningLineText(script[lineIndex], lineIndex, t);
                 dialogueText.textContent = lineText;
                 rememberCurrentLineText(lineText);
                 applyAfraidHeadMode(isAfraidTargetLineText(lineText));
@@ -3583,6 +4272,23 @@ applyDevAssetVersionToDom(document);
                 scheduleChoiceOcclusionValidation();
             }
             syncDialogueFitForMobile();
+        }
+
+        function getVoiceSettingLabelForLang(lang, ui = null) {
+            if (ui?.voice) return ui.voice;
+            if (lang === 'en') return 'Voice';
+            if (lang === 'jp') return 'ボイス';
+            return '語音';
+        }
+
+        function getDialogueTypeIntervalFromTextSpeed(speedRawValue) {
+            const speedValue = Number.parseFloat(speedRawValue);
+            if (!Number.isFinite(speedValue)) return DEFAULT_DIALOGUE_TYPE_INTERVAL_MS;
+            const clampedValue = Math.max(DIALOGUE_TEXT_SPEED_MIN, Math.min(DIALOGUE_TEXT_SPEED_MAX, speedValue));
+            return Math.max(
+                10,
+                Math.round(DIALOGUE_TEXT_SPEED_BASE_MS - (clampedValue * DIALOGUE_TEXT_SPEED_STEP_MS))
+            );
         }
 
         function updateUIText() {
@@ -3631,9 +4337,12 @@ applyDevAssetVersionToDom(document);
             document.getElementById('close-history').textContent = ui.closeHist;
 
             document.getElementById('lang-ui-settings-title').textContent = ui.settingTitle;
-            document.getElementById('lang-ui-text-speed').textContent = ui.textSpeed;
+            const textSpeedLabelEl = document.getElementById('lang-ui-text-speed');
+            if (textSpeedLabelEl) textSpeedLabelEl.textContent = ui.textSpeed;
             document.getElementById('lang-ui-bgm').textContent = ui.bgm;
             document.getElementById('lang-ui-sfx').textContent = ui.sfx;
+            const voiceLabelEl = document.getElementById('lang-ui-voice');
+            if (voiceLabelEl) voiceLabelEl.textContent = getVoiceSettingLabelForLang(currentLang, ui);
             document.getElementById('lang-ui-fullscreen').textContent = ui.fullScreen;
             const autoEl = document.getElementById('lang-ui-auto');
             if (autoEl) autoEl.textContent = ui.autoPlay;
@@ -3642,6 +4351,10 @@ applyDevAssetVersionToDom(document);
 
             document.getElementById('tog-fs-off').textContent = ui.off;
             document.getElementById('tog-fs-on').textContent = ui.on;
+            const voiceOffBtn = document.getElementById('tog-voice-off');
+            const voiceOnBtn = document.getElementById('tog-voice-on');
+            if (voiceOffBtn) voiceOffBtn.textContent = ui.off;
+            if (voiceOnBtn) voiceOnBtn.textContent = ui.on;
             document.getElementById('tog-lang-tw').textContent = ui.tw;
             document.getElementById('tog-lang-jp').textContent = ui.jp;
             document.getElementById('tog-lang-en').textContent = ui.en;
@@ -3657,21 +4370,33 @@ applyDevAssetVersionToDom(document);
         function setToggle(group, val) {
             const map = {
                 fs: { ids: ['tog-fs-off', 'tog-fs-on'], vals: ['off', 'on'] },
-                auto: { ids: ['tog-auto-off', 'tog-auto-on'], vals: ['off', 'on'] }
+                auto: { ids: ['tog-auto-off', 'tog-auto-on'], vals: ['off', 'on'] },
+                voice: { ids: ['tog-voice-off', 'tog-voice-on'], vals: ['off', 'on'] }
             };
             if (map[group]) {
-                map[group].ids.forEach((id, i) =>
-                    document.getElementById(id).classList.toggle('on', map[group].vals[i] === val)
-                );
+                map[group].ids.forEach((id, i) => {
+                    const btnEl = document.getElementById(id);
+                    if (btnEl) btnEl.classList.toggle('on', map[group].vals[i] === val);
+                });
             }
             if (group === 'auto') autoPlay = (val === 'on');
+        }
+
+        function setVoiceEnabled(enabled) {
+            dialogueVoiceEnabled = Boolean(enabled);
+            setToggle('voice', dialogueVoiceEnabled ? 'on' : 'off');
         }
 
         function updateSlider(el) {
             const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
             el.style.setProperty('--val', pct);
-            if (el.id === 'text-speed') textSpeedMs = textSpeedLevelToMs(el.value);
+            if (el.id === 'text-speed') {
+                dialogueTypeIntervalMs = getDialogueTypeIntervalFromTextSpeed(el.value || DEFAULT_DIALOGUE_TEXT_SPEED_VALUE);
+            }
             if (el.id === 'bgm-vol') bgmEl.volume = el.value / 100;
+            if (el.id === 'sfx-vol' && activeDialogueVoice?.audioEl) {
+                activeDialogueVoice.audioEl.volume = getCurrentSfxVolume();
+            }
         }
 
         function syncFullscreenToggle() {
@@ -3711,6 +4436,7 @@ applyDevAssetVersionToDom(document);
                 'copy-social-id': ({ actionEl }) => copySocialId(actionEl),
                 'head-touch': ({ event }) => handleHeadTouchAction(event),
                 'set-toggle': ({ actionEl }) => setToggle(actionEl.dataset.toggleGroup, actionEl.dataset.toggleValue),
+                'set-voice': ({ actionEl }) => setVoiceEnabled(actionEl.dataset.voice === 'on'),
                 'set-fullscreen': ({ actionEl }) => setFullscreenEnabled(actionEl.dataset.fullscreen === 'on'),
                 'update-slider': ({ actionEl }) => updateSlider(actionEl),
                 'overlay-settings-dismiss': ({ event }) => handleSettingsClick(event),
@@ -3943,8 +4669,7 @@ applyDevAssetVersionToDom(document);
             }
 
             // Thorough state reset to prevent stale state from previous session
-            clearInterval(typeTimer);
-            typeTimer = null;
+            interruptDialogueTyping({ resetVoiceTime: true });
             lineIndex = 0;
             charIndex = 0;
             rememberCurrentLineText('');
@@ -3970,6 +4695,7 @@ applyDevAssetVersionToDom(document);
             resetHeadTouchChain('start_game');
             ooxxReturnChoiceSourceIndices = null;
             dialogueHistory.length = 0;
+            clearCurrentDialogueStep();
             clearFightVisualFx();
             setBedNSleepBgOnlyMode(false);
 
@@ -3995,6 +4721,8 @@ applyDevAssetVersionToDom(document);
                 petFoxTimer = null;
             }
             if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            clearTowerOverlayState();
+            resetTowerAudioState();
             applyOpeningHeadMode(true);
             const parkScenePreload = await ensureSceneAssets(SCENE_PARK, { interactive: false });
             if (!parkScenePreload.ok) {
@@ -4015,7 +4743,7 @@ applyDevAssetVersionToDom(document);
             const splash = document.getElementById('bg-splash');
             if (splash) splash.classList.add('fade-out');
 
-            clearTimeout(blinkTimeout);
+            cancelBlinkTimer();
             stopSpeakingAnimation();
             setCharState('idle');
             scheduleNextBlink();
@@ -4027,11 +4755,11 @@ applyDevAssetVersionToDom(document);
         }
 
         function transitionToTitleWithCover(sourceOverlayEl, cleanupFn) {
-            if (typeof cleanupFn === 'function') cleanupFn();
             const title = document.getElementById('title-screen');
             title.style.opacity = '';
             title.classList.remove('hidden');
             setTimeout(() => {
+                if (typeof cleanupFn === 'function') cleanupFn();
                 if (sourceOverlayEl) {
                     sourceOverlayEl.classList.add('hidden');
                     sourceOverlayEl.classList.remove('show-text');
@@ -4041,7 +4769,7 @@ applyDevAssetVersionToDom(document);
 
         async function returnToTitle(sourceOverlayEl, cleanupFn) {
             // Stop logic / reset
-            clearInterval(typeTimer);
+            interruptDialogueTyping({ resetVoiceTime: true });
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
@@ -4061,18 +4789,21 @@ applyDevAssetVersionToDom(document);
             resetBedFlow();
             resetHeadTouchChain('return_to_title');
             ooxxReturnChoiceSourceIndices = null;
+            clearCurrentDialogueStep();
             hideChoicePanel();
             setCharState('idle'); // revert character to idle
             dialogueText.textContent = ''; // clear text
             clearFightVisualFx();
             setBedNSleepBgOnlyMode(false);
             resetMoneyIntermission();
-            if (toBeContinuedEl) toBeContinuedEl.classList.add('hidden');
+            if (toBeContinuedEl && toBeContinuedEl !== sourceOverlayEl) toBeContinuedEl.classList.add('hidden');
             if (petFoxTimer) {
                 clearTimeout(petFoxTimer);
                 petFoxTimer = null;
             }
-            if (petFoxScreenEl) petFoxScreenEl.classList.add('hidden');
+            if (petFoxScreenEl && petFoxScreenEl !== sourceOverlayEl) petFoxScreenEl.classList.add('hidden');
+            clearTowerOverlayState();
+            resetTowerAudioState();
             const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
             if (!defaultScenePreload.ok) {
                 debugLog('[HEAD_ASSET_PENDING]', 'default_scene_preload_failed', JSON.stringify(defaultScenePreload.failedAssets || []));

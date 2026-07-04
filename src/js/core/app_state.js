@@ -4,16 +4,18 @@ export const GAME_STATES = Object.freeze({
     CHOICE: "CHOICE",
     TRANSITION: "TRANSITION",
     OOXX: "OOXX",
+    TOWER: "TOWER",
     RESULT: "RESULT",
     DEATH: "DEATH",
 });
 
 const ALLOWED = Object.freeze({
     TITLE: new Set(["DIALOGUE", "TRANSITION"]),
-    DIALOGUE: new Set(["CHOICE", "DEATH", "TRANSITION", "TITLE"]),
-    CHOICE: new Set(["DIALOGUE", "TRANSITION", "OOXX"]),
-    TRANSITION: new Set(["DIALOGUE", "OOXX", "RESULT", "TITLE", "DEATH"]),
+    DIALOGUE: new Set(["CHOICE", "DEATH", "TRANSITION", "TITLE", "TOWER"]),
+    CHOICE: new Set(["DIALOGUE", "TRANSITION", "OOXX", "TOWER"]),
+    TRANSITION: new Set(["DIALOGUE", "OOXX", "RESULT", "TITLE", "DEATH", "TOWER"]),
     OOXX: new Set(["RESULT", "TRANSITION", "TITLE"]),
+    TOWER: new Set(["DIALOGUE", "TRANSITION", "TITLE"]),
     RESULT: new Set(["TRANSITION", "TITLE"]),
     DEATH: new Set(["TRANSITION", "TITLE"]),
 });
