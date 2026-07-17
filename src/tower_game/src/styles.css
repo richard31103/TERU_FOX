@@ -2029,6 +2029,84 @@
         padding: 0.65rem !important;
     }
 
+    .tower-arena-inline-overlay.is-draft {
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        border-radius: 0;
+        padding: 0.5rem;
+        background: rgba(2, 6, 23, 0.92);
+        backdrop-filter: blur(4px);
+    }
+
+    .tower-combat-arena.is-draft-open {
+        height: calc(100dvh - 0.9rem);
+        max-height: none;
+    }
+
+    .tower-arena-inline-overlay.is-draft .tower-modal-panel,
+    .tower-shop-modal-panel.tower-arena-draft-panel {
+        width: 100%;
+        max-height: calc(100dvh - 1rem);
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 0.45rem;
+    }
+
+    .tower-arena-draft-panel .tower-battle-layer-command,
+    .tower-arena-draft-panel .tower-draft-levelup-panel {
+        padding: 0.55rem !important;
+    }
+
+    .tower-draft-levelup-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 0.45rem;
+    }
+
+    .tower-draft-levelup-head h4 {
+        font-size: 0.95rem;
+    }
+
+    .tower-draft-levelup-head p {
+        margin-top: 0.15rem;
+        font-size: 0.72rem;
+        line-height: 1.35;
+    }
+
+    .tower-draft-levelup-grid {
+        margin-top: 0.5rem !important;
+        gap: 0.42rem;
+    }
+
+    .tower-draft-levelup-card {
+        min-height: 0;
+        padding: 0.58rem !important;
+    }
+
+    .tower-draft-levelup-card h5 {
+        margin-top: 0.3rem;
+        font-size: 0.82rem;
+    }
+
+    .tower-draft-levelup-card p,
+    .tower-draft-levelup-card > span:last-child {
+        margin-top: 0.2rem;
+        font-size: 0.68rem;
+        line-height: 1.3;
+    }
+
+    .tower-draft-focus-hint {
+        margin-top: 0.45rem;
+        padding: 0.42rem 0.5rem;
+        font-size: 0.65rem;
+    }
+
+    .tower-arena-status-grid.is-muted {
+        display: none;
+    }
+
     .tower-bottom-shop-group {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.42rem;
@@ -2087,6 +2165,14 @@
 
     .tower-slot-machine-frame {
         max-width: min(100%, 172px);
+    }
+
+    .tower-draft-levelup-head {
+        grid-template-columns: 1fr;
+    }
+
+    .tower-draft-levelup-head button {
+        width: 100%;
     }
 }
 

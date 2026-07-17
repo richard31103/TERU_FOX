@@ -4053,7 +4053,7 @@ export function TowerApp({
                     <section className="tower-battle-layout tw-flex tw-flex-1 tw-flex-col">
                         <div className="tower-combat-grid">
                             <div className="tower-combat-arena-shell tw-rounded-xl tw-border tw-border-slate-500/70 tw-bg-slate-900/80 tw-p-3 sm:tw-p-4">
-                                <div className="tower-combat-arena">
+                                <div className={`tower-combat-arena${isLevelUpOpen ? ' is-draft-open' : ''}`}>
                                     <img src={BATTLE_ARENA_SRC} alt="" className="tower-combat-arena-image" aria-hidden="true" />
                                     <div className="tower-combat-arena-overlay" aria-hidden="true" />
 
