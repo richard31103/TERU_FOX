@@ -701,7 +701,7 @@ async function bootstrap() {
     refs.status.textContent = '讀取劇情資料中...';
     let storySet = null;
     try {
-        storySet = await loadChapterStorySet('chapter01', ['tw', 'en', 'jp']);
+        storySet = await loadChapterStorySet('chapter01', ['tw', 'cn', 'en', 'jp']);
     } catch (err) {
         console.warn('Story load failed in tool bootstrap. Fallback to empty story set.', err);
     }
@@ -724,4 +724,3 @@ bootstrap().catch((err) => {
     console.error(err);
     refs.status.textContent = `載入失敗: ${err.message || err}`;
 });
-

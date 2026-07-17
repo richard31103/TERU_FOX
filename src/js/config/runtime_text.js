@@ -5,6 +5,7 @@ export const FOLLOWUP_CHOICE_SOURCE_INDICES = [0, 2, 3];
 
 export const FIGHT_CHOICE_LABELS = {
     tw: '戰鬥!',
+    cn: '战斗！',
     en: 'Fight!',
     jp: '戦う！'
 };
@@ -16,6 +17,14 @@ export const FIGHT_TEXT = {
         attackOption: '攻擊',
         jokeOption: '我...開玩笑的啦',
         afterHitLine1: '好痛...你竟然來真的！',
+        afterHitLine2: '我要咬死你！'
+    },
+    cn: {
+        intro: '什么？你想跟我打架！',
+        choiceTitle: '战斗选项',
+        attackOption: '攻击',
+        jokeOption: '我...开玩笑的啦',
+        afterHitLine1: '好痛...你竟然来真的！',
         afterHitLine2: '我要咬死你！'
     },
     en: {
@@ -45,6 +54,14 @@ export const FIGHT_TEXT_AFTER_OOXX = {
         afterHitLine1: '厄阿阿阿',
         afterHitLine2: '你死定了...'
     },
+    cn: {
+        intro: '怎么说打就打，你当我是宝可梦吗？',
+        choiceTitle: '战斗选项',
+        attackOption: '乱抓',
+        jokeOption: '放弃战斗',
+        afterHitLine1: '呃啊啊啊',
+        afterHitLine2: '你死定了...'
+    },
     en: {
         intro: 'Why are we fighting all of a sudden? Do you think I am a Pokemon?',
         choiceTitle: 'Battle Options',
@@ -65,6 +82,7 @@ export const FIGHT_TEXT_AFTER_OOXX = {
 
 export const FIGHT_JOKE_RETURN_LINE = {
     tw: '那你到底想要幹麻?',
+    cn: '那你到底想干嘛？',
     en: 'So what do you actually want to do?',
     jp: 'で、結局何したいの？'
 };
@@ -110,6 +128,48 @@ export const OPENING_TEXT = {
             '你也可以叫我 "TERU FOX"',
             '我是一名音樂製作人，除此之外也是DJ哦!',
             '感興趣的話，可以點擊右邊的"狐狸按鈕"，了解更多資訊!'
+        ]
+    },
+    cn: {
+        greeting: '你好呀，我是提尔，很高兴认识你！',
+        choiceIntro: '你好呀，可以自我介绍一下吗？',
+        choiceSkipIntro: '不用介绍了',
+        nameQuestionTitle: '你叫什么名字？',
+        choiceEnterName: '点击这里输入名字',
+        choiceNoName: '不想告诉你',
+        namePrompt: '请输入名字（最多10个字）',
+        nameTooLongAlert: '名字不能超过{max}个字，请重新输入。',
+        nameConfirmLine: '你好啊，{name}！',
+        nameDeclineReplyLine: '好吧...那就不叫你的名字了',
+        choiceGoHome: '我可以跟你回家吗？',
+        choiceGoHomeAfterIntro: '我可以跟你回家吗？',
+        choiceRecordStore: '要一起去逛唱片店吗？',
+        choiceCoffee: '我想去喝咖啡',
+        choiceJustChat: '和提尔狐一起爬塔',
+        moveToLawnLine: '我腿有点酸了，去草坪坐一下吧',
+        weatherChoiceLine: '今天天气真好，你想做什么呢？',
+        wakeChoiceLine: '你醒啦...你想做什么呢？',
+        goHomeTransitionLine: '好呀，我们去草坪上聊吧',
+        recordStoreReply: '好呀',
+        coffeeIntroLines: [
+            '我其实不常喝咖啡呢...',
+            '咖啡又苦，喝了还睡不着觉',
+            '但是上次喝了拉里叔叔泡的咖啡，让我稍微有些改观'
+        ],
+        coffeeChoiceTitle: '{{player_name}}要给提尔点什么？',
+        coffeeChoiceLatte: '拿铁',
+        coffeeChoiceAmericano: '美式咖啡',
+        coffeeChoiceChocoShakeNoCream: '巧克力冰沙（不加奶油）',
+        coffeeChoiceSleepyTea: '昏睡红茶',
+        coffeeResponseLatte: '拿铁吗...我想加三包糖，真的不懂咖啡有什么好喝的',
+        coffeeResponseAmericano: '美式咖啡...呜呜...（硬着头皮喝一口）好难喝...',
+        coffeeResponseChocoShakeNoCream: '哇！{{player_name}}怎么知道我喜欢这个！',
+        coffeeResponseSleepyTea: '突然...好困...',
+        introLines: [
+            '我是提尔狐',
+            '你也可以叫我“TERU FOX”',
+            '我是一名音乐制作人，同时也是DJ哦！',
+            '感兴趣的话，可以点击右边的“狐狸按钮”查看更多信息！'
         ]
     },
     en: {
@@ -209,6 +269,14 @@ export const AFRAID_TARGET_LINES_TW = new Set([
 
 export const AFRAID_TARGET_CHOICE_TITLE_TW = '你想做什麼？';
 
+export const AFRAID_TARGET_LINES_CN = new Set([
+    '你...你想做什么？',
+    '呃...你...你想做什么？',
+    '摸...摸够了吧...你还想干嘛？'
+]);
+
+export const AFRAID_TARGET_CHOICE_TITLE_CN = '你想做什么？';
+
 export const SHY_BED_TRANSITION_HEADS = { ...DIALOGUE_EXPRESSION_LIBRARY.shyBedTransition };
 
 export const FIGHT_TAIL_PIVOT_SOURCE = { x: 1389.57, y: 1259.96 };
@@ -221,6 +289,7 @@ export const BED_TAIL_BURST_RESET_MS = 260;
 
 export const BED_STOP_LINE_BY_LANG = {
     tw: '你還想幹嘛?',
+    cn: '你还想干嘛？',
     en: 'What else do you want to do?',
     jp: 'で、まだ何したいの？'
 };
@@ -233,6 +302,14 @@ export const BED_CRY_LOOP_LINES = {
         '嗚欸欸欸...',
         '姆喔喔喔...',
         '嗚嗚嗚嗚...'
+    ],
+    cn: [
+        '我受不了了...',
+        '呜呜呜哦...',
+        '咿咿咿啊...',
+        '呜诶诶诶...',
+        '姆哦哦哦...',
+        '呜呜呜呜...'
     ],
     en: [
         "I can't take it anymore...",
@@ -254,12 +331,14 @@ export const BED_CRY_LOOP_LINES = {
 
 export const BED_EXTRA_MONEY_OPTION_TEXT = {
     tw: '再拿出500$',
+    cn: '再掏出500$',
     en: 'Pull Out Another $500',
     jp: 'さらに500$を出す'
 };
 
 export const BED_EXTRA_MONEY_LINE = {
     tw: '我想買DJ器材...',
+    cn: '我想买DJ设备...',
     en: 'I want to buy DJ gear...',
     jp: 'DJ機材を買いたいんだ...'
 };
@@ -277,6 +356,19 @@ export const BED_N_DIALOGUE_LINES = {
         '嗚嗚...',
         '形象都要沒了...',
         '我要睡覺了，不准碰我!!'
+    ],
+    cn: [
+        '谢谢干爹...',
+        '提尔会好好练习DJ的...',
+        '好冷哦...',
+        '空调可以调高一点吗？',
+        '全裸好害羞...（虽然我本来就不穿裤子）',
+        '可以不要继续盯着我了吗...',
+        '为什么你这么坚持“摸尾巴”？',
+        '也太有耐心了吧...',
+        '呜呜...',
+        '形象都快没了...',
+        '我要睡觉了，不准碰我！！'
     ],
     en: [
         'Thanks, sugar daddy...',
@@ -315,6 +407,14 @@ export const BED_N_SLEEP_BRANCH_TEXT = {
         goodNightLine: '晚安',
         deathText: '{{player_name}}被咬死了'
     },
+    cn: {
+        postSleepLine: '床归我了，{{player_name}}去睡沙发！',
+        choiceTitle: '你要怎么做？',
+        optionUnderBlanket: '钻进被窝',
+        optionSleepSofa: '乖乖去睡沙发',
+        goodNightLine: '晚安',
+        deathText: '{{player_name}}被咬死了'
+    },
     en: {
         postSleepLine: 'The bed is mine. Go sleep on the couch!',
         choiceTitle: 'What will you do?',
@@ -345,6 +445,11 @@ export const HEAD_TOUCH_TEXT = {
     tw: {
         mild: '你幹麻啦',
         angry: '你很煩耶! 再弄我咬你喔!',
+        fatal: '{{player_name}}被咬死了'
+    },
+    cn: {
+        mild: '你干嘛啊',
+        angry: '你好烦啊！再弄我就咬你！',
         fatal: '{{player_name}}被咬死了'
     },
     en: {

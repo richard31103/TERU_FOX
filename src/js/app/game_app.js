@@ -19,7 +19,9 @@ import {
 } from '../config/scene_assets.js';
 import {
     AFRAID_HEADS,
+    AFRAID_TARGET_CHOICE_TITLE_CN,
     AFRAID_TARGET_CHOICE_TITLE_TW,
+    AFRAID_TARGET_LINES_CN,
     AFRAID_TARGET_LINES_TW,
     BED_ENTRY_TRANSITION,
     BED_EXTRA_MONEY_LINE,
@@ -206,6 +208,7 @@ applyDevAssetVersionToDom(document);
             const countText = Number.isFinite(failedCount) ? String(failedCount) : 'some';
             if (currentLang === 'en') return `Failed to load ${countText} scene image(s). Retry now?`;
             if (currentLang === 'jp') return `シーン画像 ${countText} 枚の読み込みに失敗しました。再試行しますか？`;
+            if (currentLang === 'cn') return `场景图片加载失败（共 ${countText} 张），是否立即重试？`;
             return `場景圖片載入失敗（${countText} 張），要立即重試嗎？`;
         }
 
@@ -424,7 +427,7 @@ applyDevAssetVersionToDom(document);
         }
 
         async function initStory() {
-            const storySet = await loadChapterStorySet('chapter01', ['tw', 'en', 'jp']);
+            const storySet = await loadChapterStorySet('chapter01', ['tw', 'cn', 'en', 'jp']);
             applyStoredStoryFlowTwOverrides(storySet);
             storyEngine = createStoryEngine(storySet, currentLang);
             refreshStoryProjection();
@@ -756,14 +759,22 @@ applyDevAssetVersionToDom(document);
         }
 
         function isAfraidTargetLineText(text) {
-            if (currentLang !== 'tw') return false;
-            return AFRAID_TARGET_LINES_TW.has((text || '').trim());
+            const targetLines = currentLang === 'tw'
+                ? AFRAID_TARGET_LINES_TW
+                : currentLang === 'cn'
+                    ? AFRAID_TARGET_LINES_CN
+                    : null;
+            return Boolean(targetLines?.has((text || '').trim()));
         }
 
         function shouldUseAfraidForChoice(sourceIndices) {
-            if (currentLang !== 'tw') return false;
             const choiceTitle = l10n[currentLang]?.choiceTitle || '';
-            if (choiceTitle !== AFRAID_TARGET_CHOICE_TITLE_TW) return false;
+            const targetTitle = currentLang === 'tw'
+                ? AFRAID_TARGET_CHOICE_TITLE_TW
+                : currentLang === 'cn'
+                    ? AFRAID_TARGET_CHOICE_TITLE_CN
+                    : null;
+            if (!targetTitle || choiceTitle !== targetTitle) return false;
             return sameChoiceSourceIndices(sourceIndices, DEFAULT_CHOICE_SOURCE_INDICES)
                 || sameChoiceSourceIndices(sourceIndices, FOLLOWUP_CHOICE_SOURCE_INDICES);
         }
@@ -1220,6 +1231,7 @@ applyDevAssetVersionToDom(document);
         function getNoPreviousLineMessage() {
             if (currentLang === 'en') return 'No previous line';
             if (currentLang === 'jp') return '前の台詞はありません';
+            if (currentLang === 'cn') return '没有上一句';
             return '沒有上一句';
         }
 
@@ -1582,6 +1594,7 @@ applyDevAssetVersionToDom(document);
             if (activeSceneId === SCENE_BED || activeSceneId === SCENE_BED_N) {
                 const bedTitleFallbackByLang = {
                     tw: '提爾家',
+                    cn: '提尔家',
                     en: "Teru's Home",
                     jp: 'テールの家'
                 };
@@ -3790,7 +3803,9 @@ applyDevAssetVersionToDom(document);
                     ? '勝ったら特別なCGが見られたのに...'
                     : currentLang === 'en'
                         ? 'You would get a special CG only if you won...'
-                        : '贏了才有色圖可以看'
+                        : currentLang === 'cn'
+                            ? '赢了才有色图可以看'
+                            : '贏了才有色圖可以看'
             );
             const bindResultClick = (resultEl) => {
                 if (!resultEl) return;
@@ -4243,8 +4258,8 @@ applyDevAssetVersionToDom(document);
             }
             currentLang = lang;
             if (!l10n[lang]) return;
-            ['tw', 'jp', 'en'].forEach(l => {
-                document.getElementById('tog-lang-' + l).classList.toggle('on', l === lang);
+            ['tw', 'cn', 'jp', 'en'].forEach(l => {
+                document.getElementById('tog-lang-' + l)?.classList.toggle('on', l === lang);
                 const titleBtn = document.getElementById('title-lang-' + l);
                 if (titleBtn) titleBtn.classList.toggle('on', l === lang);
             });
@@ -4278,6 +4293,7 @@ applyDevAssetVersionToDom(document);
             if (ui?.voice) return ui.voice;
             if (lang === 'en') return 'Voice';
             if (lang === 'jp') return 'ボイス';
+            if (lang === 'cn') return '语音';
             return '語音';
         }
 
@@ -4356,12 +4372,15 @@ applyDevAssetVersionToDom(document);
             if (voiceOffBtn) voiceOffBtn.textContent = ui.off;
             if (voiceOnBtn) voiceOnBtn.textContent = ui.on;
             document.getElementById('tog-lang-tw').textContent = ui.tw;
+            document.getElementById('tog-lang-cn').textContent = ui.cn;
             document.getElementById('tog-lang-jp').textContent = ui.jp;
             document.getElementById('tog-lang-en').textContent = ui.en;
             const titleLangTw = document.getElementById('title-lang-tw');
+            const titleLangCn = document.getElementById('title-lang-cn');
             const titleLangJp = document.getElementById('title-lang-jp');
             const titleLangEn = document.getElementById('title-lang-en');
             if (titleLangTw) titleLangTw.textContent = ui.tw;
+            if (titleLangCn) titleLangCn.textContent = ui.cn;
             if (titleLangJp) titleLangJp.textContent = ui.jp;
             if (titleLangEn) titleLangEn.textContent = ui.en;
             syncDialogueFitForMobile();

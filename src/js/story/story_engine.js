@@ -133,7 +133,7 @@ function toLegacyLanguageBundle(content) {
     };
 }
 
-export async function loadChapterStorySet(chapterId, langs = ["tw", "en", "jp"]) {
+export async function loadChapterStorySet(chapterId, langs = ["tw", "cn", "en", "jp"]) {
     const results = {};
     const baseLang = langs.includes("tw") ? "tw" : langs[0];
     const baseUrl = new URL(`./content/${chapterId}.${baseLang}.json`, import.meta.url);
