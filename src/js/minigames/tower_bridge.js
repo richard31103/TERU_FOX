@@ -3,7 +3,7 @@ import { DEV_ASSET_VERSIONING_ENABLED } from '../config/asset_versioning.js';
 const TOWER_BUNDLE_URL = 'assets/minigames/tower/tower-game.bundle.js';
 const TOWER_STYLE_URL = 'assets/minigames/tower/tower-game.css';
 const TOWER_GLOBAL_KEY = '__TERU_TOWER_GAME__';
-const TOWER_BUNDLE_VERSION = 'phase52-20260312-5';
+const TOWER_BUNDLE_VERSION = 'phase53-20260717-1';
 const TOWER_CACHE_QUERY_KEY = '__towerv';
 const TOWER_RUNTIME_CACHE_TOKEN = DEV_ASSET_VERSIONING_ENABLED
     ? `dev-${Date.now().toString(36)}`

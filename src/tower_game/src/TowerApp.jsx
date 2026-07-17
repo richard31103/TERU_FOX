@@ -36,8 +36,8 @@ import { resolveTowerSceneBackground } from './data/tower_scene_assets.js';
 
 const PLAYER_AVATAR_SRC = 'assets/images/minigames/tower/Game_TERU.png';
 const BATTLE_ARENA_SRC = 'assets/images/minigames/tower/Battle_Arena.jpg';
-const NORMAL_ENEMY_DIR = 'assets/images/minigames/tower/enemies/normal';
-const BOSS_ENEMY_DIR = 'assets/images/minigames/tower/enemies/boss';
+const NORMAL_ENEMY_DIR = '/assets/images/minigames/tower/enemies/normal';
+const BOSS_ENEMY_DIR = '/assets/images/minigames/tower/enemies/boss';
 const NORMAL_ENEMY_COUNT = 15;
 const SPECIAL_NORMAL_ASSET_KEY = 'normal_16_S';
 const SPECIAL_NORMAL_WEIGHT = 1;
@@ -96,7 +96,11 @@ const ENEMY_ATK_EXP_GROWTH = 1.0195;
 const ENEMY_BOSS_HP_MUL = 2.9;
 const ENEMY_BOSS_ATK_MUL = 1.22;
 
-const ENEMY_FALLBACK_EMOJI = { normal: '??', boss: '??' };
+const ENEMY_FALLBACK_SRC = {
+    normal: `${NORMAL_ENEMY_DIR}/normal_01.png`,
+    boss: `${BOSS_ENEMY_DIR}/boss_01.png`
+};
+const ENEMY_FALLBACK_LABEL = { normal: '敵', boss: '王' };
 const RARITY_GLOW_COLORS = {
     common: 'rgba(148,163,184,0.45)',
     advanced: 'rgba(16,185,129,0.58)',
@@ -3848,6 +3852,15 @@ export function TowerApp({
         tryPurchaseShopItem(item);
     }
 
+    function handleEnemyAvatarError() {
+        const fallbackSrc = enemyIsBoss ? ENEMY_FALLBACK_SRC.boss : ENEMY_FALLBACK_SRC.normal;
+        if (enemyImageSrc !== fallbackSrc) {
+            setEnemyImageSrc(fallbackSrc);
+            return;
+        }
+        setIsEnemyAvatarBroken(true);
+    }
+
     useEffect(() => {
         if (phase === 'battle' && selectedClass && selectedWeapon) startBattleRun(true);
     }, [phase, selectedClass, selectedWeapon]);
@@ -4171,10 +4184,10 @@ export function TowerApp({
                                             </div>
                                             {isEnemyAvatarBroken ? (
                                                 <span className={`tower-enemy-emoji ${enemyAvatarFxClass}`.trim()} role="img" aria-label="Tower enemy fallback">
-                                                    {enemyIsBoss ? ENEMY_FALLBACK_EMOJI.boss : ENEMY_FALLBACK_EMOJI.normal}
+                                                    {enemyIsBoss ? ENEMY_FALLBACK_LABEL.boss : ENEMY_FALLBACK_LABEL.normal}
                                                 </span>
                                             ) : (
-                                                <img src={enemyImageSrc} alt={`Tower enemy ${currentEnemyName}`} className={`tower-enemy-avatar ${enemyAvatarFxClass}`.trim()} onError={() => setIsEnemyAvatarBroken(true)} loading="lazy" decoding="async" />
+                                                <img src={enemyImageSrc} alt={`Tower enemy ${currentEnemyName}`} className={`tower-enemy-avatar ${enemyAvatarFxClass}`.trim()} onError={handleEnemyAvatarError} decoding="async" />
                                             )}
                                         </div>
                                     </div>
