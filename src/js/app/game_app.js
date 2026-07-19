@@ -460,6 +460,7 @@ applyDevAssetVersionToDom(document);
         let currentDialogueLineText = '';
         let inChoiceMode = false;
         let isChoicePickPending = false;
+        let choicePanelSessionId = 0;
         let currentDialogueStep = null;
         let scriptedSequenceIdCounter = 0;
         const PLAYER_NAME_MAX_LENGTH = 10;
@@ -1767,9 +1768,14 @@ applyDevAssetVersionToDom(document);
             bedFlow.tearsAfterStop = false;
         }
 
+        function invalidateChoiceSelection() {
+            choicePanelSessionId += 1;
+            isChoicePickPending = false;
+        }
+
         function hideChoicePanel() {
             inChoiceMode = false;
-            isChoicePickPending = false;
+            invalidateChoiceSelection();
             dialogueController.setChoiceMode(false);
             choiceController.hide();
             if (choicePanel) choicePanel.dataset.choiceCount = '0';
@@ -1851,11 +1857,11 @@ applyDevAssetVersionToDom(document);
 
         function showChoicePanel(sourceIndices = DEFAULT_CHOICE_SOURCE_INDICES) {
             clearCurrentDialogueStep();
+            invalidateChoiceSelection();
             if (appState && appState.getState() !== GAME_STATES.CHOICE) {
                 try { appState.transition(GAME_STATES.CHOICE, { source: 'show_choice_panel' }); } catch (e) { }
             }
             inChoiceMode = true;
-            isChoicePickPending = false;
             dialogueController.setChoiceMode(true);
             choiceController.show();
             const shouldUseAfraid = shouldUseAfraidForChoice(sourceIndices);
@@ -1928,6 +1934,7 @@ applyDevAssetVersionToDom(document);
 
         function showRuntimeChoicePanel({ titleKey, options, fallbackTitle = '' }) {
             clearCurrentDialogueStep();
+            invalidateChoiceSelection();
             runtimeChoiceState = {
                 titleKey,
                 fallbackTitle,
@@ -1938,7 +1945,6 @@ applyDevAssetVersionToDom(document);
                 try { appState.transition(GAME_STATES.CHOICE, { source: 'runtime_choice' }); } catch (e) { }
             }
             inChoiceMode = true;
-            isChoicePickPending = false;
             dialogueController.setChoiceMode(true);
             choiceController.show();
             applyAfraidHeadMode(false);
@@ -1970,12 +1976,14 @@ applyDevAssetVersionToDom(document);
 
         function handleChoiceSelection(slotIndex) {
             if (isChoicePickPending) return;
+            const selectionSessionId = choicePanelSessionId;
             isChoicePickPending = true;
             triggerSoftVibration(12);
             choiceController
                 .animateChoicePick(slotIndex)
                 .catch(() => { })
                 .then(() => {
+                    if (selectionSessionId !== choicePanelSessionId) return;
                     if (!inChoiceMode || !choicePanel.classList.contains('visible')) return;
                     if (isRuntimeChoiceMode) {
                         handleRuntimeChoice(slotIndex);
@@ -1987,7 +1995,9 @@ applyDevAssetVersionToDom(document);
                     }
                 })
                 .finally(() => {
-                    isChoicePickPending = false;
+                    if (selectionSessionId === choicePanelSessionId) {
+                        isChoicePickPending = false;
+                    }
                 });
         }
 
@@ -2391,7 +2401,7 @@ applyDevAssetVersionToDom(document);
             }
 
             inChoiceMode = false;
-            isChoicePickPending = false;
+            invalidateChoiceSelection();
             dialogueController.setChoiceMode(false);
             choiceController.hide();
             syncChoiceUiState();
@@ -2556,6 +2566,16 @@ applyDevAssetVersionToDom(document);
         }
 
         let isDeathSequence = false;
+        let reviveSequenceId = 0;
+        let wakeChoiceTimer = null;
+
+        function invalidateReviveSequence() {
+            reviveSequenceId += 1;
+            if (wakeChoiceTimer) {
+                clearTimeout(wakeChoiceTimer);
+                wakeChoiceTimer = null;
+            }
+        }
 
         function dispatchAction(actionId, context = {}) {
             if (!actionId) return;
@@ -3065,12 +3085,14 @@ applyDevAssetVersionToDom(document);
         }
 
         async function reviveToOpeningAfterIntroChoices(sourceOverlayEl) {
+            invalidateReviveSequence();
+            const activeReviveSequenceId = reviveSequenceId;
             interruptDialogueTyping({ resetVoiceTime: true });
             lineIndex = 0;
             charIndex = 0;
             rememberCurrentLineText('');
             isTyping = false;
-            isDeathSequence = false;
+            isDeathSequence = true;
             isAngry = false;
             isHappy = false;
             isAfraidHeadMode = false;
@@ -3079,7 +3101,7 @@ applyDevAssetVersionToDom(document);
             isHappyTalkMode = false;
             isParkEyebrowsDown = false;
             isFightSequenceActive = false;
-            isOpeningDialogueLocked = false;
+            isOpeningDialogueLocked = true;
             isOpeningGreetingHeadTouchLocked = false;
             pendingPostChoiceAction = null;
             pendingClickAdvance = null;
@@ -3119,6 +3141,7 @@ applyDevAssetVersionToDom(document);
             dialogueText.textContent = '';
 
             const defaultScenePreload = await ensureSceneAssets(SCENE_DEFAULT, { interactive: false });
+            if (activeReviveSequenceId !== reviveSequenceId) return;
             if (!defaultScenePreload.ok) {
                 console.warn('[ASSET] Default scene preload failed during death revive:', defaultScenePreload.failedAssets);
             }
@@ -3131,6 +3154,10 @@ applyDevAssetVersionToDom(document);
             }
 
             const showWakeChoiceLine = () => {
+                if (activeReviveSequenceId !== reviveSequenceId) return;
+                wakeChoiceTimer = null;
+                isDeathSequence = false;
+                isOpeningDialogueLocked = false;
                 const opening = getOpeningTextBundle();
                 runScriptedLine(
                     opening.wakeChoiceLine || '你醒啦...你想做什麼呢?',
@@ -3141,7 +3168,7 @@ applyDevAssetVersionToDom(document);
 
             if (sourceOverlayEl) {
                 sourceOverlayEl.classList.add('hidden');
-                setTimeout(showWakeChoiceLine, OVERLAY_FADE_MS + 40);
+                wakeChoiceTimer = setTimeout(showWakeChoiceLine, OVERLAY_FADE_MS + 40);
             } else {
                 showWakeChoiceLine();
             }
@@ -4059,6 +4086,10 @@ applyDevAssetVersionToDom(document);
         }
 
         function triggerDeath({ overrideText = '' } = {}) {
+            invalidateReviveSequence();
+            isDeathSequence = true;
+            isOpeningDialogueLocked = true;
+            hideChoicePanel();
             resetBedFlow();
             resetHeadTouchChain('trigger_death');
             isFightSequenceActive = false;
@@ -4262,6 +4293,7 @@ applyDevAssetVersionToDom(document);
 
         // Trigger death shortcut if clicking anywhere on the black death screen overlay (to force show text)
         document.getElementById('death-screen').addEventListener('click', function (e) {
+            e.stopPropagation();
             // If we've started the sequence but the text hasn't shown up yet, fast-forward it
             this.classList.add('show-text');
         });
@@ -4725,6 +4757,7 @@ applyDevAssetVersionToDom(document);
             }
 
             // Thorough state reset to prevent stale state from previous session
+            invalidateReviveSequence();
             interruptDialogueTyping({ resetVoiceTime: true });
             lineIndex = 0;
             charIndex = 0;
@@ -4732,7 +4765,7 @@ applyDevAssetVersionToDom(document);
             hasUsedMainOOXXChoice = false;
             isTyping = false;
             inChoiceMode = false;
-            isChoicePickPending = false;
+            invalidateChoiceSelection();
             isDeathSequence = false;
             isAngry = false;
             isHappy = false;
@@ -4825,6 +4858,7 @@ applyDevAssetVersionToDom(document);
 
         async function returnToTitle(sourceOverlayEl, cleanupFn) {
             // Stop logic / reset
+            invalidateReviveSequence();
             interruptDialogueTyping({ resetVoiceTime: true });
             isDeathSequence = false;
             isAngry = false;
