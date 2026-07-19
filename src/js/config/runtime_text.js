@@ -104,6 +104,7 @@ export const OPENING_TEXT = {
         choiceRecordStore: '要一起去逛唱片行嗎?',
         choiceCoffee: '我想要去喝咖啡',
         choiceJustChat: '和提爾狐爬塔',
+        unfinishedRoutesLine: '提爾還沒做完這兩條線',
         moveToLawnLine: '我腿有點酸了，去草坪坐一下吧',
         weatherChoiceLine: '天氣真好，{{player_name}}想做什麼呢?',
         wakeChoiceLine: '你醒啦...你想做什麼呢?',
@@ -111,8 +112,7 @@ export const OPENING_TEXT = {
         recordStoreReply: '好呀',
         coffeeIntroLines: [
             '我其實不常喝咖啡呢...',
-            '咖啡好苦喝了又睡不著覺',
-            '但是上次喝了賴瑞叔叔泡的咖啡讓我稍微有改觀'
+            '咖啡好苦喝了又睡不著覺'
         ],
         coffeeChoiceTitle: '{{player_name}}要點什麼給提爾喝?',
         coffeeChoiceLatte: '拿鐵',
@@ -146,6 +146,7 @@ export const OPENING_TEXT = {
         choiceRecordStore: '要一起去逛唱片店吗？',
         choiceCoffee: '我想去喝咖啡',
         choiceJustChat: '和提尔狐一起爬塔',
+        unfinishedRoutesLine: '提尔还没做完这两条线',
         moveToLawnLine: '我腿有点酸了，去草坪坐一下吧',
         weatherChoiceLine: '今天天气真好，你想做什么呢？',
         wakeChoiceLine: '你醒啦...你想做什么呢？',
@@ -153,8 +154,7 @@ export const OPENING_TEXT = {
         recordStoreReply: '好呀',
         coffeeIntroLines: [
             '我其实不常喝咖啡呢...',
-            '咖啡又苦，喝了还睡不着觉',
-            '但是上次喝了拉里叔叔泡的咖啡，让我稍微有些改观'
+            '咖啡又苦，喝了还睡不着觉'
         ],
         coffeeChoiceTitle: '{{player_name}}要给提尔点什么？',
         coffeeChoiceLatte: '拿铁',
@@ -188,6 +188,7 @@ export const OPENING_TEXT = {
         choiceRecordStore: 'Want to browse a record store together?',
         choiceCoffee: 'I want to grab coffee.',
         choiceJustChat: 'Climb the Tower with TERU Fox',
+        unfinishedRoutesLine: 'TERU has not finished these two routes yet.',
         moveToLawnLine: 'My legs are a bit tired. Let us sit on the lawn.',
         weatherChoiceLine: 'Nice weather. What do you want to do?',
         wakeChoiceLine: 'You are awake... what do you want to do?',
@@ -195,8 +196,7 @@ export const OPENING_TEXT = {
         recordStoreReply: 'Sure.',
         coffeeIntroLines: [
             'I actually do not drink coffee that often...',
-            'Coffee is bitter, and it keeps me awake.',
-            "But Uncle Larry's coffee last time changed my mind a little."
+            'Coffee is bitter, and it keeps me awake.'
         ],
         coffeeChoiceTitle: 'What do you want to order for TERU?',
         coffeeChoiceLatte: 'Latte',
@@ -230,6 +230,7 @@ export const OPENING_TEXT = {
         choiceRecordStore: '一緒にレコード屋さんを見に行く？',
         choiceCoffee: 'コーヒーを飲みに行きたい。',
         choiceJustChat: 'テール狐と塔を登る',
+        unfinishedRoutesLine: 'テールはまだこの2つのルートを作り終えてないよ。',
         moveToLawnLine: 'ちょっと足が疲れたから、芝生で座って話そう。',
         weatherChoiceLine: 'いい天気だね。何したい？',
         wakeChoiceLine: '目が覚めたね... 何したい？',
@@ -237,8 +238,7 @@ export const OPENING_TEXT = {
         recordStoreReply: 'いいよ。',
         coffeeIntroLines: [
             '実は、コーヒーはあまり飲まないんだ...',
-            'コーヒーって苦いし、飲むと眠れなくなるし。',
-            'でもこの前ラリーさんのコーヒーを飲んで、ちょっと印象が変わった。'
+            'コーヒーって苦いし、飲むと眠れなくなるし。'
         ],
         coffeeChoiceTitle: 'テールに何を頼んであげる？',
         coffeeChoiceLatte: 'ラテ',

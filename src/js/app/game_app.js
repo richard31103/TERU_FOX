@@ -2987,6 +2987,17 @@ applyDevAssetVersionToDom(document);
             );
         }
 
+        function showOpeningUnfinishedRouteLine() {
+            const opening = getOpeningTextBundle();
+            runScriptedLine(
+                opening.unfinishedRoutesLine || '提爾還沒做完這兩條線',
+                l10n[currentLang]?.speaker || '',
+                () => {
+                    pendingClickAdvance = showOpeningAfterIntroChoices;
+                }
+            );
+        }
+
         function showOpeningAfterIntroChoices() {
             showRuntimeChoicePanel({
                 titleKey: 'choice_title',
@@ -3004,14 +3015,7 @@ applyDevAssetVersionToDom(document);
                     {
                         textKey: '',
                         fallbackText: () => getOpeningTextBundle().choiceRecordStore || '要一起去逛唱片行嗎?',
-                        onSelect: () => {
-                            const opening = getOpeningTextBundle();
-                            runScriptedLine(
-                                opening.recordStoreReply || '好呀',
-                                l10n[currentLang]?.speaker || '',
-                                () => dispatchAction('show_to_be_continued', { delayMs: 0 })
-                            );
-                        }
+                        onSelect: showOpeningUnfinishedRouteLine
                     },
                     {
                         textKey: '',
@@ -3021,7 +3025,7 @@ applyDevAssetVersionToDom(document);
                     {
                         textKey: '',
                         fallbackText: () => getOpeningTextBundle().choiceJustChat || '和提爾狐爬塔',
-                        onSelect: () => dispatchAction('start_tower', { delayMs: 0 })
+                        onSelect: showOpeningUnfinishedRouteLine
                     }
                 ]
             });
