@@ -2990,7 +2990,7 @@ applyDevAssetVersionToDom(document);
         function showOpeningUnfinishedRouteLine() {
             const opening = getOpeningTextBundle();
             runScriptedLine(
-                opening.unfinishedRoutesLine || '提爾還沒做完這兩條線',
+                opening.unfinishedRoutesLine || '提爾還沒做完這條線',
                 l10n[currentLang]?.speaker || '',
                 () => {
                     pendingClickAdvance = showOpeningAfterIntroChoices;
