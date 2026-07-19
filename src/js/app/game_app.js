@@ -233,6 +233,21 @@ applyDevAssetVersionToDom(document);
             return true;
         }
 
+        async function waitForImageLayersToPaint(imageElements) {
+            const elements = Array.from(new Set((imageElements || []).filter(Boolean)));
+            await Promise.all(elements.map(async (imgEl) => {
+                if (!imgEl.getAttribute('src') || typeof imgEl.decode !== 'function') return;
+                try {
+                    await imgEl.decode();
+                } catch (e) {
+                    // Scene loading already reports failed assets; keep the curtain flow responsive.
+                }
+            }));
+            await new Promise((resolve) => {
+                requestAnimationFrame(() => requestAnimationFrame(resolve));
+            });
+        }
+
         function toggleAudioGlobal() {
             audioMuted = audioService.setMuted(!audioMuted);
             const btn = document.getElementById('audio-toggle-btn');
@@ -2776,6 +2791,24 @@ applyDevAssetVersionToDom(document);
                 try { appState.transition(GAME_STATES.TRANSITION, { source: 'opening_park_to_default' }); } catch (e) { }
             }
 
+            const preloadDefaultSceneForOpening = async () => {
+                const applied = await preloadSceneAndApply(SCENE_DEFAULT);
+                if (applied) {
+                    await waitForImageLayersToPaint([
+                        charTail,
+                        charBody,
+                        charIdle,
+                        charBlink,
+                        charSpeak,
+                        charAngry,
+                        charHappy,
+                        charHappyTalk,
+                        charHeadphone
+                    ]);
+                }
+                return applied;
+            };
+
             let switchedToDefault = false;
             try {
                 const result = await ooxxTransitionEngine.runCurtainTransition({
@@ -2784,16 +2817,16 @@ applyDevAssetVersionToDom(document);
                     holdMs: OPENING_TO_DEFAULT_TRANSITION.holdMs,
                     fadeOutMs: OPENING_TO_DEFAULT_TRANSITION.fadeOutMs,
                     onBlack: async () => {
-                        switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                        switchedToDefault = await preloadDefaultSceneForOpening();
                     }
                 });
                 if ((!result || result.cancelled) && !switchedToDefault) {
-                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                    switchedToDefault = await preloadDefaultSceneForOpening();
                 }
             } catch (err) {
                 console.error('Opening Park transition error:', err);
                 if (!switchedToDefault) {
-                    switchedToDefault = await preloadSceneAndApply(SCENE_DEFAULT);
+                    switchedToDefault = await preloadDefaultSceneForOpening();
                 }
             }
 
