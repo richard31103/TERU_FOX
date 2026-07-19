@@ -126,6 +126,12 @@ applyDevAssetVersionToDom(document);
         const appContext = createAppContext(document);
         const { refs: ctxRefs, dialogueUI, audio: audioService, audioCtx } = appContext;
         const assetStore = createImageAssetStore();
+        let expressionHeadLayers = [];
+        let expressionHeadLayerSet = null;
+        let expressionHeadTransitionEl = null;
+        let expressionHeadSwapVersion = 0;
+        let expressionHeadSwapScheduled = false;
+        const pendingExpressionHeadLayers = new Set();
         const globalLoadingIndicatorEl = document.getElementById('global-loading-indicator');
         const globalLoadingLabelEl = document.getElementById('global-loading-label');
         const toastEl = document.getElementById('toast');
@@ -180,17 +186,57 @@ applyDevAssetVersionToDom(document);
             setGlobalLoadingVisible(pendingCount > 0);
         });
 
-        function setCachedSrc(imgEl, assetKey) {
+        // Keep the current head visible until replacement layers have decoded and painted.
+        function preserveCurrentExpressionHead() {
+            if (!expressionHeadTransitionEl || expressionHeadTransitionEl.classList.contains('active')) return;
+            const activeLayer = [...expressionHeadLayers]
+                .reverse()
+                .find((imgEl) => imgEl?.classList.contains('active') && imgEl.getAttribute('src'));
+            if (!activeLayer) return;
+            const currentSrc = activeLayer.currentSrc || activeLayer.getAttribute('src');
+            if (!currentSrc) return;
+            expressionHeadTransitionEl.setAttribute('src', currentSrc);
+            expressionHeadTransitionEl.classList.add('active');
+        }
+
+        function queueExpressionHeadSwap(imgEl) {
+            if (!imgEl || !expressionHeadTransitionEl) return;
+            pendingExpressionHeadLayers.add(imgEl);
+            expressionHeadSwapVersion += 1;
+            if (expressionHeadSwapScheduled) return;
+            expressionHeadSwapScheduled = true;
+
+            Promise.resolve().then(async () => {
+                expressionHeadSwapScheduled = false;
+                const swapVersion = expressionHeadSwapVersion;
+                const layersToPaint = Array.from(pendingExpressionHeadLayers);
+                pendingExpressionHeadLayers.clear();
+                await waitForImageLayersToPaint(layersToPaint);
+                if (swapVersion !== expressionHeadSwapVersion) return;
+                expressionHeadTransitionEl.classList.remove('active');
+            });
+        }
+
+        function cancelExpressionHeadSwap() {
+            expressionHeadSwapVersion += 1;
+            pendingExpressionHeadLayers.clear();
+            expressionHeadTransitionEl?.classList.remove('active');
+        }
+
+        function setCachedSrc(imgEl, assetKey, { guardExpressionSwap = true } = {}) {
             if (!imgEl || !assetKey) return false;
             const resolvedSrc = assetStore.resolve(assetKey);
             if (!resolvedSrc) return false;
             if (imgEl.dataset.assetKey === assetKey && imgEl.getAttribute('src') === resolvedSrc) {
                 return true;
             }
+            const guardsExpressionSwap = Boolean(guardExpressionSwap && expressionHeadLayerSet?.has(imgEl));
+            if (guardsExpressionSwap) preserveCurrentExpressionHead();
             imgEl.dataset.assetKey = assetKey;
             if (imgEl.getAttribute('src') !== resolvedSrc) {
                 imgEl.setAttribute('src', resolvedSrc);
             }
+            if (guardsExpressionSwap) queueExpressionHeadSwap(imgEl);
             return true;
         }
 
@@ -525,6 +571,17 @@ applyDevAssetVersionToDom(document);
         const choicePanel = dialogueUI.refs.choicePanel;
         const characterContainerEl = ctxRefs.characterContainer;
         const headTouchFaceEl = document.getElementById('char-head-touch');
+        expressionHeadTransitionEl = document.getElementById('char-head-transition');
+        expressionHeadLayers = [
+            charIdle,
+            charBlink,
+            charSpeak,
+            charAngry,
+            charHappy,
+            charHappyTalk,
+            headTouchFaceEl
+        ].filter(Boolean);
+        expressionHeadLayerSet = new Set(expressionHeadLayers);
         const headTouchZoneEl = document.getElementById('head-touch-zone');
         const fightDamageNumberEl = ctxRefs.fightDamageNumber;
         const fightRedFlashEl = ctxRefs.fightRedFlash;
@@ -1629,6 +1686,7 @@ applyDevAssetVersionToDom(document);
         function applyScene(sceneId) {
             const cfg = SCENE_CONFIG[sceneId] || SCENE_CONFIG[SCENE_DEFAULT];
             const nextSceneId = sceneId in SCENE_CONFIG ? sceneId : SCENE_DEFAULT;
+            cancelExpressionHeadSwap();
             if (nextSceneId !== activeSceneId) {
                 resetHeadTouchChain('scene_change');
             }
@@ -1647,26 +1705,26 @@ applyDevAssetVersionToDom(document);
             if (charParkEyes) setCachedSrc(charParkEyes, cfg.parkEyes || SCENE_CONFIG[SCENE_PARK]?.parkEyes || '');
             if (charParkMouth) setCachedSrc(charParkMouth, cfg.parkMouth || SCENE_CONFIG[SCENE_PARK]?.parkMouth || '');
             if (charParkEyebrows) setCachedSrc(charParkEyebrows, cfg.parkEyebrows || SCENE_CONFIG[SCENE_PARK]?.parkEyebrows || '');
-            if (charIdle) setCachedSrc(charIdle, cfg.idle);
-            if (charBlink) setCachedSrc(charBlink, cfg.blink);
-            if (charSpeak) setCachedSrc(charSpeak, cfg.speak);
+            if (charIdle) setCachedSrc(charIdle, cfg.idle, { guardExpressionSwap: false });
+            if (charBlink) setCachedSrc(charBlink, cfg.blink, { guardExpressionSwap: false });
+            if (charSpeak) setCachedSrc(charSpeak, cfg.speak, { guardExpressionSwap: false });
             if (activeSceneId === SCENE_DEFAULT && isOpeningPrologueActive) {
-                if (charIdle) setCachedSrc(charIdle, OPENING_HEADS.idle);
-                if (charBlink) setCachedSrc(charBlink, OPENING_HEADS.blink);
-                if (charSpeak) setCachedSrc(charSpeak, OPENING_HEADS.speak);
+                if (charIdle) setCachedSrc(charIdle, OPENING_HEADS.idle, { guardExpressionSwap: false });
+                if (charBlink) setCachedSrc(charBlink, OPENING_HEADS.blink, { guardExpressionSwap: false });
+                if (charSpeak) setCachedSrc(charSpeak, OPENING_HEADS.speak, { guardExpressionSwap: false });
             }
             if (activeSceneId === SCENE_DEFAULT && isAfraidHeadMode) {
-                if (charIdle) setCachedSrc(charIdle, AFRAID_HEADS.idle);
-                if (charBlink) setCachedSrc(charBlink, AFRAID_HEADS.blink);
-                if (charSpeak) setCachedSrc(charSpeak, AFRAID_HEADS.speak);
+                if (charIdle) setCachedSrc(charIdle, AFRAID_HEADS.idle, { guardExpressionSwap: false });
+                if (charBlink) setCachedSrc(charBlink, AFRAID_HEADS.blink, { guardExpressionSwap: false });
+                if (charSpeak) setCachedSrc(charSpeak, AFRAID_HEADS.speak, { guardExpressionSwap: false });
             }
-            if (charAngry) setCachedSrc(charAngry, cfg.angry);
-            if (charHappy) setCachedSrc(charHappy, cfg.happy);
-            if (charHappyTalk) setCachedSrc(charHappyTalk, cfg.happyTalk || cfg.happy);
+            if (charAngry) setCachedSrc(charAngry, cfg.angry, { guardExpressionSwap: false });
+            if (charHappy) setCachedSrc(charHappy, cfg.happy, { guardExpressionSwap: false });
+            if (charHappyTalk) setCachedSrc(charHappyTalk, cfg.happyTalk || cfg.happy, { guardExpressionSwap: false });
             if (activeSceneId === SCENE_DEFAULT && isShyBedTransitionMode) {
-                if (charHappy) setCachedSrc(charHappy, SHY_BED_TRANSITION_HEADS.happy);
-                if (charHappyTalk) setCachedSrc(charHappyTalk, SHY_BED_TRANSITION_HEADS.speak);
-                if (charBlink) setCachedSrc(charBlink, SHY_BED_TRANSITION_HEADS.blink);
+                if (charHappy) setCachedSrc(charHappy, SHY_BED_TRANSITION_HEADS.happy, { guardExpressionSwap: false });
+                if (charHappyTalk) setCachedSrc(charHappyTalk, SHY_BED_TRANSITION_HEADS.speak, { guardExpressionSwap: false });
+                if (charBlink) setCachedSrc(charBlink, SHY_BED_TRANSITION_HEADS.blink, { guardExpressionSwap: false });
             }
             if (charTail) {
                 charTail.style.setProperty('--tail-origin', cfg.tailOrigin || SCENE_CONFIG[SCENE_DEFAULT].tailOrigin);
